@@ -12,7 +12,20 @@
           "package_name": "com.pravor.notessharing"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1093598842915-e1ma64hkvo3567noj4pt2a8khbv5flqk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pravor.notessharing",
+            "certificate_hash": "917baaa32bdc3961f468bbbcd8d7fcf31ec5cb75"
+          }
+        },
+        {
+          "client_id": "1093598842915-7un8eep0q7323t57tgjb4f034mtrvprq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyALceiY8Q6CF1yK_kG97LCRCnIuaZ4IWvE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1093598842915-7un8eep0q7323t57tgjb4f034mtrvprq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
