@@ -2,25 +2,46 @@ package com.pravor.notessharing.state
 
 import androidx.compose.runtime.Immutable
 import com.pravor.notessharing.model.SelectedUploadFile
-import com.pravor.notessharing.model.UploadItem
 import com.pravor.notessharing.model.UploadType
+
+@Immutable
+data class YoutubePreview(
+    val title: String,
+    val channelTitle: String,
+    val thumbnailUrl: String,
+    val url: String
+)
 
 @Immutable
 data class UploadUiState(
     val branches: List<String> = emptyList(),
-    val years: List<String> = emptyList(),
+    val semesters: List<String> = emptyList(),
     val selectedBranch: String = "",
-    val selectedYear: String = "",
+    val selectedSemester: String = "",
     val subject: String = "",
     val selectedType: UploadType? = null,
     val selectedFiles: List<SelectedUploadFile> = emptyList(),
     val youtubeUrl: String = "",
+    
+    // PYQ specific metadata
+    val examYears: List<String> = emptyList(),
+    val selectedExamYear: String = "",
+    val examTypes: List<String> = emptyList(),
+    val selectedExamType: String = "",
+    
+    // YouTube oEmbed preview
+    val youtubePreview: YoutubePreview? = null,
+    val isFetchingYoutube: Boolean = false,
+    val youtubeError: String? = null,
+
+    // Status and progress
     val errorMessage: String? = null,
-    val savedUpload: UploadItem? = null,
-    val isSaving: Boolean = false
+    val uploadSuccess: Boolean = false,
+    val isSaving: Boolean = false,
+    val uploadProgress: Float = 0f
 ) {
     val metadataComplete: Boolean
-        get() = selectedBranch.isNotBlank() && selectedYear.isNotBlank() && subject.isNotBlank()
+        get() = selectedBranch.isNotBlank() && selectedSemester.isNotBlank() && subject.isNotBlank() && selectedType != null
 
     val totalSizeBytes: Long
         get() = selectedFiles.sumOf { it.sizeBytes }

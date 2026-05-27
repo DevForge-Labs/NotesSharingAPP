@@ -61,6 +61,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,22 +85,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.state.UploadUiState
+import com.pravor.notessharing.state.YoutubePreview
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
+import com.pravor.notessharing.ui.components.LiquidTransferProgressBar
 import com.pravor.notessharing.viewmodel.UploadViewModel
 
 @Composable
-fun UploadRoute(viewModel: UploadViewModel = viewModel()) {
+fun UploadRoute(
+    onUploadSuccess: () -> Unit,
+    viewModel: UploadViewModel = viewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(uiState.uploadSuccess) {
+        if (uiState.uploadSuccess) {
+            onUploadSuccess()
+            viewModel.clearUploadSuccess()
+        }
+    }
+
+    val selectedType = uiState.selectedType ?: UploadType.Notes
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        viewModel.addPickedUris(uris, UploadType.Pdf, UploadFileSource.DocumentPicker)
+        viewModel.addPickedUris(uris, selectedType, UploadFileSource.DocumentPicker)
     }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        viewModel.addPickedUris(uris, UploadType.Images, UploadFileSource.Gallery)
+        viewModel.addPickedUris(uris, selectedType, UploadFileSource.Gallery)
     }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         viewModel.onCameraCaptureResult(success)
@@ -108,9 +124,11 @@ fun UploadRoute(viewModel: UploadViewModel = viewModel()) {
     UploadScreen(
         uiState = uiState,
         onBranchChange = viewModel::selectBranch,
-        onYearChange = viewModel::selectYear,
+        onSemesterChange = viewModel::selectSemester,
         onSubjectChange = viewModel::updateSubject,
         onTypeSelected = viewModel::selectUploadType,
+        onExamYearChange = viewModel::selectExamYear,
+        onExamTypeChange = viewModel::selectExamType,
         onPickPdfs = { pdfPicker.launch(arrayOf("application/pdf")) },
         onPickImages = { imagePicker.launch(arrayOf("image/*")) },
         onCaptureImage = { cameraLauncher.launch(viewModel.createCameraUri()) },
@@ -124,9 +142,11 @@ fun UploadRoute(viewModel: UploadViewModel = viewModel()) {
 fun UploadScreen(
     uiState: UploadUiState,
     onBranchChange: (String) -> Unit,
-    onYearChange: (String) -> Unit,
+    onSemesterChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
+    onExamYearChange: (String) -> Unit,
+    onExamTypeChange: (String) -> Unit,
     onPickPdfs: () -> Unit,
     onPickImages: () -> Unit,
     onCaptureImage: () -> Unit,
@@ -144,6 +164,13 @@ fun UploadScreen(
                 return Offset.Zero
             }
         }
+    }
+
+    val isFormValid = uiState.metadataComplete && when (uiState.selectedType) {
+        UploadType.Pyq -> uiState.selectedFiles.size == 1 && uiState.selectedExamYear.isNotBlank() && uiState.selectedExamType.isNotBlank()
+        UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && uiState.youtubePreview != null
+        UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> uiState.selectedFiles.isNotEmpty()
+        null -> false
     }
 
     Box(
@@ -167,32 +194,42 @@ fun UploadScreen(
                 MetadataSection(
                     uiState = uiState,
                     onBranchChange = onBranchChange,
-                    onYearChange = onYearChange,
-                    onSubjectChange = onSubjectChange
-                )
-            }
-            item(key = "type-selector", contentType = "type-selector") {
-                UploadTypeSelector(
-                    selectedType = uiState.selectedType,
-                    enabled = uiState.metadataComplete,
-                    onTypeSelected = onTypeSelected
+                    onSemesterChange = onSemesterChange,
+                    onSubjectChange = onSubjectChange,
+                    onTypeSelected = onTypeSelected,
+                    onExamYearChange = onExamYearChange,
+                    onExamTypeChange = onExamTypeChange
                 )
             }
             item(key = "content-picker", contentType = "content-picker") {
                 Crossfade(targetState = uiState.selectedType, label = "upload-type-content") { type ->
                     when (type) {
-                        UploadType.Pdf -> PdfUploadSection(uiState.selectedFiles, onPickPdfs, onRemoveFile)
-                        UploadType.Images -> ImageUploadSection(uiState.selectedFiles, onPickImages, onCaptureImage, onRemoveFile)
-                        UploadType.Youtube -> YoutubeUploadSection(uiState.youtubeUrl, onYoutubeUrlChange)
+                        UploadType.Pyq -> PyqUploadSection(uiState.selectedFiles, onPickPdfs, onRemoveFile)
+                        UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> CombinedUploadSection(
+                            files = uiState.selectedFiles,
+                            onPickPdfs = onPickPdfs,
+                            onPickImages = onPickImages,
+                            onCaptureImage = onCaptureImage,
+                            onRemoveFile = onRemoveFile
+                        )
+                        UploadType.Youtube -> YoutubeUploadSection(
+                            youtubeUrl = uiState.youtubeUrl,
+                            isFetching = uiState.isFetchingYoutube,
+                            preview = uiState.youtubePreview,
+                            error = uiState.youtubeError,
+                            onYoutubeUrlChange = onYoutubeUrlChange
+                        )
                         null -> EmptyUploadState(uiState.metadataComplete)
                     }
                 }
             }
-            item(key = "live-stats", contentType = "stats") {
-                LiveUploadStats(
-                    fileCount = uiState.selectedFiles.size,
-                    totalSizeBytes = uiState.totalSizeBytes
-                )
+            if (uiState.selectedType != UploadType.Youtube && uiState.selectedType != null) {
+                item(key = "live-stats", contentType = "stats") {
+                    LiveUploadStats(
+                        fileCount = uiState.selectedFiles.size,
+                        totalSizeBytes = uiState.totalSizeBytes
+                    )
+                }
             }
             item(key = "summary", contentType = "summary") {
                 UploadSummaryCard(uiState)
@@ -203,6 +240,8 @@ fun UploadScreen(
             item(key = "upload-button", contentType = "button") {
                 UploadButton(
                     isSaving = uiState.isSaving,
+                    enabled = isFormValid,
+                    progress = uiState.uploadProgress,
                     onUpload = onUpload
                 )
             }
@@ -240,8 +279,11 @@ private fun UploadHeader() {
 fun MetadataSection(
     uiState: UploadUiState,
     onBranchChange: (String) -> Unit,
-    onYearChange: (String) -> Unit,
-    onSubjectChange: (String) -> Unit
+    onSemesterChange: (String) -> Unit,
+    onSubjectChange: (String) -> Unit,
+    onTypeSelected: (UploadType) -> Unit,
+    onExamYearChange: (String) -> Unit,
+    onExamTypeChange: (String) -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(26.dp),
@@ -253,33 +295,86 @@ fun MetadataSection(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             SectionHeader("Study Metadata")
+            
             DropdownField(
                 label = "Branch",
                 value = uiState.selectedBranch,
                 options = uiState.branches,
                 onValueChange = onBranchChange
             )
+            
             DropdownField(
-                label = "Year",
-                value = uiState.selectedYear,
-                options = uiState.years,
-                onValueChange = onYearChange
+                label = "Semester",
+                value = uiState.selectedSemester,
+                options = uiState.semesters,
+                onValueChange = onSemesterChange
             )
-            OutlinedTextField(
-                value = uiState.subject,
-                onValueChange = onSubjectChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Subject") },
-                placeholder = { Text("DBMS, Operating Systems, DSA...") },
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+            
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedTextField(
+                    value = uiState.subject,
+                    onValueChange = onSubjectChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Subject") },
+                    placeholder = { Text("DBMS, Operating Systems, DSA...") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                    )
                 )
+                val showSubjectError = uiState.subject.isBlank() && (uiState.selectedBranch.isNotBlank() || uiState.selectedSemester.isNotBlank())
+                if (showSubjectError) {
+                    Text(
+                        text = "Subject is required",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+
+            DropdownFieldUploadType(
+                label = "Document Type",
+                value = uiState.selectedType,
+                options = UploadType.values().toList(),
+                onValueChange = onTypeSelected
             )
+
+            if (uiState.selectedType == UploadType.Pyq) {
+                DropdownField(
+                    label = "Exam Year",
+                    value = uiState.selectedExamYear,
+                    options = uiState.examYears,
+                    onValueChange = onExamYearChange
+                )
+                if (uiState.selectedExamYear.isBlank() && uiState.selectedExamType.isNotBlank()) {
+                    Text(
+                        text = "Exam Year is required",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
+                DropdownField(
+                    label = "Exam Type",
+                    value = uiState.selectedExamType,
+                    options = uiState.examTypes,
+                    onValueChange = onExamTypeChange
+                )
+                if (uiState.selectedExamType.isBlank() && uiState.selectedExamYear.isNotBlank()) {
+                    Text(
+                        text = "Exam Type is required",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -333,94 +428,51 @@ private fun DropdownField(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UploadTypeSelector(
-    selectedType: UploadType?,
-    enabled: Boolean,
-    onTypeSelected: (UploadType) -> Unit
+private fun DropdownFieldUploadType(
+    label: String,
+    value: UploadType?,
+    options: List<UploadType>,
+    onValueChange: (UploadType) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionHeader("Select Upload Type")
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            UploadTypeCard(
-                title = "PDF",
-                subtitle = "Documents",
-                icon = Icons.Default.Description,
-                selected = selectedType == UploadType.Pdf,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-                onClick = { onTypeSelected(UploadType.Pdf) }
-            )
-            UploadTypeCard(
-                title = "Images",
-                subtitle = "Camera/Gallery",
-                icon = Icons.Default.Image,
-                selected = selectedType == UploadType.Images,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-                onClick = { onTypeSelected(UploadType.Images) }
-            )
-            UploadTypeCard(
-                title = "YouTube",
-                subtitle = "Single link",
-                icon = Icons.Default.OndemandVideo,
-                selected = selectedType == UploadType.Youtube,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-                onClick = { onTypeSelected(UploadType.Youtube) }
-            )
-        }
-        AnimatedVisibility(!enabled) {
-            Text(
-                text = "Complete metadata before selecting files.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
+    var expanded by remember { mutableStateOf(false) }
 
-@Composable
-private fun UploadTypeCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    selected: Boolean,
-    enabled: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit
-) {
-    val container by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-        label = "upload-type-container"
-    )
-    val content by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-        label = "upload-type-content"
-    )
-
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = container),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 8.dp else 4.dp)
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(28.dp))
-            Text(title, color = content, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            Text(
-                subtitle,
-                color = if (selected) content.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        OutlinedTextField(
+            value = value?.label ?: "",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            label = { Text(label) },
+            placeholder = { Text("Select $label") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            shape = RoundedCornerShape(18.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
             )
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onValueChange(option)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
@@ -428,15 +480,13 @@ private fun UploadTypeCard(
 @Composable
 private fun EmptyUploadState(metadataComplete: Boolean) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier
-                .padding(18.dp),
+            modifier = Modifier.padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -448,7 +498,7 @@ private fun EmptyUploadState(metadataComplete: Boolean) {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = if (metadataComplete) "PDFs, images, and YouTube links cannot be mixed." else "Branch, year, and subject are required before file selection.",
+                text = if (metadataComplete) "PDFs, images, and YouTube links cannot be mixed." else "Branch, semester, subject, and document type are required before file selection.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -457,22 +507,77 @@ private fun EmptyUploadState(metadataComplete: Boolean) {
 }
 
 @Composable
-private fun PdfUploadSection(
+private fun PyqUploadSection(
     files: List<SelectedUploadFile>,
     onPickPdfs: () -> Unit,
     onRemoveFile: (SelectedUploadFile) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Button(onClick = onPickPdfs, shape = RoundedCornerShape(18.dp)) {
+        Button(
+            onClick = onPickPdfs,
+            shape = RoundedCornerShape(18.dp),
+            enabled = files.isEmpty()
+        ) {
+            Icon(Icons.Default.Description, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Select PDF")
+        }
+        if (files.isEmpty()) {
+            EmptyPreviewCard("No PDF selected", "Tap Select PDF to choose the exam paper (PDF only).")
+        } else {
+            files.forEach { file ->
+                PdfPreviewCard(file = file, onRemove = { onRemoveFile(file) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun CombinedUploadSection(
+    files: List<SelectedUploadFile>,
+    onPickPdfs: () -> Unit,
+    onPickImages: () -> Unit,
+    onCaptureImage: () -> Unit,
+    onRemoveFile: (SelectedUploadFile) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Button(
+            onClick = onPickPdfs,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp)
+        ) {
             Icon(Icons.Default.Description, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Add PDFs")
         }
+        
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onPickImages, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) {
+                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Gallery")
+            }
+            Button(onClick = onCaptureImage, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) {
+                Icon(Icons.Default.CameraAlt, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Camera")
+            }
+        }
+        
         if (files.isEmpty()) {
-            EmptyPreviewCard("No PDFs selected", "Tap Add PDFs to choose one or more PDF documents.")
+            EmptyPreviewCard("No files selected", "Tap Add PDFs, Gallery or Camera to select documents or images.")
         } else {
-            files.forEach { file ->
-                PdfPreviewCard(file = file, onRemove = { onRemoveFile(file) })
+            val pdfFiles = files.filter { it.displayName.endsWith(".pdf", ignoreCase = true) }
+            val imageFiles = files.filter { !it.displayName.endsWith(".pdf", ignoreCase = true) }
+            
+            if (pdfFiles.isNotEmpty()) {
+                pdfFiles.forEach { file ->
+                    PdfPreviewCard(file = file, onRemove = { onRemoveFile(file) })
+                }
+            }
+            
+            if (imageFiles.isNotEmpty()) {
+                ImagePreviewGrid(files = imageFiles, onRemoveFile = onRemoveFile)
             }
         }
     }
@@ -501,34 +606,6 @@ fun PdfPreviewCard(
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.Close, contentDescription = "Remove PDF")
             }
-        }
-    }
-}
-
-@Composable
-private fun ImageUploadSection(
-    files: List<SelectedUploadFile>,
-    onPickImages: () -> Unit,
-    onCaptureImage: () -> Unit,
-    onRemoveFile: (SelectedUploadFile) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = onPickImages, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) {
-                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Gallery")
-            }
-            Button(onClick = onCaptureImage, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) {
-                Icon(Icons.Default.CameraAlt, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Camera")
-            }
-        }
-        if (files.isEmpty()) {
-            EmptyPreviewCard("No images selected", "Open camera or gallery. Camera and gallery images can be mixed.")
-        } else {
-            ImagePreviewGrid(files = files, onRemoveFile = onRemoveFile)
         }
     }
 }
@@ -607,6 +684,9 @@ private fun ImagePreviewTile(
 @Composable
 private fun YoutubeUploadSection(
     youtubeUrl: String,
+    isFetching: Boolean,
+    preview: YoutubePreview?,
+    error: String?,
     onYoutubeUrlChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -625,49 +705,109 @@ private fun YoutubeUploadSection(
                 unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
             )
         )
-        YoutubePreviewCard(youtubeUrl)
+        YoutubePreviewCard(preview = preview, isFetching = isFetching, error = error)
     }
 }
 
 @Composable
-fun YoutubePreviewCard(url: String) {
+fun YoutubePreviewCard(
+    preview: YoutubePreview?,
+    isFetching: Boolean,
+    error: String?
+) {
+    if (preview == null && !isFetching && error == null) {
+        return
+    }
+
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 112.dp, height = 74.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.primaryContainer)
-                        ),
-                        RoundedCornerShape(18.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.OndemandVideo, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = "DBMS Full Course",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = url.ifBlank { "youtube.com/..." },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+        Box(modifier = Modifier.padding(14.dp)) {
+            if (isFetching) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth().height(74.dp)
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = "Loading video details...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (error != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(34.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else if (preview != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 112.dp, height = 74.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (preview.thumbnailUrl.isNotBlank()) {
+                            AsyncImage(
+                                model = preview.thumbnailUrl,
+                                contentDescription = "Video Thumbnail",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.OndemandVideo,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = preview.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = preview.channelTitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
@@ -711,11 +851,21 @@ fun UploadSummaryCard(uiState: UploadUiState) {
         ) {
             SectionHeader("Upload Preview")
             SummaryRow("Branch", uiState.selectedBranch.ifBlank { "Required" })
-            SummaryRow("Year", uiState.selectedYear.ifBlank { "Required" })
+            SummaryRow("Semester", uiState.selectedSemester.ifBlank { "Required" })
             SummaryRow("Subject", uiState.subject.ifBlank { "Required" })
-            SummaryRow("Content Type", uiState.selectedType?.label ?: "Not selected")
-            SummaryRow("Files", if (uiState.selectedType == UploadType.Youtube && uiState.youtubeUrl.isNotBlank()) "1 link" else uiState.selectedFiles.size.toString())
-            SummaryRow("Total Size", formatBytes(uiState.totalSizeBytes))
+            SummaryRow("Document Type", uiState.selectedType?.label ?: "Not selected")
+            
+            if (uiState.selectedType == UploadType.Pyq) {
+                SummaryRow("Exam Year", uiState.selectedExamYear.ifBlank { "Required" })
+                SummaryRow("Exam Type", uiState.selectedExamType.ifBlank { "Required" })
+            }
+            
+            if (uiState.selectedType == UploadType.Youtube) {
+                SummaryRow("YouTube URL", uiState.youtubeUrl.ifBlank { "Not provided" })
+            } else {
+                SummaryRow("Files", uiState.selectedFiles.size.toString())
+                SummaryRow("Total Size", formatBytes(uiState.totalSizeBytes))
+            }
         }
     }
 }
@@ -734,8 +884,8 @@ private fun StatusMessages(uiState: UploadUiState) {
         uiState.errorMessage?.let { message ->
             StatusCard(message = message, icon = Icons.Default.ErrorOutline, error = true)
         }
-        uiState.savedUpload?.let { item ->
-            StatusCard(message = "Saved locally: ${item.subject} (${item.type.label})", icon = Icons.Default.CheckCircle, error = false)
+        if (uiState.uploadSuccess) {
+            StatusCard(message = "Upload completed successfully!", icon = Icons.Default.CheckCircle, error = false)
         }
     }
 }
@@ -768,23 +918,25 @@ private fun StatusCard(
 @Composable
 fun UploadButton(
     isSaving: Boolean,
+    enabled: Boolean,
+    progress: Float,
     onUpload: () -> Unit
 ) {
-    Button(
-        onClick = onUpload,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(54.dp),
-        enabled = !isSaving,
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-    ) {
-        if (isSaving) {
-            LinearProgressIndicator(modifier = Modifier.width(96.dp), color = MaterialTheme.colorScheme.onPrimary)
-        } else {
+    if (isSaving) {
+        LiquidTransferProgressBar(progress = progress)
+    } else {
+        Button(
+            onClick = onUpload,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp),
+            enabled = enabled,
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
             Icon(Icons.Default.Upload, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Save Upload Locally", fontWeight = FontWeight.Bold)
+            Text("Upload Document", fontWeight = FontWeight.Bold)
         }
     }
 }
