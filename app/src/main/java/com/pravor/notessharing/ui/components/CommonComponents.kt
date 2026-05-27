@@ -1,7 +1,6 @@
 package com.pravor.notessharing.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,21 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
-import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -131,83 +123,59 @@ fun CategoryChip(
 fun FeedCard(
     item: FeedItem,
     onUpvoteClick: () -> Unit,
-    onSaveClick: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(text = item.uploaderInitials)
-                Spacer(Modifier.width(12.dp))
+                Avatar(text = item.uploaderInitials, modifier = Modifier.size(34.dp))
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = item.uploaderName,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = item.uploadDate,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 FileTypeBadge(item.fileType)
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = item.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item.tags.forEach { tag -> TagPill(tag) }
-            }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                StatItem(Icons.Default.ThumbUp, item.upvotes.toString())
-                StatItem(Icons.Default.ChatBubbleOutline, item.comments.toString())
+                StatItem(
+                    icon = Icons.Default.ThumbUp,
+                    value = item.upvotes.toString(),
+                    modifier = Modifier.clickable(onClick = onUpvoteClick)
+                )
                 StatItem(Icons.Default.Download, item.downloads.toString())
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionIconButton(
-                    selected = item.isUpvoted,
-                    selectedIcon = Icons.Filled.ThumbUp,
-                    unselectedIcon = Icons.Outlined.ThumbUp,
-                    contentDescription = "Upvote",
-                    onClick = onUpvoteClick
-                )
-                ActionIconButton(
-                    selected = item.isSaved,
-                    selectedIcon = Icons.Filled.Bookmark,
-                    unselectedIcon = Icons.Filled.BookmarkBorder,
-                    contentDescription = "Save",
-                    onClick = onSaveClick
-                )
-                ActionIconButton(
-                    selected = false,
-                    selectedIcon = Icons.Filled.Share,
-                    unselectedIcon = Icons.Filled.Share,
-                    contentDescription = "Share",
-                    onClick = {}
-                )
             }
         }
     }
@@ -216,10 +184,13 @@ fun FeedCard(
 @Composable
 fun StudyFileCard(
     file: StudyFile,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
@@ -255,6 +226,59 @@ fun StudyFileCard(
                     text = "${file.uploadDate} | ${file.fileType.label} | ${file.downloads} downloads | ${file.upvotes} upvotes",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CompactStudyFileRow(
+    file: StudyFile,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FilePresent,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = file.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = "${file.uploadDate} | ${file.downloads} downloads",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -322,10 +346,9 @@ fun StatePanel(
 }
 
 @Composable
-fun Avatar(text: String, modifier: Modifier = Modifier) {
+fun Avatar(text: String, modifier: Modifier = Modifier.size(48.dp)) {
     Box(
         modifier = modifier
-            .size(48.dp)
             .background(
                 brush = Brush.linearGradient(
                     listOf(
@@ -369,34 +392,6 @@ fun StatItem(icon: ImageVector, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ActionIconButton(
-    selected: Boolean,
-    selectedIcon: ImageVector,
-    unselectedIcon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit
-) {
-    val scale by animateFloatAsState(if (selected) 1.08f else 1f, label = "action-scale")
-    val tint by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "action-tint"
-    )
-
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        IconButton(onClick = onClick, modifier = Modifier.scale(scale)) {
-            Icon(
-                imageVector = if (selected) selectedIcon else unselectedIcon,
-                contentDescription = contentDescription,
-                tint = tint
-            )
-        }
-    }
-}
-
-@Composable
 private fun FileTypeBadge(fileType: FileType) {
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -408,22 +403,6 @@ private fun FileTypeBadge(fileType: FileType) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onTertiaryContainer,
             fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun TagPill(tag: String) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Text(
-            text = tag,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
         )
     }
 }

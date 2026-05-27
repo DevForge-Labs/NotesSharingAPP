@@ -2,7 +2,6 @@ package com.pravor.notessharing.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.UploadFile
@@ -15,8 +14,11 @@ sealed class AppDestination(
 ) {
     data object Home : AppDestination("home", "Home", Icons.Filled.Home)
     data object Explore : AppDestination("explore", "Explore", Icons.Filled.Explore)
+    data object TrendingNotes : AppDestination("explore/trending_notes", "Trending Notes", Icons.Filled.Explore)
+    data object RecommendedVideos : AppDestination("explore/recommended_videos", "Recommended Videos", Icons.Filled.Explore)
+    data object Discover : AppDestination("explore/discover", "Discover", Icons.Filled.Explore)
     data object Upload : AppDestination("upload", "Upload", Icons.Filled.UploadFile)
-    data object MyFiles : AppDestination("my_files", "My Files", Icons.Filled.Folder)
+    data object MyFiles : AppDestination("my_files", "My Files", Icons.Filled.UploadFile)
     data object Profile : AppDestination("profile", "Profile", Icons.Filled.Person)
 }
 
@@ -24,6 +26,5 @@ val bottomDestinations = listOf(
     AppDestination.Home,
     AppDestination.Explore,
     AppDestination.Upload,
-    AppDestination.MyFiles,
     AppDestination.Profile
 )

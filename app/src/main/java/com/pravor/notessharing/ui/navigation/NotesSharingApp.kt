@@ -11,7 +11,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pravor.notessharing.ui.components.BottomNavBar
+import com.pravor.notessharing.ui.screens.explore.DiscoverRoute
 import com.pravor.notessharing.ui.screens.explore.ExploreRoute
+import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
+import com.pravor.notessharing.ui.screens.explore.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
 import com.pravor.notessharing.ui.screens.profile.ProfileRoute
@@ -29,20 +32,29 @@ fun NotesSharingApp(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val selectedBottomRoute = if (currentRoute?.startsWith("${AppDestination.Explore.route}/") == true) {
+        AppDestination.Explore.route
+    } else {
+        currentRoute
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             BottomNavBar(
                 destinations = bottomDestinations,
-                currentRoute = currentRoute,
+                currentRoute = selectedBottomRoute,
                 onDestinationClick = { destination ->
-                    navController.navigate(destination.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+                    if (destination == AppDestination.Home) {
+                        navController.popBackStack(AppDestination.Home.route, inclusive = false)
+                    } else {
+                        navController.navigate(destination.route) {
+                            popUpTo(AppDestination.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
                 }
             )
@@ -53,8 +65,52 @@ fun NotesSharingApp(
             startDestination = AppDestination.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(AppDestination.Home.route) { HomeRoute() }
-            composable(AppDestination.Explore.route) { ExploreRoute() }
+            composable(AppDestination.Home.route) {
+                HomeRoute(
+                    onViewAllLibraryClick = {
+                        navController.navigate(AppDestination.MyFiles.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onSeeMoreClick = {
+                        navController.navigate(AppDestination.Explore.route) {
+                            popUpTo(AppDestination.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+            composable(AppDestination.Explore.route) {
+                ExploreRoute(
+                    onTrendingSeeMoreClick = {
+                        navController.navigate(AppDestination.TrendingNotes.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onRecommendedVideosSeeMoreClick = {
+                        navController.navigate(AppDestination.RecommendedVideos.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onDiscoverSeeMoreClick = {
+                        navController.navigate(AppDestination.Discover.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(AppDestination.TrendingNotes.route) {
+                TrendingNotesRoute(onBackClick = { navController.popBackStack() })
+            }
+            composable(AppDestination.RecommendedVideos.route) {
+                RecommendedVideosRoute(onBackClick = { navController.popBackStack() })
+            }
+            composable(AppDestination.Discover.route) {
+                DiscoverRoute(onBackClick = { navController.popBackStack() })
+            }
             composable(AppDestination.Upload.route) { UploadRoute() }
             composable(AppDestination.MyFiles.route) { MyFilesRoute() }
             composable(AppDestination.Profile.route) {

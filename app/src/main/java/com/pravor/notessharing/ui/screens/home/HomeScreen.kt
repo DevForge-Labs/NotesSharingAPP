@@ -1,57 +1,86 @@
 package com.pravor.notessharing.ui.screens.home
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FilePresent
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.model.Category
+import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.HomeUiState
+import com.pravor.notessharing.state.MyFilesUiState
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
-import com.pravor.notessharing.ui.components.CategoryChip
-import com.pravor.notessharing.ui.components.FeedCard
+import com.pravor.notessharing.ui.components.CompactStudyFileRow
 import com.pravor.notessharing.ui.components.NotesSearchBar
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.DummyData
 import com.pravor.notessharing.viewmodel.HomeViewModel
+import com.pravor.notessharing.viewmodel.MyFilesViewModel
 
 @Composable
-fun HomeRoute(viewModel: HomeViewModel = viewModel()) {
+fun HomeRoute(
+    onViewAllLibraryClick: () -> Unit = {},
+    onSeeMoreClick: () -> Unit = {},
+    viewModel: HomeViewModel = viewModel(),
+    myFilesViewModel: MyFilesViewModel = viewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
-        onCategoryClick = viewModel::selectCategory,
+        myFilesUiState = myFilesUiState,
         onUpvoteClick = viewModel::toggleUpvote,
-        onSaveClick = viewModel::toggleSaved
+        onBookmarkClick = viewModel::toggleSaved,
+        onViewAllLibraryClick = onViewAllLibraryClick,
+        onSeeMoreClick = onSeeMoreClick
     )
 }
 
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    onCategoryClick: (Category) -> Unit,
+    myFilesUiState: MyFilesUiState,
     onUpvoteClick: (String) -> Unit,
-    onSaveClick: (String) -> Unit,
+    onBookmarkClick: (String) -> Unit,
+    onViewAllLibraryClick: () -> Unit,
+    onSeeMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val feedListState = rememberLazyListState()
@@ -69,9 +98,11 @@ fun HomeScreen(
             is HomeUiState.Error -> StatePanel("Something went wrong", state.message, modifier = Modifier.padding(top = 96.dp))
             is HomeUiState.Success -> HomeSuccessContent(
                 content = state.content,
-                onCategoryClick = onCategoryClick,
+                myFilesUiState = myFilesUiState,
                 onUpvoteClick = onUpvoteClick,
-                onSaveClick = onSaveClick,
+                onBookmarkClick = onBookmarkClick,
+                onViewAllLibraryClick = onViewAllLibraryClick,
+                onSeeMoreClick = onSeeMoreClick,
                 listState = feedListState
             )
         }
@@ -81,18 +112,26 @@ fun HomeScreen(
 @Composable
 private fun HomeSuccessContent(
     content: HomeContent,
-    onCategoryClick: (Category) -> Unit,
+    myFilesUiState: MyFilesUiState,
     onUpvoteClick: (String) -> Unit,
-    onSaveClick: (String) -> Unit,
+    onBookmarkClick: (String) -> Unit,
+    onViewAllLibraryClick: () -> Unit,
+    onSeeMoreClick: () -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
+    val libraryFiles = when (myFilesUiState) {
+        is MyFilesUiState.Success -> (myFilesUiState.content.savedFiles + myFilesUiState.content.uploadedFiles).take(5)
+        else -> emptyList()
+    }
+    val visibleFeedItems = content.feedItems.take(4)
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
             state = listState,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "home-title", contentType = "header") {
@@ -103,41 +142,169 @@ private fun HomeSuccessContent(
                     fontWeight = FontWeight.Bold
                 )
             }
-            item(key = "home-search", contentType = "search") { NotesSearchBar("Search notes, subjects, PDFs...") }
-            item(key = "home-categories", contentType = "categories") {
-                val categoryListState = rememberLazyListState()
-                Box {
-                    LazyRow(
-                        state = categoryListState,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            item(key = "home-search", contentType = "search") {
+                NotesSearchBar("Search notes, PYQs, PDFs...")
+            }
+            item(key = "continue-title", contentType = "section") {
+                Spacer(Modifier.height(4.dp))
+                SectionHeader("Continue Reading")
+            }
+            item(key = "continue-card", contentType = "continue-reading") {
+                ContinueReadingCard(
+                    item = content.feedItems.firstOrNull(),
+                    onClick = {}
+                )
+            }
+            item(key = "for-you-title", contentType = "section") {
+                Spacer(Modifier.height(8.dp))
+                SectionHeader("For You")
+            }
+            items(visibleFeedItems, key = { it.id }, contentType = { "feed-card" }) { feedItem ->
+                HomeFeedCard(
+                    item = feedItem,
+                    onClick = {},
+                    onUpvoteClick = { onUpvoteClick(feedItem.id) },
+                    onBookmarkClick = { onBookmarkClick(feedItem.id) }
+                )
+            }
+            if (content.feedItems.size > visibleFeedItems.size) {
+                item(key = "for-you-see-more", contentType = "action") {
+                    TextButton(
+                        onClick = onSeeMoreClick,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(content.categories, key = { it.name }, contentType = { "category" }) { category ->
-                            CategoryChip(
-                                category = category,
-                                selected = content.selectedCategory == category,
-                                onClick = { onCategoryClick(category) }
-                            )
-                        }
+                        Text("See More")
                     }
-                    AdaptiveScrollbar(
-                        listState = categoryListState,
-                        orientation = com.pravor.notessharing.ui.components.ScrollbarOrientation.Horizontal
-                    )
                 }
             }
-            item(key = "home-section", contentType = "section") {
-                Spacer(Modifier.height(8.dp))
-                SectionHeader("Fresh from your campus")
+            item(key = "library-title", contentType = "section") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionHeader("Your Library", modifier = Modifier.weight(1f))
+                    TextButton(onClick = onViewAllLibraryClick) {
+                        Text("View All")
+                    }
+                }
             }
-            items(content.feedItems, key = { it.id }, contentType = { "feed-card" }) { feedItem ->
-                FeedCard(
-                    item = feedItem,
-                    onUpvoteClick = { onUpvoteClick(feedItem.id) },
-                    onSaveClick = { onSaveClick(feedItem.id) }
-                )
+            if (libraryFiles.isEmpty()) {
+                item(key = "library-empty", contentType = "empty") {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer
+                    ) {
+                        Text(
+                            text = "Start exploring notes",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                items(libraryFiles, key = { "library-${it.id}" }, contentType = { "library-file" }) { file ->
+                    CompactStudyFileRow(file = file, onClick = {})
+                }
             }
         }
         AdaptiveScrollbar(listState = listState)
+    }
+}
+
+@Composable
+private fun ContinueReadingCard(
+    item: FeedItem?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (item == null) {
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer
+        ) {
+            Text(
+                text = "Start exploring notes",
+                modifier = Modifier.padding(18.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.FilePresent,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Page 18/42 | Last opened 2h ago",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            LinearProgressIndicator(
+                progress = { 0.43f },
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "43% completed",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(onClick = onClick, shape = RoundedCornerShape(18.dp)) {
+                    Text("Continue Reading")
+                }
+            }
+        }
     }
 }
 
@@ -147,11 +314,15 @@ private fun HomePreview() {
     NotesSharingTheme {
         HomeScreen(
             uiState = HomeUiState.Success(
-                HomeContent(Category.Notes, DummyData.categories, DummyData.feedItems)
+                HomeContent(DummyData.categories.first(), DummyData.categories, DummyData.feedItems)
             ),
-            onCategoryClick = {},
+            myFilesUiState = MyFilesUiState.Success(
+                com.pravor.notessharing.state.MyFilesContent(DummyData.savedFiles, DummyData.uploadedFiles)
+            ),
             onUpvoteClick = {},
-            onSaveClick = {}
+            onBookmarkClick = {},
+            onViewAllLibraryClick = {},
+            onSeeMoreClick = {}
         )
     }
 }
