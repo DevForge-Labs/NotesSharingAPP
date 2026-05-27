@@ -36,8 +36,10 @@ class LocalUploadRepository(private val context: Context) {
         val id = UUID.randomUUID().toString()
         val uploadDir = File(context.filesDir, "uploads/$id").apply { mkdirs() }
         val localUris = when (type) {
-            UploadType.Pdf,
-            UploadType.Images -> selectedFiles.mapIndexed { index, file ->
+            UploadType.Pyq,
+            UploadType.Notes,
+            UploadType.CheatSheet,
+            UploadType.Assignment -> selectedFiles.mapIndexed { index, file ->
                 copyIntoLocalUpload(uri = Uri.parse(file.uri), uploadDir = uploadDir, fallbackName = "${type.label}-$index")
             }
             UploadType.Youtube -> emptyList()

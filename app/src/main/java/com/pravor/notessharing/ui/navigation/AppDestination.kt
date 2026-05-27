@@ -18,6 +18,7 @@ sealed class AppDestination(
     data object RecommendedVideos : AppDestination("explore/recommended_videos", "Recommended Videos", Icons.Filled.Explore)
     data object Discover : AppDestination("explore/discover", "Discover", Icons.Filled.Explore)
     data object Upload : AppDestination("upload", "Upload", Icons.Filled.UploadFile)
+    data object UploadSuccess : AppDestination("upload/success", "Upload Success", Icons.Filled.UploadFile)
     data object MyFiles : AppDestination("my_files", "My Files", Icons.Filled.UploadFile)
     data object Profile : AppDestination("profile", "Profile", Icons.Filled.Person)
     data object EditProfile : AppDestination("profile/edit", "Edit Profile", Icons.Filled.Person)

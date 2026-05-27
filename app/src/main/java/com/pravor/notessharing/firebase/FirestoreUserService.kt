@@ -27,6 +27,12 @@ class FirestoreUserService {
                 val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 val branch = snapshot.getString("branch") ?: "Computer Science"
                 val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
+                
+                val pyqUploads = snapshot.getLong("pyqUploads")?.toInt() ?: 0
+                val notesUploads = snapshot.getLong("notesUploads")?.toInt() ?: 0
+                val assignmentUploads = snapshot.getLong("assignmentUploads")?.toInt() ?: 0
+                val cheatSheetUploads = snapshot.getLong("cheatSheetUploads")?.toInt() ?: 0
+                val youtubeUploads = snapshot.getLong("youtubeUploads")?.toInt() ?: 0
 
                 Profile(
                     uid = uid,
@@ -41,7 +47,12 @@ class FirestoreUserService {
                     notesUploaded = notesUploaded,
                     contributorLevel = contributorLevel,
                     branch = branch,
-                    createdAt = createdAt
+                    createdAt = createdAt,
+                    pyqUploads = pyqUploads,
+                    notesUploads = notesUploads,
+                    assignmentUploads = assignmentUploads,
+                    cheatSheetUploads = cheatSheetUploads,
+                    youtubeUploads = youtubeUploads
                 )
             } else {
                 null
@@ -71,6 +82,12 @@ class FirestoreUserService {
                     val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                     val branch = snapshot.getString("branch") ?: "Computer Science"
                     val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
+                    
+                    val pyqUploads = snapshot.getLong("pyqUploads")?.toInt() ?: 0
+                    val notesUploads = snapshot.getLong("notesUploads")?.toInt() ?: 0
+                    val assignmentUploads = snapshot.getLong("assignmentUploads")?.toInt() ?: 0
+                    val cheatSheetUploads = snapshot.getLong("cheatSheetUploads")?.toInt() ?: 0
+                    val youtubeUploads = snapshot.getLong("youtubeUploads")?.toInt() ?: 0
 
                     val profile = Profile(
                         uid = uid,
@@ -85,7 +102,12 @@ class FirestoreUserService {
                         notesUploaded = notesUploaded,
                         contributorLevel = contributorLevel,
                         branch = branch,
-                        createdAt = createdAt
+                        createdAt = createdAt,
+                        pyqUploads = pyqUploads,
+                        notesUploads = notesUploads,
+                        assignmentUploads = assignmentUploads,
+                        cheatSheetUploads = cheatSheetUploads,
+                        youtubeUploads = youtubeUploads
                     )
                     trySend(profile)
                 } catch (e: Exception) {

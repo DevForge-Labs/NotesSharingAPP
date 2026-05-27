@@ -41,6 +41,12 @@ import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.ui.graphics.Color
+import com.pravor.notessharing.model.calculateLevelProgress
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -173,6 +179,9 @@ private fun ProfileContent(
                     StatCard("Bookmarks", profile.bookmarks.toString(), Icons.Default.Bookmark, Modifier.weight(1f))
                     StatCard("Upvotes", profile.upvotes.toString(), Icons.Default.TrendingUp, Modifier.weight(1f))
                 }
+            }
+            item(key = "uploads-breakdown", contentType = "uploads-breakdown") {
+                UploadsBreakdownCard(profile)
             }
             item(key = "quick-actions-title", contentType = "section") {
                 SectionHeader("Quick Actions")
@@ -323,35 +332,13 @@ fun ProfileHeaderCard(profile: Profile) {
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(12.dp))
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(17.dp)
-                    )
-                    Text(
-                        text = "Top Contributor",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
         }
     }
 }
 
 @Composable
 fun ContributorCard(profile: Profile) {
+    val progressInfo = calculateLevelProgress(profile.uploads)
     PressScaleCard(
         shape = RoundedCornerShape(26.dp),
         modifier = Modifier.fillMaxWidth()
@@ -385,20 +372,20 @@ fun ContributorCard(profile: Profile) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "Level ${profile.contributorLevel} Contributor",
+                        text = "Level ${progressInfo.currentLevel} Contributor",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${profile.uploads} notes uploaded | ${profile.upvotes} upvotes earned",
+                        text = "${profile.uploads} files uploaded | ${profile.upvotes} upvotes earned",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             LinearProgressIndicator(
-                progress = { 0.68f },
+                progress = { progressInfo.progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp),
@@ -406,12 +393,114 @@ fun ContributorCard(profile: Profile) {
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
             Text(
-                text = "68% toward Level 5",
+                text = progressInfo.nextLevelText,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold
             )
         }
+    }
+}
+
+@Composable
+fun UploadsBreakdownCard(profile: Profile) {
+    PressScaleCard(
+        shape = RoundedCornerShape(26.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "Uploads Breakdown",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatBreakdownRow(
+                    label = "PYQs Uploaded",
+                    count = profile.pyqUploads,
+                    icon = Icons.Default.Description,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                StatBreakdownRow(
+                    label = "Notes Uploaded",
+                    count = profile.notesUploads,
+                    icon = Icons.Default.Image,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                StatBreakdownRow(
+                    label = "Assignments Uploaded",
+                    count = profile.assignmentUploads,
+                    icon = Icons.Default.Assignment,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                StatBreakdownRow(
+                    label = "Cheat Sheets Uploaded",
+                    count = profile.cheatSheetUploads,
+                    icon = Icons.Default.Bookmark,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                StatBreakdownRow(
+                    label = "YouTube Resources",
+                    count = profile.youtubeUploads,
+                    icon = Icons.Default.Link,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatBreakdownRow(
+    label: String,
+    count: Int,
+    icon: ImageVector,
+    tint: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                modifier = Modifier.size(34.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            text = count.toString(),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

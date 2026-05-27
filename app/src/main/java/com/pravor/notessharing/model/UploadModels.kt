@@ -3,9 +3,11 @@ package com.pravor.notessharing.model
 import androidx.compose.runtime.Immutable
 
 enum class UploadType(val label: String) {
-    Pdf("PDF"),
-    Images("Images"),
-    Youtube("YouTube Link")
+    Pyq("PYQ"),
+    Notes("Notes"),
+    CheatSheet("Cheat Sheet"),
+    Assignment("Assignment"),
+    Youtube("YouTube Resource")
 }
 
 enum class UploadFileSource {

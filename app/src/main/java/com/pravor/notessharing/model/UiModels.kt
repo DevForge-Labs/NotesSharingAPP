@@ -53,7 +53,14 @@ data class Profile(
     val notesUploaded: Int = 0,
     val contributorLevel: Int = 1,
     val branch: String = "Computer Science",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    
+    // Type-specific upload stats
+    val pyqUploads: Int = 0,
+    val notesUploads: Int = 0,
+    val assignmentUploads: Int = 0,
+    val cheatSheetUploads: Int = 0,
+    val youtubeUploads: Int = 0
 ) {
     @get:Exclude
     val initials: String
@@ -66,6 +73,80 @@ data class Profile(
         } else {
             "PN"
         }
+}
+
+data class LevelProgress(
+    val currentLevel: Int,
+    val nextLevel: Int,
+    val currentUploads: Int,
+    val targetUploads: Int,
+    val progress: Float,
+    val nextLevelText: String
+)
+
+fun calculateLevelProgress(uploads: Int): LevelProgress {
+    return when {
+        uploads < 5 -> {
+            val progress = uploads.toFloat() / 5f
+            LevelProgress(
+                currentLevel = 1,
+                nextLevel = 2,
+                currentUploads = uploads,
+                targetUploads = 5,
+                progress = progress,
+                nextLevelText = "$uploads / 5 uploads completed"
+            )
+        }
+        uploads < 15 -> {
+            val completedInLevel = uploads - 5
+            val neededInLevel = 15 - 5 // 10
+            val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
+            LevelProgress(
+                currentLevel = 2,
+                nextLevel = 3,
+                currentUploads = uploads,
+                targetUploads = 15,
+                progress = progress,
+                nextLevelText = "$uploads / 15 uploads completed"
+            )
+        }
+        uploads < 30 -> {
+            val completedInLevel = uploads - 15
+            val neededInLevel = 30 - 15 // 15
+            val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
+            LevelProgress(
+                currentLevel = 3,
+                nextLevel = 4,
+                currentUploads = uploads,
+                targetUploads = 30,
+                progress = progress,
+                nextLevelText = "$uploads / 30 uploads completed"
+            )
+        }
+        uploads < 50 -> {
+            val completedInLevel = uploads - 30
+            val neededInLevel = 50 - 30 // 20
+            val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
+            LevelProgress(
+                currentLevel = 4,
+                nextLevel = 5,
+                currentUploads = uploads,
+                targetUploads = 50,
+                progress = progress,
+                nextLevelText = "$uploads / 50 uploads completed"
+            )
+        }
+        else -> {
+            LevelProgress(
+                currentLevel = 5,
+                nextLevel = 5,
+                currentUploads = uploads,
+                targetUploads = uploads,
+                progress = 1.0f,
+                nextLevelText = "Max Level 5 Contributor ($uploads uploads)"
+            )
+        }
+    }
 }
 
 enum class FileType(val label: String) {

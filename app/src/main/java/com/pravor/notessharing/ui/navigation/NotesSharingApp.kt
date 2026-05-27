@@ -20,6 +20,7 @@ import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
 import com.pravor.notessharing.ui.screens.profile.ProfileRoute
 import com.pravor.notessharing.ui.screens.profile.EditProfileRoute
 import com.pravor.notessharing.ui.screens.upload.UploadRoute
+import com.pravor.notessharing.ui.screens.upload.UploadSuccessRoute
 import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ThemePreference
 import com.pravor.notessharing.ui.screens.auth.SplashScreen
@@ -185,7 +186,23 @@ fun NotesSharingApp(
             composable(AppDestination.Discover.route) {
                 DiscoverRoute(onBackClick = { navController.popBackStack() })
             }
-            composable(AppDestination.Upload.route) { UploadRoute() }
+            composable(AppDestination.Upload.route) {
+                UploadRoute(
+                    onUploadSuccess = {
+                        navController.navigate(AppDestination.UploadSuccess.route)
+                    }
+                )
+            }
+            composable(AppDestination.UploadSuccess.route) {
+                UploadSuccessRoute(
+                    onUploadAgain = {
+                        navController.popBackStack(AppDestination.Upload.route, inclusive = false)
+                    },
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
             composable(AppDestination.MyFiles.route) { MyFilesRoute() }
             composable(AppDestination.Profile.route) {
                 ProfileRoute(
