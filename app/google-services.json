@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1093598842915",
+    "project_id": "notessharingapp-dfee3",
+    "storage_bucket": "notessharingapp-dfee3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1093598842915:android:a4c44bb77b6e2751a5e196",
+        "android_client_info": {
+          "package_name": "com.pravor.notessharing"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALceiY8Q6CF1yK_kG97LCRCnIuaZ4IWvE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
