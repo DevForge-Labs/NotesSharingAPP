@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1093598842915-9qjtj3mla1bquepro0qt2p54l49lemcp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pravor.notessharing",
+            "certificate_hash": "8a58fc3662a4eefbc4c25eec490e38e1d4d3c17f"
+          }
+        },
+        {
           "client_id": "1093598842915-e1ma64hkvo3567noj4pt2a8khbv5flqk.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

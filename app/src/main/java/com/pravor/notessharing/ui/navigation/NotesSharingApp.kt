@@ -18,9 +18,16 @@ import com.pravor.notessharing.ui.screens.explore.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
 import com.pravor.notessharing.ui.screens.profile.ProfileRoute
+import com.pravor.notessharing.ui.screens.profile.EditProfileRoute
 import com.pravor.notessharing.ui.screens.upload.UploadRoute
 import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ThemePreference
+import com.pravor.notessharing.ui.screens.auth.SplashScreen
+import com.pravor.notessharing.ui.screens.auth.WelcomeScreen
+import com.pravor.notessharing.ui.screens.auth.LoginScreen
+import com.pravor.notessharing.ui.screens.auth.SignUpScreen
+import com.pravor.notessharing.auth.AuthViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun NotesSharingApp(
@@ -29,6 +36,7 @@ fun NotesSharingApp(
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationsChange: (Boolean) -> Unit
 ) {
+    val authViewModel: AuthViewModel = viewModel()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -38,33 +46,99 @@ fun NotesSharingApp(
         currentRoute
     }
 
+    val isAuthScreen = currentRoute == AppDestination.Splash.route ||
+            currentRoute == AppDestination.Welcome.route ||
+            currentRoute == AppDestination.Login.route ||
+            currentRoute == AppDestination.SignUp.route
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            BottomNavBar(
-                destinations = bottomDestinations,
-                currentRoute = selectedBottomRoute,
-                onDestinationClick = { destination ->
-                    if (destination == AppDestination.Home) {
-                        navController.popBackStack(AppDestination.Home.route, inclusive = false)
-                    } else {
-                        navController.navigate(destination.route) {
-                            popUpTo(AppDestination.Home.route) {
-                                saveState = true
+            if (!isAuthScreen) {
+                BottomNavBar(
+                    destinations = bottomDestinations,
+                    currentRoute = selectedBottomRoute,
+                    onDestinationClick = { destination ->
+                        if (destination == AppDestination.Home) {
+                            navController.popBackStack(AppDestination.Home.route, inclusive = false)
+                        } else {
+                            navController.navigate(destination.route) {
+                                popUpTo(AppDestination.Home.route) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
                     }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = AppDestination.Home.route,
+            startDestination = AppDestination.Splash.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable(AppDestination.Splash.route) {
+                SplashScreen(
+                    viewModel = authViewModel,
+                    onNavigateToHome = {
+                        navController.navigate(AppDestination.Home.route) {
+                            popUpTo(AppDestination.Splash.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateToAuth = {
+                        navController.navigate(AppDestination.Welcome.route) {
+                            popUpTo(AppDestination.Splash.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable(AppDestination.Welcome.route) {
+                WelcomeScreen(
+                    viewModel = authViewModel,
+                    onNavigateToLogin = { navController.navigate(AppDestination.Login.route) },
+                    onNavigateToSignUp = { navController.navigate(AppDestination.SignUp.route) },
+                    onNavigateToHome = {
+                        navController.navigate(AppDestination.Home.route) {
+                            popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable(AppDestination.Login.route) {
+                LoginScreen(
+                    viewModel = authViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSignUp = {
+                        navController.navigate(AppDestination.SignUp.route) {
+                            popUpTo(AppDestination.Welcome.route)
+                        }
+                    },
+                    onNavigateToHome = {
+                        navController.navigate(AppDestination.Home.route) {
+                            popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable(AppDestination.SignUp.route) {
+                SignUpScreen(
+                    viewModel = authViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToLogin = {
+                        navController.navigate(AppDestination.Login.route) {
+                            popUpTo(AppDestination.Welcome.route)
+                        }
+                    },
+                    onNavigateToHome = {
+                        navController.navigate(AppDestination.Home.route) {
+                            popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable(AppDestination.Home.route) {
                 HomeRoute(
                     onViewAllLibraryClick = {
@@ -118,7 +192,24 @@ fun NotesSharingApp(
                     appSettings = appSettings,
                     onDarkModeChange = onDarkModeChange,
                     onThemePreferenceChange = onThemePreferenceChange,
-                    onNotificationsChange = onNotificationsChange
+                    onNotificationsChange = onNotificationsChange,
+                    onLogoutClick = {
+                        authViewModel.logout()
+                        navController.navigate(AppDestination.Splash.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onEditProfileClick = {
+                        navController.navigate(AppDestination.EditProfile.route)
+                    }
+                )
+            }
+            composable(AppDestination.EditProfile.route) {
+                EditProfileRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToProfile = {
+                        navController.popBackStack(AppDestination.Profile.route, inclusive = false)
+                    }
                 )
             }
         }

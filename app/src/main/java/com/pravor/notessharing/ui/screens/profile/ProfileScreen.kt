@@ -5,6 +5,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -39,6 +40,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,7 +77,9 @@ import com.pravor.notessharing.state.ThemePreference
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
-import com.pravor.notessharing.viewmodel.ProfileViewModel
+import com.pravor.notessharing.profile.ProfileViewModel
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @Composable
 fun ProfileRoute(
@@ -82,6 +87,8 @@ fun ProfileRoute(
     onDarkModeChange: (Boolean) -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
+    onLogoutClick: () -> Unit,
+    onEditProfileClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -89,7 +96,9 @@ fun ProfileRoute(
         uiState = uiState,
         appSettings = appSettings,
         onThemePreferenceChange = onThemePreferenceChange,
-        onNotificationsChange = onNotificationsChange
+        onNotificationsChange = onNotificationsChange,
+        onLogoutClick = onLogoutClick,
+        onEditProfileClick = onEditProfileClick
     )
 }
 
@@ -100,6 +109,8 @@ fun ProfileScreen(
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
+    onLogoutClick: () -> Unit,
+    onEditProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val profileListState = rememberLazyListState()
@@ -120,6 +131,8 @@ fun ProfileScreen(
                 appSettings = appSettings,
                 onThemePreferenceChange = onThemePreferenceChange,
                 onNotificationsChange = onNotificationsChange,
+                onLogoutClick = onLogoutClick,
+                onEditProfileClick = onEditProfileClick,
                 listState = profileListState
             )
         }
@@ -132,9 +145,12 @@ private fun ProfileContent(
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationsChange: (Boolean) -> Unit,
+    onLogoutClick: () -> Unit,
+    onEditProfileClick: () -> Unit,
     listState: LazyListState
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -154,7 +170,7 @@ private fun ProfileContent(
             item(key = "stats-row", contentType = "stats") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatCard("Uploads", profile.uploads.toString(), Icons.Default.UploadFile, Modifier.weight(1f))
-                    StatCard("Bookmarks", profile.saved.toString(), Icons.Default.Bookmark, Modifier.weight(1f))
+                    StatCard("Bookmarks", profile.bookmarks.toString(), Icons.Default.Bookmark, Modifier.weight(1f))
                     StatCard("Upvotes", profile.upvotes.toString(), Icons.Default.TrendingUp, Modifier.weight(1f))
                 }
             }
@@ -169,7 +185,7 @@ private fun ProfileContent(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         QuickActionButton("History", Icons.Default.History, Modifier.weight(1f))
-                        QuickActionButton("Edit Profile", Icons.Default.Edit, Modifier.weight(1f))
+                        QuickActionButton("Edit Profile", Icons.Default.Edit, Modifier.weight(1f), onClick = onEditProfileClick)
                     }
                 }
             }
@@ -180,7 +196,8 @@ private fun ProfileContent(
                 SettingsList(
                     appSettings = appSettings,
                     onAppearanceClick = { showThemeDialog = true },
-                    onNotificationsChange = onNotificationsChange
+                    onNotificationsChange = onNotificationsChange,
+                    onLogoutClick = { showLogoutDialog = true }
                 )
             }
         }
@@ -195,6 +212,39 @@ private fun ProfileContent(
                 showThemeDialog = false
             },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text(
+                    text = "Log Out?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("Are you sure you want to sign out of your account?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogoutClick()
+                    }
+                ) {
+                    Text("Log Out", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 }
@@ -220,23 +270,43 @@ fun ProfileHeaderCard(profile: Profile) {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(86.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+            var isImageError by remember { mutableStateOf(false) }
+            if (profile.profileImageUrl.isNotEmpty() && !isImageError) {
+                AsyncImage(
+                    model = profile.profileImageUrl,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(86.dp)
+                        .clip(CircleShape)
+                        .border(
+                            2.dp,
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                            ),
+                            CircleShape
                         ),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = profile.initials,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
+                    contentScale = ContentScale.Crop,
+                    onError = { isImageError = true }
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(86.dp)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                            ),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = profile.initials,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             Spacer(Modifier.height(14.dp))
             Text(
@@ -315,7 +385,7 @@ fun ContributorCard(profile: Profile) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "Level 4 Contributor",
+                        text = "Level ${profile.contributorLevel} Contributor",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
@@ -388,11 +458,13 @@ fun StatCard(
 fun QuickActionButton(
     label: String,
     icon: ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     PressScaleCard(
         shape = RoundedCornerShape(22.dp),
-        modifier = modifier
+        modifier = modifier,
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 15.dp),
@@ -428,7 +500,8 @@ fun QuickActionButton(
 private fun SettingsList(
     appSettings: AppSettingsUiState,
     onAppearanceClick: () -> Unit,
-    onNotificationsChange: (Boolean) -> Unit
+    onNotificationsChange: (Boolean) -> Unit,
+    onLogoutClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -468,6 +541,13 @@ private fun SettingsList(
                 subtitle = "Version 1.0",
                 icon = Icons.Default.Info,
                 onClick = {}
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+            SettingsRow(
+                title = "Log Out",
+                subtitle = "Sign out of your account",
+                icon = Icons.Default.ExitToApp,
+                onClick = onLogoutClick
             )
         }
     }
@@ -608,6 +688,7 @@ private fun ThemeOptionRow(
 private fun PressScaleCard(
     shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -620,7 +701,7 @@ private fun PressScaleCard(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = {}
+                onClick = onClick
             ),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
