@@ -79,3 +79,11 @@ enum class ThemePreference(val label: String) {
     Light("Light"),
     Dark("Dark")
 }
+
+sealed interface EditProfileState {
+    data object Idle : EditProfileState
+    data object Loading : EditProfileState
+    data object Success : EditProfileState
+    data class Error(val message: String) : EditProfileState
+}
+

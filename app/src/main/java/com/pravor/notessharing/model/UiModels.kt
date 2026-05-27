@@ -1,6 +1,7 @@
 package com.pravor.notessharing.model
 
 import androidx.compose.runtime.Immutable
+import com.google.firebase.firestore.Exclude
 
 @Immutable
 data class FeedItem(
@@ -36,16 +37,36 @@ data class TrendingTopic(
     val subtitle: String
 )
 
+
+
 @Immutable
 data class Profile(
-    val name: String,
-    val initials: String,
-    val branch: String,
-    val semester: String,
-    val uploads: Int,
-    val saved: Int,
-    val upvotes: Int
-)
+    val uid: String = "",
+    val name: String = "",
+    val email: String = "",
+    val semester: String = "Not Set",
+    val profileImageUrl: String = "",
+    val role: String = "user",
+    val uploads: Int = 0,
+    val bookmarks: Int = 0,
+    val upvotes: Int = 0,
+    val notesUploaded: Int = 0,
+    val contributorLevel: Int = 1,
+    val branch: String = "Computer Science",
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    @get:Exclude
+    val initials: String
+        get() = if (name.isNotBlank()) {
+            name.split(" ")
+                .filter { it.isNotBlank() }
+                .take(2)
+                .map { it.first().uppercase() }
+                .joinToString("")
+        } else {
+            "PN"
+        }
+}
 
 enum class FileType(val label: String) {
     Pdf("PDF"),
@@ -65,3 +86,18 @@ enum class Category(val label: String) {
     Videos("Videos"),
     Trending("Trending")
 }
+
+fun semesterToYear(semester: Int): Int {
+    return when (semester) {
+        1, 2 -> 1
+        3, 4 -> 2
+        5, 6 -> 3
+        7, 8 -> 4
+        else -> 1
+    }
+}
+
+fun getSemesterInt(semesterStr: String): Int {
+    return semesterStr.filter { it.isDigit() }.toIntOrNull() ?: 1
+}
+

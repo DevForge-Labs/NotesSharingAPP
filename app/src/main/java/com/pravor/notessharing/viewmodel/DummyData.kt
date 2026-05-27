@@ -59,15 +59,7 @@ internal object DummyData {
         StudyFile("uploaded-ml", "Regression Formula Sheet", "Uploaded Apr 18", FileType.CheatSheet, 118, 28)
     )
 
-    val profile = Profile(
-        name = "Pratyush Nishank",
-        initials = "PN",
-        branch = "Computer Science",
-        semester = "Semester 5",
-        uploads = 34,
-        saved = 52,
-        upvotes = 428
-    )
+
 
     val categories = Category.entries
     val topics = listOf(
