@@ -27,7 +27,8 @@ fun ExploreSuccessContent(
     listState: LazyListState,
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
-    onDiscoverSeeMoreClick: () -> Unit
+    onDiscoverSeeMoreClick: () -> Unit,
+    onDocumentClick: (String) -> Unit
 ) {
     val visibleTrendingNotes = content.trendingNotes.take(7)
     val visibleRecommendedVideos = content.videoRecommendations.take(4)
@@ -61,7 +62,7 @@ fun ExploreSuccessContent(
             item(key = "trending-carousel", contentType = "carousel") {
                 ScrollableRowWithIndicator {
                     items(visibleTrendingNotes, key = { it.id }, contentType = { "trending-note" }) { note ->
-                        TrendingNoteCard(note)
+                        TrendingNoteCard(note, onClick = { onDocumentClick(note.id) })
                     }
                 }
             }
@@ -120,7 +121,7 @@ fun ExploreSuccessContent(
                     }
                 }
             ) { item ->
-                DiscoverFeedItem(item)
+                DiscoverFeedItem(item, onClick = { onDocumentClick(item.id) })
             }
             if (content.discoverItems.size > visibleDiscoverItems.size) {
                 item(key = "discover-see-more", contentType = "action") {

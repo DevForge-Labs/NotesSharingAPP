@@ -29,10 +29,11 @@ import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.model.TrendingNote
 
 @Composable
-fun TrendingNoteCard(note: TrendingNote) {
+fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
     PressScaleSurface(
         modifier = Modifier.width(216.dp),
-        shape = RoundedCornerShape(26.dp)
+        shape = RoundedCornerShape(26.dp),
+        onClick = onClick
     ) {
         Column(
             Modifier

@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.model.Profile
 import com.pravor.notessharing.model.calculateLevelProgress
+import com.pravor.notessharing.ui.components.LiquidContributorCard
 import com.pravor.notessharing.ui.theme.ElectricBlue
 import com.pravor.notessharing.viewmodel.ContributorStatsUiState
 import com.pravor.notessharing.viewmodel.ContributorStatsViewModel
@@ -113,7 +114,7 @@ fun UploadSuccessScreen(
                     ContributorStatsCard(profile)
 
                     // 4. Card 3 — Contributor Progress Level Card
-                    ContributorProgressCard(profile)
+                    LiquidContributorCard(profile)
                 }
                 is ContributorStatsUiState.Error -> {
                     Text(
@@ -356,74 +357,4 @@ private fun StatBreakdownRow(
     }
 }
 
-@Composable
-private fun ContributorProgressCard(profile: Profile) {
-    val progressInfo = calculateLevelProgress(profile.uploads)
-    
-    Card(
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.15f),
-                            MaterialTheme.colorScheme.surfaceContainer
-                        )
-                    )
-                )
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.WorkspacePremium,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Level ${progressInfo.currentLevel} Contributor",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (progressInfo.currentLevel == 5) "Max Level Reached" else "Progress to Level ${progressInfo.nextLevel}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
 
-            LinearProgressIndicator(
-                progress = { progressInfo.progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
-
-            Text(
-                text = progressInfo.nextLevelText,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}

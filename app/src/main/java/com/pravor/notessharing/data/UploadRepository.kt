@@ -10,6 +10,8 @@ import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.state.YoutubePreview
+import com.pravor.notessharing.viewmodel.DummyData
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class UploadRepository(private val context: Context) {
@@ -52,6 +54,91 @@ class UploadRepository(private val context: Context) {
         return name to size.coerceAtLeast(0L)
     }
 
+    suspend fun uploadNotes(
+        branch: String,
+        semester: String,
+        subject: String,
+        selectedFiles: List<SelectedUploadFile>,
+        onProgress: (Float) -> Unit
+    ) {
+        uploadDocument(
+            branch = branch,
+            semester = semester,
+            subject = subject,
+            type = UploadType.Notes,
+            selectedFiles = selectedFiles,
+            youtubeUrl = null,
+            youtubePreview = null,
+            examYear = null,
+            examType = null,
+            onProgress = onProgress
+        )
+    }
+
+    suspend fun uploadCheatSheet(
+        branch: String,
+        semester: String,
+        subject: String,
+        selectedFiles: List<SelectedUploadFile>,
+        onProgress: (Float) -> Unit
+    ) {
+        uploadDocument(
+            branch = branch,
+            semester = semester,
+            subject = subject,
+            type = UploadType.CheatSheet,
+            selectedFiles = selectedFiles,
+            youtubeUrl = null,
+            youtubePreview = null,
+            examYear = null,
+            examType = null,
+            onProgress = onProgress
+        )
+    }
+
+    suspend fun uploadAssignment(
+        branch: String,
+        semester: String,
+        subject: String,
+        selectedFiles: List<SelectedUploadFile>,
+        onProgress: (Float) -> Unit
+    ) {
+        uploadDocument(
+            branch = branch,
+            semester = semester,
+            subject = subject,
+            type = UploadType.Assignment,
+            selectedFiles = selectedFiles,
+            youtubeUrl = null,
+            youtubePreview = null,
+            examYear = null,
+            examType = null,
+            onProgress = onProgress
+        )
+    }
+
+    suspend fun uploadYouTubeResource(
+        branch: String,
+        semester: String,
+        subject: String,
+        youtubeUrl: String,
+        youtubePreview: YoutubePreview?,
+        onProgress: (Float) -> Unit
+    ) {
+        uploadDocument(
+            branch = branch,
+            semester = semester,
+            subject = subject,
+            type = UploadType.Youtube,
+            selectedFiles = emptyList(),
+            youtubeUrl = youtubeUrl,
+            youtubePreview = youtubePreview,
+            examYear = null,
+            examType = null,
+            onProgress = onProgress
+        )
+    }
+
     suspend fun uploadDocument(
         branch: String,
         semester: String,
@@ -69,44 +156,78 @@ class UploadRepository(private val context: Context) {
         val displaySubject = subject.trim()
         val searchKey = normalizeSubject(displaySubject)
 
+        var uploaderName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Anonymous"
+        var uploaderPhotoUrl = FirebaseAuth.getInstance().currentUser?.photoUrl?.toString() ?: ""
+        try {
+            val userProfile = com.pravor.notessharing.firebase.FirestoreUserService().getUserProfile(uploaderId)
+            if (userProfile != null) {
+                if (userProfile.name.isNotBlank()) {
+                    uploaderName = userProfile.name
+                }
+                if (userProfile.profileImageUrl.isNotBlank()) {
+                    uploaderPhotoUrl = userProfile.profileImageUrl
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+
         if (type == UploadType.Youtube) {
-            val preview = youtubePreview ?: throw Exception("Invalid YouTube video details.")
+            val documentId = UUID.randomUUID().toString()
+            val videoId = youtubeUrl?.let { com.pravor.notessharing.model.extractYoutubeVideoId(it) } ?: ""
+            val generatedThumb = if (videoId.isNotBlank()) "https://img.youtube.com/vi/$videoId/hqdefault.jpg" else (youtubePreview?.thumbnailUrl ?: "")
+            val title = youtubePreview?.title ?: "YouTube Video"
+            val channelName = youtubePreview?.channelTitle ?: "YouTube Channel"
+            
             val doc = mapOf(
-                "title" to preview.title,
-                "displaySubject" to displaySubject,
-                "searchKey" to searchKey,
+                "documentId" to documentId,
+                "title" to title,
+                "description" to "",
                 "branch" to branch,
                 "semester" to semester,
+                "subject" to displaySubject,
+                "displaySubject" to displaySubject,
+                "searchKey" to searchKey,
+                "documentType" to type.label,
                 "type" to type.label,
-                "youtubeUrl" to (youtubeUrl ?: preview.url),
-                "thumbnailUrl" to preview.thumbnailUrl,
-                "videoTitle" to preview.title,
-                "channelTitle" to preview.channelTitle,
                 "uploaderId" to uploaderId,
+                "uploaderName" to uploaderName,
+                "uploaderPhotoUrl" to uploaderPhotoUrl,
+                "uploadTimestamp" to uploadedAt,
                 "uploadedAt" to uploadedAt,
+                "downloadsCount" to 0,
                 "downloads" to 0,
+                "likesCount" to 0,
+                "upvotes" to 0,
                 "bookmarks" to 0,
-                "upvotes" to 0
+                "viewsCount" to 0,
+                "fileUrl" to null,
+                "storagePath" to null,
+                "fileSize" to 0L,
+                "fileExtension" to "",
+                "isVerified" to false,
+                "tags" to emptyList<String>(),
+                "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: "")),
+                "youtubeVideoId" to videoId,
+                "thumbnailUrl" to generatedThumb,
+                "channelName" to channelName,
+                "videoTitle" to title
             )
-            firestoreService.saveDocument(doc)
+            firestoreService.saveDocument(filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
             onProgress(1.0f)
-        } else {
+        } else if (type == UploadType.Pyq) {
+            if (selectedFiles.size != 1) {
+                throw IllegalArgumentException("PYQs support only a single PDF upload.")
+            }
             val totalBytes = selectedFiles.sumOf { it.sizeBytes }
             var totalUploadedBytes = 0L
 
             for (file in selectedFiles) {
-                val cleanFileName = Uri.parse(file.uri).lastPathSegment?.substringAfterLast('/') ?: "file_${UUID.randomUUID()}"
-                
-                val folderName = when (type) {
-                    UploadType.Pyq -> "pyqs"
-                    UploadType.Notes -> "notes"
-                    UploadType.CheatSheet -> "cheatsheets"
-                    UploadType.Assignment -> "assignments"
-                    else -> "documents"
-                }
-                
-                val storagePath = "$folderName/$semester/$cleanFileName"
+                val documentId = UUID.randomUUID().toString()
+                val sanitizedSubject = sanitizeForStorage(subject)
+                val ext = getFileExtension(file.displayName, file.uri)
+                val storagePath = "pyqs/${semester.trim()}/$sanitizedSubject-pyq-$documentId.$ext"
 
                 val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
                     val fileUploadedBytes = (fileProgress * file.sizeBytes).toLong()
@@ -121,31 +242,165 @@ class UploadRepository(private val context: Context) {
                 totalUploadedBytes += file.sizeBytes
 
                 val doc = mutableMapOf<String, Any>(
+                    "documentId" to documentId,
                     "title" to file.displayName,
-                    "displaySubject" to displaySubject,
-                    "searchKey" to searchKey,
+                    "description" to "",
                     "branch" to branch,
                     "semester" to semester,
+                    "subject" to displaySubject,
+                    "displaySubject" to displaySubject,
+                    "searchKey" to searchKey,
+                    "documentType" to type.label,
                     "type" to type.label,
-                    "storagePath" to uploadedPath,
-                    "downloadUrl" to downloadUrl,
-                    "fileSize" to file.sizeBytes,
                     "uploaderId" to uploaderId,
+                    "uploaderName" to uploaderName,
+                    "uploaderPhotoUrl" to uploaderPhotoUrl,
+                    "uploadTimestamp" to uploadedAt,
                     "uploadedAt" to uploadedAt,
+                    "downloadsCount" to 0,
                     "downloads" to 0,
+                    "likesCount" to 0,
+                    "upvotes" to 0,
                     "bookmarks" to 0,
-                    "upvotes" to 0
+                    "viewsCount" to 0,
+                    "fileUrl" to downloadUrl,
+                    "downloadUrl" to downloadUrl,
+                    "storagePath" to uploadedPath,
+                    "fileSize" to file.sizeBytes,
+                    "fileExtension" to ext,
+                    "isVerified" to false,
+                    "tags" to emptyList<String>(),
+                    "attachmentCount" to 1
                 )
 
-                if (type == UploadType.Pyq) {
-                    doc["examYear"] = examYear ?: ""
-                    doc["examType"] = examType ?: ""
-                }
+                doc["examYear"] = examYear ?: ""
+                doc["examType"] = examType ?: ""
 
-                firestoreService.saveDocument(doc)
+                firestoreService.saveDocument(filterNullValues(doc))
             }
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, selectedFiles.size)
+        } else {
+            val totalBytes = selectedFiles.sumOf { it.sizeBytes }
+            var totalUploadedBytes = 0L
+            val downloadUrls = mutableListOf<String>()
+            val storagePaths = mutableListOf<String>()
+            
+            val documentId = UUID.randomUUID().toString()
+            
+            val folderName = when (type) {
+                UploadType.Notes -> "notes"
+                UploadType.CheatSheet -> "cheatsheets"
+                UploadType.Assignment -> "assignments"
+                else -> "documents"
+            }
+
+            val sanitizedSubject = sanitizeForStorage(subject)
+            val typeSlug = when (type) {
+                UploadType.Notes -> "notes"
+                UploadType.CheatSheet -> "cheatsheet"
+                UploadType.Assignment -> "assignment"
+                else -> "document"
+            }
+            val folderSlug = "$sanitizedSubject-$typeSlug-$documentId"
+
+            for ((index, file) in selectedFiles.withIndex()) {
+                val ext = getFileExtension(file.displayName, file.uri)
+                val fileName = if (ext == "pdf") {
+                    if (selectedFiles.size > 1) {
+                        sanitizeFileName(file.displayName)
+                    } else {
+                        val base = when (type) {
+                            UploadType.Assignment -> "solution"
+                            UploadType.CheatSheet -> "cheatsheet"
+                            else -> "notes"
+                        }
+                        "$base.pdf"
+                    }
+                } else {
+                    "page${index + 1}.$ext"
+                }
+                
+                val storagePath = "$folderName/$folderSlug/$fileName"
+
+                val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
+                    val fileUploadedBytes = (fileProgress * file.sizeBytes).toLong()
+                    val overallProgress = if (totalBytes > 0) {
+                        (totalUploadedBytes + fileUploadedBytes).toFloat() / totalBytes.toFloat()
+                    } else {
+                        1.0f
+                    }
+                    onProgress(overallProgress.coerceIn(0f, 1f))
+                }
+
+                totalUploadedBytes += file.sizeBytes
+                downloadUrls.add(downloadUrl)
+                storagePaths.add(uploadedPath)
+            }
+
+            val firstFileExtension = getFileExtension(selectedFiles.first().displayName, selectedFiles.first().uri)
+            val isPdf = firstFileExtension == "pdf"
+            val fileType = if (isPdf) "pdf" else "image"
+            val mimeType = when (firstFileExtension) {
+                "pdf" -> "application/pdf"
+                "jpg", "jpeg" -> "image/jpeg"
+                "png" -> "image/png"
+                "webp" -> "image/webp"
+                else -> "application/octet-stream"
+            }
+
+            val formattedTitle = "${subject.trim()} ${type.label}"
+
+            val doc = mutableMapOf<String, Any>(
+                "documentId" to documentId,
+                "title" to formattedTitle,
+                "description" to "",
+                "branch" to branch,
+                "semester" to semester,
+                "subject" to displaySubject,
+                "displaySubject" to displaySubject,
+                "searchKey" to searchKey,
+                "documentType" to type.label,
+                "type" to type.label,
+                "uploaderId" to uploaderId,
+                "uploaderName" to uploaderName,
+                "uploaderPhotoUrl" to uploaderPhotoUrl,
+                "uploadTimestamp" to uploadedAt,
+                "uploadedAt" to uploadedAt,
+                "downloadsCount" to 0,
+                "downloads" to 0,
+                "likesCount" to 0,
+                "upvotes" to 0,
+                "bookmarks" to 0,
+                "viewsCount" to 0,
+                "fileUrl" to downloadUrls.first(),
+                "downloadUrl" to downloadUrls.first(),
+                "storagePath" to storagePaths.first(),
+                "fileSize" to totalBytes,
+                "fileExtension" to firstFileExtension,
+                "isVerified" to false,
+                "tags" to emptyList<String>(),
+                
+                // Enhanced metadata fields
+                "fileType" to fileType,
+                "mimeType" to mimeType,
+                "fileUrls" to downloadUrls,
+                "thumbnailUrl" to (if (fileType == "image") downloadUrls.first() else ""),
+                "attachmentCount" to selectedFiles.size
+            )
+
+            firestoreService.saveDocument(filterNullValues(doc))
+            statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
         }
+    }
+
+    private fun filterNullValues(map: Map<String, Any?>): Map<String, Any> {
+        val nonNullMap = mutableMapOf<String, Any>()
+        for ((key, value) in map) {
+            if (value != null) {
+                nonNullMap[key] = value
+            }
+        }
+        return nonNullMap
     }
 
     private fun normalizeSubject(subject: String): String {
@@ -153,5 +408,114 @@ class UploadRepository(private val context: Context) {
             .trim()
             .lowercase()
             .replace(" ", "")
+    }
+
+    suspend fun getDocumentFileUrls(documentId: String): List<String> {
+        return try {
+            val snapshot = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("documents")
+                .document(documentId)
+                .get()
+                .await()
+            if (snapshot.exists()) {
+                val fileUrls = (snapshot.get("fileUrls") as? List<*>)?.mapNotNull { it as? String }
+                if (fileUrls != null && fileUrls.isNotEmpty()) {
+                    return fileUrls
+                }
+                val singleUrl = snapshot.getString("downloadUrl") ?: snapshot.getString("fileUrl") ?: snapshot.getString("youtubeUrl")
+                if (singleUrl != null) {
+                    return listOf(singleUrl)
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun resolveFilesForDocument(id: String): Pair<String, List<String>> {
+        // Try loading from Firestore first
+        val firestoreUrls = getDocumentFileUrls(id)
+        if (firestoreUrls.isNotEmpty()) {
+            val title = try {
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("documents")
+                    .document(id)
+                    .get()
+                    .await()
+                    .getString("title") ?: "Document"
+            } catch (e: Exception) {
+                "Document"
+            }
+            return title to firestoreUrls
+        }
+
+        // Fallback to dummy data
+        val dummyFeed = DummyData.feedItems.find { it.id == id }
+        if (dummyFeed != null) {
+            val title = dummyFeed.title
+            val mockUrls = when (id) {
+                "feed-dbms-4" -> listOf(
+                    "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500",
+                    "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=500"
+                )
+                "feed-cn-cheat" -> listOf("https://images.unsplash.com/photo-1517842645767-c639042777db?w=500")
+                "feed-coa-notes" -> listOf(
+                    "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500",
+                    "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=500"
+                )
+                else -> listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+            }
+            return title to mockUrls
+        }
+
+        val dummySaved = DummyData.savedFiles.find { it.id == id }
+        if (dummySaved != null) {
+            return dummySaved.title to listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+        }
+
+        val dummyUploaded = DummyData.uploadedFiles.find { it.id == id }
+        if (dummyUploaded != null) {
+            return dummyUploaded.title to listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+        }
+
+        val dummyTrending = DummyData.trendingNotes.find { it.id == id }
+        if (dummyTrending != null) {
+            return dummyTrending.title to listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+        }
+
+        return "Document" to emptyList()
+    }
+
+    private fun sanitizeForStorage(input: String): String {
+        return input.lowercase()
+            .replace("\\s+".toRegex(), "-")
+            .replace("[^a-z0-9\\-]".toRegex(), "")
+            .replace("-+".toRegex(), "-")
+            .trim('-')
+    }
+
+    private fun sanitizeFileName(name: String): String {
+        val baseName = name.substringBeforeLast('.')
+        val ext = name.substringAfterLast('.', "")
+        val sanitizedBase = baseName.lowercase()
+            .replace("\\s+".toRegex(), "-")
+            .replace("[^a-z0-9\\-]".toRegex(), "")
+            .replace("-+".toRegex(), "-")
+            .trim('-')
+        return if (ext.isNotBlank()) "$sanitizedBase.${ext.lowercase()}" else sanitizedBase
+    }
+
+    private fun getFileExtension(displayName: String, uriString: String): String {
+        val extFromDisplay = displayName.substringAfterLast('.', "").lowercase()
+        if (extFromDisplay.isNotBlank() && extFromDisplay.length <= 4) {
+            return extFromDisplay
+        }
+        val extFromUri = uriString.substringAfterLast('.', "").lowercase().substringBefore('?')
+        if (extFromUri.isNotBlank() && extFromUri.length <= 4) {
+            return extFromUri
+        }
+        return "pdf" // Default fallback
     }
 }

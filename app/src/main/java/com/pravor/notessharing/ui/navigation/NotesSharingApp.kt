@@ -199,7 +199,13 @@ fun NotesSharingApp(
                         navController.popBackStack(AppDestination.Upload.route, inclusive = false)
                     },
                     onBackClick = {
-                        navController.popBackStack()
+                        navController.navigate(AppDestination.Profile.route) {
+                            popUpTo(AppDestination.Upload.route) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
@@ -218,6 +224,11 @@ fun NotesSharingApp(
                     },
                     onEditProfileClick = {
                         navController.navigate(AppDestination.EditProfile.route)
+                    },
+                    onMyUploadsClick = {
+                        navController.navigate(AppDestination.MyFiles.route) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

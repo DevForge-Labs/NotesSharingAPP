@@ -10,6 +10,7 @@ import com.pravor.notessharing.data.UploadRepository
 import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
+import com.pravor.notessharing.model.extractYoutubeVideoId
 import com.pravor.notessharing.state.UploadUiState
 import com.pravor.notessharing.state.YoutubePreview
 import kotlinx.coroutines.Dispatchers
@@ -98,50 +99,76 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         // PYQ: exactly 1 PDF, no images.
         if (current.selectedType == UploadType.Pyq) {
             if (uris.size > 1 || current.selectedFiles.isNotEmpty()) {
-                _uiState.update { it.copy(errorMessage = "PYQ only allows a single PDF document.") }
+                _uiState.update { it.copy(errorMessage = "PYQs support only a single PDF upload.") }
                 return
             }
             val resolvedUri = uris.first()
             val name = getFileName(resolvedUri)
             if (!name.endsWith(".pdf", ignoreCase = true)) {
-                _uiState.update { it.copy(errorMessage = "PYQ must be a PDF document.") }
+                _uiState.update { it.copy(errorMessage = "PYQs support only a single PDF upload.") }
                 return
             }
         }
 
-        // Notes / Cheat Sheets / Assignments: PDF or Images allowed. No YouTube.
+        // Notes / Cheat Sheets / Assignments: PDF or images (JPG, JPEG, PNG, WEBP) allowed.
         if (current.selectedType in listOf(UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment)) {
+            val allowedExtensions = listOf("pdf", "jpg", "jpeg", "png", "webp")
             for (uri in uris) {
                 val name = getFileName(uri)
-                val isPdf = name.endsWith(".pdf", ignoreCase = true)
-                val isImage = name.endsWith(".jpg", ignoreCase = true) || name.endsWith(".jpeg", ignoreCase = true) || name.endsWith(".png", ignoreCase = true) || name.endsWith(".webp", ignoreCase = true)
-                if (!isPdf && !isImage) {
-                    _uiState.update { it.copy(errorMessage = "Only PDF and Image files are allowed.") }
+                val ext = name.substringAfterLast('.', "").lowercase()
+                if (ext !in allowedExtensions) {
+                    _uiState.update { it.copy(errorMessage = "Only PDF and image files (JPG, JPEG, PNG, WEBP) are allowed.") }
                     return
                 }
             }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val files = uris.map { uri ->
+            val resolvedFiles = uris.map { uri ->
                 takeReadPermission(uri)
                 repository.resolveSelectedFile(uri, source)
             }
-            _uiState.update {
-                it.copy(
-                    selectedFiles = it.selectedFiles + files,
-                    errorMessage = null,
+            
+            _uiState.update { state ->
+                val candidateFiles = state.selectedFiles + resolvedFiles
+                val validationError = validateSelectedFiles(candidateFiles)
+                state.copy(
+                    selectedFiles = candidateFiles,
+                    errorMessage = validationError,
                     uploadSuccess = false
                 )
             }
         }
     }
 
+    private fun validateSelectedFiles(files: List<SelectedUploadFile>): String? {
+        if (files.isEmpty()) return null
+        
+        val pdfCount = files.count { it.displayName.endsWith(".pdf", ignoreCase = true) }
+        val imageCount = files.count { 
+            val ext = it.displayName.substringAfterLast('.', "").lowercase()
+            ext in listOf("jpg", "jpeg", "png", "webp")
+        }
+        
+        if (pdfCount > 0 && imageCount > 0) {
+            return "Please upload either PDF documents or images, not both together."
+        }
+        
+        val selectedType = _uiState.value.selectedType
+        if (selectedType == UploadType.Pyq && (pdfCount > 1 || files.size > 1)) {
+            return "PYQs support only a single PDF upload."
+        }
+        
+        return null
+    }
+
     fun removeFile(file: SelectedUploadFile) {
         _uiState.update { state ->
             val files = state.selectedFiles.filterNot { it.uri == file.uri }
+            val validationError = validateSelectedFiles(files)
             state.copy(
                 selectedFiles = files,
+                errorMessage = validationError,
                 uploadSuccess = false
             )
         }
@@ -172,11 +199,11 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 fetchYoutubeMetadata(url)
             }.onSuccess { preview ->
                 _uiState.update { it.copy(youtubePreview = preview, isFetchingYoutube = false) }
-            }.onFailure { e ->
+            }.onFailure {
                 _uiState.update {
                     it.copy(
                         isFetchingYoutube = false,
-                        youtubeError = "Failed to load video details: ${e.message}"
+                        youtubeError = "Video preview unavailable. The YouTube link can still be uploaded."
                     )
                 }
             }
@@ -216,7 +243,11 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         when (type) {
             UploadType.Pyq -> {
                 if (state.selectedFiles.size != 1) {
-                    _uiState.update { it.copy(errorMessage = "PYQ requires exactly one PDF.") }
+                    _uiState.update { it.copy(errorMessage = "PYQs support only a single PDF upload.") }
+                    return
+                }
+                if (!state.selectedFiles.first().displayName.endsWith(".pdf", ignoreCase = true)) {
+                    _uiState.update { it.copy(errorMessage = "PYQs support only a single PDF upload.") }
                     return
                 }
                 if (state.selectedExamYear.isBlank()) {
@@ -228,35 +259,89 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                     return
                 }
             }
-            UploadType.Youtube -> {
-                if (state.youtubeUrl.isBlank() || state.youtubePreview == null) {
-                    _uiState.update { it.copy(errorMessage = "A valid YouTube URL and video details are required.") }
-                    return
-                }
-            }
-            else -> {
+            UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> {
                 if (state.selectedFiles.isEmpty()) {
                     _uiState.update { it.copy(errorMessage = "Please select at least one file to upload.") }
                     return
                 }
+                val validationError = validateSelectedFiles(state.selectedFiles)
+                if (validationError != null) {
+                    _uiState.update { it.copy(errorMessage = validationError) }
+                    return
+                }
+            }
+            UploadType.Youtube -> {
+                if (state.youtubeUrl.isBlank() || extractYoutubeVideoId(state.youtubeUrl) == null) {
+                    _uiState.update { it.copy(errorMessage = "A valid YouTube URL is required.") }
+                    return
+                }
+            }
+            null -> {
+                _uiState.update { it.copy(errorMessage = "Please select a document type.") }
+                return
             }
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null, uploadProgress = 0f) }
             runCatching {
-                repository.uploadDocument(
-                    branch = state.selectedBranch,
-                    semester = state.selectedSemester,
-                    subject = state.subject,
-                    type = type!!,
-                    selectedFiles = state.selectedFiles,
-                    youtubeUrl = state.youtubeUrl,
-                    youtubePreview = state.youtubePreview,
-                    examYear = if (type == UploadType.Pyq) state.selectedExamYear else null,
-                    examType = if (type == UploadType.Pyq) state.selectedExamType else null
-                ) { progress ->
-                    _uiState.update { it.copy(uploadProgress = progress) }
+                when (type!!) {
+                    UploadType.Pyq -> {
+                        repository.uploadDocument(
+                            branch = state.selectedBranch,
+                            semester = state.selectedSemester,
+                            subject = state.subject,
+                            type = type,
+                            selectedFiles = state.selectedFiles,
+                            youtubeUrl = state.youtubeUrl,
+                            youtubePreview = state.youtubePreview,
+                            examYear = state.selectedExamYear,
+                            examType = state.selectedExamType
+                        ) { progress ->
+                            _uiState.update { it.copy(uploadProgress = progress) }
+                        }
+                    }
+                    UploadType.Notes -> {
+                        repository.uploadNotes(
+                            branch = state.selectedBranch,
+                            semester = state.selectedSemester,
+                            subject = state.subject,
+                            selectedFiles = state.selectedFiles
+                        ) { progress ->
+                            _uiState.update { it.copy(uploadProgress = progress) }
+                        }
+                    }
+                    UploadType.CheatSheet -> {
+                        repository.uploadCheatSheet(
+                            branch = state.selectedBranch,
+                            semester = state.selectedSemester,
+                            subject = state.subject,
+                            selectedFiles = state.selectedFiles
+                        ) { progress ->
+                            _uiState.update { it.copy(uploadProgress = progress) }
+                        }
+                    }
+                    UploadType.Assignment -> {
+                        repository.uploadAssignment(
+                            branch = state.selectedBranch,
+                            semester = state.selectedSemester,
+                            subject = state.subject,
+                            selectedFiles = state.selectedFiles
+                        ) { progress ->
+                            _uiState.update { it.copy(uploadProgress = progress) }
+                        }
+                    }
+                    UploadType.Youtube -> {
+                        repository.uploadYouTubeResource(
+                            branch = state.selectedBranch,
+                            semester = state.selectedSemester,
+                            subject = state.subject,
+                            youtubeUrl = state.youtubeUrl,
+                            youtubePreview = state.youtubePreview
+                        ) { progress ->
+                            _uiState.update { it.copy(uploadProgress = progress) }
+                        }
+                    }
                 }
             }.onSuccess {
                 _uiState.update {
@@ -296,8 +381,9 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun isValidYoutubeUrl(url: String): Boolean {
         val normalized = url.trim().lowercase()
-        return (normalized.startsWith("http://") || normalized.startsWith("https://")) &&
+        val hasValidPrefix = (normalized.startsWith("http://") || normalized.startsWith("https://")) &&
                 (normalized.contains("youtube.com") || normalized.contains("youtu.be"))
+        return hasValidPrefix && extractYoutubeVideoId(url) != null
     }
 
     private fun getFileName(uri: Uri): String {

@@ -8,6 +8,11 @@ class FirestoreDocumentService {
     private val documentsCollection = firestore.collection("documents")
 
     suspend fun saveDocument(doc: Map<String, Any>) {
-        documentsCollection.add(doc).await()
+        val docId = doc["documentId"] as? String
+        if (docId != null) {
+            documentsCollection.document(docId).set(doc).await()
+        } else {
+            documentsCollection.add(doc).await()
+        }
     }
 }
