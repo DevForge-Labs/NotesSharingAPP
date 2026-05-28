@@ -36,3 +36,11 @@ data class UploadItem(
     val timestamp: Long,
     val totalSizeBytes: Long
 )
+
+fun extractYoutubeVideoId(url: String): String? {
+    val trimmed = url.trim()
+    if (trimmed.isBlank()) return null
+    val pattern = "^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com\\/(?:[^\\/\\n\\s]+\\/\\S+\\/|(?:v|e(?:mbed)?)\\/|\\S*?[?&]v=)|youtu\\.be\\/|youtube\\.com\\/shorts\\/)([a-zA-Z0-9_-]{11})".toRegex(RegexOption.IGNORE_CASE)
+    val matchResult = pattern.find(trimmed)
+    return matchResult?.groupValues?.get(1)
+}

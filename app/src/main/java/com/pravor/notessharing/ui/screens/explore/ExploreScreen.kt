@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,19 +44,54 @@ fun ExploreScreen(
     onDiscoverSeeMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
+    var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
+
     val listState = rememberLazyListState()
 
-    Crossfade(targetState = uiState, label = "explore-state", modifier = modifier.fillMaxSize()) { state ->
-        when (state) {
-            ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
-            ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
-            is ExploreUiState.Error -> StatePanel("Explore failed", state.message, modifier = Modifier.padding(top = 96.dp))
-            is ExploreUiState.Success -> ExploreSuccessContent(
-                content = state.content,
-                listState = listState,
-                onTrendingSeeMoreClick = onTrendingSeeMoreClick,
-                onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
-                onDiscoverSeeMoreClick = onDiscoverSeeMoreClick
+    Box(modifier = modifier.fillMaxSize()) {
+        Crossfade(targetState = uiState, label = "explore-state", modifier = Modifier.fillMaxSize()) { state ->
+            when (state) {
+                ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
+                ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
+                is ExploreUiState.Error -> StatePanel("Explore failed", state.message, modifier = Modifier.padding(top = 96.dp))
+                is ExploreUiState.Success -> ExploreSuccessContent(
+                    content = state.content,
+                    listState = listState,
+                    onTrendingSeeMoreClick = onTrendingSeeMoreClick,
+                    onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
+                    onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
+                    onDocumentClick = { docId ->
+                        coroutineScope.launch {
+                            try {
+                                val (title, fileUrls) = repository.resolveFilesForDocument(docId)
+                                if (fileUrls.isNotEmpty()) {
+                                    selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
+                                }
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        selectedUploadForViewer?.let { viewerData ->
+            com.pravor.notessharing.ui.components.GroupedUploadViewerDialog(
+                title = viewerData.title,
+                fileUrls = viewerData.fileUrls,
+                onDismiss = { selectedUploadForViewer = null },
+                onFileClick = { url ->
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
             )
         }
     }

@@ -81,6 +81,7 @@ import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ProfileUiState
 import com.pravor.notessharing.state.ThemePreference
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
+import com.pravor.notessharing.ui.components.LiquidContributorCard
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.profile.ProfileViewModel
@@ -95,6 +96,7 @@ fun ProfileRoute(
     onNotificationsChange: (Boolean) -> Unit,
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
+    onMyUploadsClick: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -104,7 +106,8 @@ fun ProfileRoute(
         onThemePreferenceChange = onThemePreferenceChange,
         onNotificationsChange = onNotificationsChange,
         onLogoutClick = onLogoutClick,
-        onEditProfileClick = onEditProfileClick
+        onEditProfileClick = onEditProfileClick,
+        onMyUploadsClick = onMyUploadsClick
     )
 }
 
@@ -117,6 +120,7 @@ fun ProfileScreen(
     onNotificationsChange: (Boolean) -> Unit,
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
+    onMyUploadsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val profileListState = rememberLazyListState()
@@ -139,6 +143,7 @@ fun ProfileScreen(
                 onNotificationsChange = onNotificationsChange,
                 onLogoutClick = onLogoutClick,
                 onEditProfileClick = onEditProfileClick,
+                onMyUploadsClick = onMyUploadsClick,
                 listState = profileListState
             )
         }
@@ -153,6 +158,7 @@ private fun ProfileContent(
     onNotificationsChange: (Boolean) -> Unit,
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
+    onMyUploadsClick: () -> Unit,
     listState: LazyListState
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -171,7 +177,7 @@ private fun ProfileContent(
                 ProfileHeaderCard(profile)
             }
             item(key = "contributor-summary", contentType = "contributor-summary") {
-                ContributorCard(profile)
+                LiquidContributorCard(profile)
             }
             item(key = "stats-row", contentType = "stats") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -189,7 +195,7 @@ private fun ProfileContent(
             item(key = "quick-actions", contentType = "actions") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuickActionButton("My Uploads", Icons.Default.UploadFile, Modifier.weight(1f))
+                        QuickActionButton("My Uploads", Icons.Default.UploadFile, Modifier.weight(1f), onClick = onMyUploadsClick)
                         QuickActionButton("Bookmarks", Icons.Default.Bookmark, Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -336,71 +342,7 @@ fun ProfileHeaderCard(profile: Profile) {
     }
 }
 
-@Composable
-fun ContributorCard(profile: Profile) {
-    val progressInfo = calculateLevelProgress(profile.uploads)
-    PressScaleCard(
-        shape = RoundedCornerShape(26.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f),
-                            MaterialTheme.colorScheme.surfaceContainer
-                        )
-                    )
-                )
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.WorkspacePremium,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondary
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = "Level ${progressInfo.currentLevel} Contributor",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${profile.uploads} files uploaded | ${profile.upvotes} upvotes earned",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            LinearProgressIndicator(
-                progress = { progressInfo.progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
-            Text(
-                text = progressInfo.nextLevelText,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
+
 
 @Composable
 fun UploadsBreakdownCard(profile: Profile) {

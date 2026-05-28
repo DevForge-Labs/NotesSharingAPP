@@ -166,9 +166,9 @@ fun UploadScreen(
         }
     }
 
-    val isFormValid = uiState.metadataComplete && when (uiState.selectedType) {
+    val isFormValid = uiState.metadataComplete && uiState.errorMessage == null && when (uiState.selectedType) {
         UploadType.Pyq -> uiState.selectedFiles.size == 1 && uiState.selectedExamYear.isNotBlank() && uiState.selectedExamType.isNotBlank()
-        UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && uiState.youtubePreview != null
+        UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && com.pravor.notessharing.model.extractYoutubeVideoId(uiState.youtubeUrl) != null
         UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> uiState.selectedFiles.isNotEmpty()
         null -> false
     }
@@ -577,7 +577,7 @@ private fun CombinedUploadSection(
             }
             
             if (imageFiles.isNotEmpty()) {
-                ImagePreviewGrid(files = imageFiles, onRemoveFile = onRemoveFile)
+                ImagePreviewSection(files = imageFiles, onRemoveFile = onRemoveFile)
             }
         }
     }
@@ -601,7 +601,11 @@ fun PdfPreviewCard(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(file.displayName, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(formatBytes(file.sizeBytes), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(formatBytes(file.sizeBytes), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.width(8.dp))
+                    Text("• PDF Document", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                }
             }
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.Close, contentDescription = "Remove PDF")
@@ -611,72 +615,277 @@ fun PdfPreviewCard(
 }
 
 @Composable
-fun ImagePreviewGrid(
+fun ImagePreviewSection(
     files: List<SelectedUploadFile>,
     onRemoveFile: (SelectedUploadFile) -> Unit
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(104.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(((files.size + 2) / 3 * 122).coerceAtLeast(122).dp),
-        userScrollEnabled = false,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    if (files.isEmpty()) return
+    
+    if (files.size == 1) {
+        SingleImagePreviewCard(file = files[0], onRemove = { onRemoveFile(files[0]) })
+    } else {
+        ImageGridPreviewLayout(files = files, onRemoveFile = onRemoveFile)
+    }
+}
+
+@Composable
+fun SingleImagePreviewCard(
+    file: SelectedUploadFile,
+    onRemove: () -> Unit
+) {
+    val context = LocalContext.current
+    val imageInfo = remember(file.uri) {
+        runCatching {
+            val uri = Uri.parse(file.uri)
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(stream, null, options)
+                Pair(options.outWidth, options.outHeight)
+            }
+        }.getOrNull()
+    }
+    val dimensions = imageInfo?.let { "${it.first} x ${it.second}" }
+    
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        items(files, key = { it.uri }) { file ->
-            ImagePreviewTile(file = file, onRemove = { onRemoveFile(file) })
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                val bitmap = remember(file.uri) {
+                    runCatching {
+                        val uri = Uri.parse(file.uri)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            context.contentResolver.loadThumbnail(uri, android.util.Size(640, 360), null)
+                        } else {
+                            context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+                        }
+                    }.getOrNull()
+                }
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = file.displayName,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.Center).size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(36.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f), RoundedCornerShape(12.dp))
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Remove image", modifier = Modifier.size(18.dp))
+                }
+            }
+            
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = file.displayName,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatBytes(file.sizeBytes),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (dimensions != null) {
+                        Text(
+                            text = "•",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = dimensions,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ImagePreviewTile(
+fun ImageGridPreviewLayout(
+    files: List<SelectedUploadFile>,
+    onRemoveFile: (SelectedUploadFile) -> Unit
+) {
+    val displayFiles = files.take(4)
+    val remainingCount = if (files.size > 4) files.size - 4 else 0
+    
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        val chunked = displayFiles.chunked(2)
+        chunked.forEachIndexed { rowIndex, rowFiles ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                rowFiles.forEachIndexed { colIndex, file ->
+                    val isLastItem = (rowIndex == 1 && colIndex == 1) || (files.size == 2 && rowIndex == 0 && colIndex == 1) || (files.size == 3 && rowIndex == 1 && colIndex == 0)
+                    val showOverlay = isLastItem && remainingCount > 0
+                    
+                    Box(modifier = Modifier.weight(1f)) {
+                        GridImagePreviewCard(
+                            file = file,
+                            showOverlay = showOverlay,
+                            remainingCount = remainingCount,
+                            onRemove = { onRemoveFile(file) }
+                        )
+                    }
+                }
+                if (rowFiles.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GridImagePreviewCard(
     file: SelectedUploadFile,
+    showOverlay: Boolean,
+    remainingCount: Int,
     onRemove: () -> Unit
 ) {
     val context = LocalContext.current
-    val bitmap = remember(file.uri) {
+    val imageInfo = remember(file.uri) {
         runCatching {
             val uri = Uri.parse(file.uri)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.contentResolver.loadThumbnail(uri, android.util.Size(220, 220), null)
-            } else {
-                context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(stream, null, options)
+                Pair(options.outWidth, options.outHeight)
             }
         }.getOrNull()
     }
+    val dimensions = imageInfo?.let { "${it.first}x${it.second}" }
 
-    Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = file.displayName,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Icon(
-                Icons.Default.Image,
-                contentDescription = null,
-                modifier = Modifier.align(Alignment.Center),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .size(28.dp)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f), RoundedCornerShape(10.dp))
-        ) {
-            Icon(Icons.Default.Close, contentDescription = "Remove image", modifier = Modifier.size(16.dp))
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(4f / 3f)
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                val bitmap = remember(file.uri) {
+                    runCatching {
+                        val uri = Uri.parse(file.uri)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            context.contentResolver.loadThumbnail(uri, android.util.Size(320, 240), null)
+                        } else {
+                            context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+                        }
+                    }.getOrNull()
+                }
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = file.displayName,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.Center),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                if (showOverlay) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.65f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "+$remainingCount",
+                            color = androidx.compose.ui.graphics.Color.White,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(28.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f), RoundedCornerShape(10.dp))
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Remove image", modifier = Modifier.size(16.dp))
+                }
+            }
+            
+            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = file.displayName,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatBytes(file.sizeBytes),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (dimensions != null) {
+                        Text(
+                            text = "•",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = dimensions,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -751,15 +960,15 @@ fun YoutubePreviewCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ErrorOutline,
-                        contentDescription = "Error",
-                        tint = MaterialTheme.colorScheme.error,
+                        contentDescription = "Info",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(34.dp)
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = error,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else if (preview != null) {
@@ -872,9 +1081,25 @@ fun UploadSummaryCard(uiState: UploadUiState) {
 
 @Composable
 private fun SummaryRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.width(110.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = value,
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            softWrap = true,
+            overflow = TextOverflow.Clip
+        )
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 fun PressScaleSurface(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape,
+    onClick: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -30,7 +31,7 @@ fun PressScaleSurface(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = {}
+                onClick = onClick
             ),
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,

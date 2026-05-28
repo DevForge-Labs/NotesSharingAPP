@@ -29,10 +29,11 @@ import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.model.DiscoverFeedItem
 
 @Composable
-fun DiscoverFeedItem(item: DiscoverFeedItem) {
+fun DiscoverFeedItem(item: DiscoverFeedItem, onClick: () -> Unit = {}) {
     PressScaleSurface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(24.dp),
+        onClick = onClick
     ) {
         when (item) {
             is DiscoverFeedItem.Note -> DiscoverRow(

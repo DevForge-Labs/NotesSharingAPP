@@ -32,6 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -83,6 +87,11 @@ fun HomeScreen(
     onSeeMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
+    var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
+
     val feedListState = rememberLazyListState()
     val stateKey = when (uiState) {
         HomeUiState.Loading -> "loading"
@@ -91,19 +100,49 @@ fun HomeScreen(
         is HomeUiState.Success -> "success"
     }
 
-    Crossfade(targetState = stateKey, label = "home-state", modifier = modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            HomeUiState.Loading -> StatePanel("Loading feed", "Preparing your study stream", loading = true, modifier = Modifier.padding(top = 96.dp))
-            HomeUiState.Empty -> StatePanel("No notes yet", "Saved study resources will appear here", modifier = Modifier.padding(top = 96.dp))
-            is HomeUiState.Error -> StatePanel("Something went wrong", state.message, modifier = Modifier.padding(top = 96.dp))
-            is HomeUiState.Success -> HomeSuccessContent(
-                content = state.content,
-                myFilesUiState = myFilesUiState,
-                onUpvoteClick = onUpvoteClick,
-                onBookmarkClick = onBookmarkClick,
-                onViewAllLibraryClick = onViewAllLibraryClick,
-                onSeeMoreClick = onSeeMoreClick,
-                listState = feedListState
+    Box(modifier = modifier.fillMaxSize()) {
+        Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
+            when (val state = uiState) {
+                HomeUiState.Loading -> StatePanel("Loading feed", "Preparing your study stream", loading = true, modifier = Modifier.padding(top = 96.dp))
+                HomeUiState.Empty -> StatePanel("No notes yet", "Saved study resources will appear here", modifier = Modifier.padding(top = 96.dp))
+                is HomeUiState.Error -> StatePanel("Something went wrong", state.message, modifier = Modifier.padding(top = 96.dp))
+                is HomeUiState.Success -> HomeSuccessContent(
+                    content = state.content,
+                    myFilesUiState = myFilesUiState,
+                    onUpvoteClick = onUpvoteClick,
+                    onBookmarkClick = onBookmarkClick,
+                    onViewAllLibraryClick = onViewAllLibraryClick,
+                    onSeeMoreClick = onSeeMoreClick,
+                    onDocumentClick = { docId ->
+                        coroutineScope.launch {
+                            try {
+                                val (title, fileUrls) = repository.resolveFilesForDocument(docId)
+                                if (fileUrls.isNotEmpty()) {
+                                    selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
+                                }
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    },
+                    listState = feedListState
+                )
+            }
+        }
+
+        selectedUploadForViewer?.let { viewerData ->
+            com.pravor.notessharing.ui.components.GroupedUploadViewerDialog(
+                title = viewerData.title,
+                fileUrls = viewerData.fileUrls,
+                onDismiss = { selectedUploadForViewer = null },
+                onFileClick = { url ->
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
             )
         }
     }
@@ -117,6 +156,7 @@ private fun HomeSuccessContent(
     onBookmarkClick: (String) -> Unit,
     onViewAllLibraryClick: () -> Unit,
     onSeeMoreClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val libraryFiles = when (myFilesUiState) {
@@ -152,7 +192,7 @@ private fun HomeSuccessContent(
             item(key = "continue-card", contentType = "continue-reading") {
                 ContinueReadingCard(
                     item = content.feedItems.firstOrNull(),
-                    onClick = {}
+                    onClick = { content.feedItems.firstOrNull()?.let { onDocumentClick(it.id) } }
                 )
             }
             item(key = "for-you-title", contentType = "section") {
@@ -162,7 +202,7 @@ private fun HomeSuccessContent(
             items(visibleFeedItems, key = { it.id }, contentType = { "feed-card" }) { feedItem ->
                 HomeFeedCard(
                     item = feedItem,
-                    onClick = {},
+                    onClick = { onDocumentClick(feedItem.id) },
                     onUpvoteClick = { onUpvoteClick(feedItem.id) },
                     onBookmarkClick = { onBookmarkClick(feedItem.id) }
                 )
@@ -207,7 +247,7 @@ private fun HomeSuccessContent(
                 }
             } else {
                 items(libraryFiles, key = { "library-${it.id}" }, contentType = { "library-file" }) { file ->
-                    CompactStudyFileRow(file = file, onClick = {})
+                    CompactStudyFileRow(file = file, onClick = { onDocumentClick(file.id) })
                 }
             }
         }
