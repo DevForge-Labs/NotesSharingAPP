@@ -25,6 +25,7 @@ fun ExploreRoute(
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -32,7 +33,8 @@ fun ExploreRoute(
         uiState = uiState,
         onTrendingSeeMoreClick = onTrendingSeeMoreClick,
         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
-        onDiscoverSeeMoreClick = onDiscoverSeeMoreClick
+        onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
+        onDocumentClick = onDocumentClick
     )
 }
 
@@ -42,6 +44,7 @@ fun ExploreScreen(
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -64,15 +67,20 @@ fun ExploreScreen(
                     onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
                     onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
                     onDocumentClick = { docId ->
-                        coroutineScope.launch {
-                            try {
-                                val (title, fileUrls) = repository.resolveFilesForDocument(docId)
-                                if (fileUrls.isNotEmpty()) {
-                                    selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
+                        val isVideo = docId.startsWith("video-") || docId.startsWith("discover-video-")
+                        if (isVideo) {
+                            coroutineScope.launch {
+                                try {
+                                    val (title, fileUrls) = repository.resolveFilesForDocument(docId)
+                                    if (fileUrls.isNotEmpty()) {
+                                        selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore
                                 }
-                            } catch (e: Exception) {
-                                // Ignore
                             }
+                        } else {
+                            onDocumentClick(docId)
                         }
                     }
                 )

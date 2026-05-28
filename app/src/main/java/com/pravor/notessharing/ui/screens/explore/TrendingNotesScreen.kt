@@ -23,16 +23,18 @@ import com.pravor.notessharing.viewmodel.ExploreViewModel
 @Composable
 fun TrendingNotesRoute(
     onBackClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    TrendingNotesScreen(uiState = uiState, onBackClick = onBackClick)
+    TrendingNotesScreen(uiState = uiState, onBackClick = onBackClick, onDocumentClick = onDocumentClick)
 }
 
 @Composable
 fun TrendingNotesScreen(
     uiState: ExploreUiState,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onDocumentClick: (String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -51,18 +53,7 @@ fun TrendingNotesScreen(
                 items(uiState.content.trendingNotes, key = { it.id }, contentType = { "trending-note" }) { note ->
                     HomeFeedCard(
                         item = note.toFeedItem(),
-                        onClick = {
-                            coroutineScope.launch {
-                                try {
-                                    val (title, fileUrls) = repository.resolveFilesForDocument(note.id)
-                                    if (fileUrls.isNotEmpty()) {
-                                        selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
-                                    }
-                                } catch (e: Exception) {
-                                    // Ignore
-                                }
-                            }
-                        },
+                        onClick = { onDocumentClick(note.id) },
                         onUpvoteClick = {},
                         onBookmarkClick = {}
                     )

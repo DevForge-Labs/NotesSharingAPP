@@ -21,6 +21,7 @@ import com.pravor.notessharing.ui.screens.profile.ProfileRoute
 import com.pravor.notessharing.ui.screens.profile.EditProfileRoute
 import com.pravor.notessharing.ui.screens.upload.UploadRoute
 import com.pravor.notessharing.ui.screens.upload.UploadSuccessRoute
+import com.pravor.notessharing.ui.screens.document.DocumentDetailRoute
 import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ThemePreference
 import com.pravor.notessharing.ui.screens.auth.SplashScreen
@@ -155,6 +156,9 @@ fun NotesSharingApp(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                     }
                 )
             }
@@ -174,17 +178,30 @@ fun NotesSharingApp(
                         navController.navigate(AppDestination.Discover.route) {
                             launchSingleTop = true
                         }
+                    },
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                     }
                 )
             }
             composable(AppDestination.TrendingNotes.route) {
-                TrendingNotesRoute(onBackClick = { navController.popBackStack() })
+                TrendingNotesRoute(
+                    onBackClick = { navController.popBackStack() },
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    }
+                )
             }
             composable(AppDestination.RecommendedVideos.route) {
                 RecommendedVideosRoute(onBackClick = { navController.popBackStack() })
             }
             composable(AppDestination.Discover.route) {
-                DiscoverRoute(onBackClick = { navController.popBackStack() })
+                DiscoverRoute(
+                    onBackClick = { navController.popBackStack() },
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    }
+                )
             }
             composable(AppDestination.Upload.route) {
                 UploadRoute(
@@ -209,7 +226,30 @@ fun NotesSharingApp(
                     }
                 )
             }
-            composable(AppDestination.MyFiles.route) { MyFilesRoute() }
+            composable(AppDestination.MyFiles.route) {
+                MyFilesRoute(
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    }
+                )
+            }
+            composable(
+                route = AppDestination.DocumentDetail.route,
+                arguments = listOf(
+                    androidx.navigation.navArgument("documentId") {
+                        type = androidx.navigation.NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
+                DocumentDetailRoute(
+                    documentId = documentId,
+                    onBackClick = { navController.popBackStack() },
+                    onNavigateToDetail = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    }
+                )
+            }
             composable(AppDestination.Profile.route) {
                 ProfileRoute(
                     appSettings = appSettings,
