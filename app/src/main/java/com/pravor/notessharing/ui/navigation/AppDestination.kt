@@ -31,6 +31,10 @@ sealed class AppDestination(
     data object DocumentDetail : AppDestination("document_detail/{documentId}", "Document Detail", Icons.Filled.Explore) {
         fun createRoute(documentId: String) = "document_detail/$documentId"
     }
+
+    data object VideoDetail : AppDestination("video_detail/{videoId}", "Video Detail", Icons.Filled.Explore) {
+        fun createRoute(videoId: String) = "video_detail/$videoId"
+    }
 }
 
 val bottomDestinations = listOf(

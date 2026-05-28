@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pravor.notessharing.data.RecentlyOpenedRepository
 import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.ui.components.Avatar
@@ -42,9 +43,25 @@ fun DocumentDetailRoute(
     viewModel: DocumentDetailViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(documentId) {
         viewModel.loadDocumentDetail(documentId)
+    }
+
+    LaunchedEffect(uiState) {
+        val state = uiState
+        if (state is DocumentDetailUiState.Success) {
+            val doc = state.document
+            RecentlyOpenedRepository(context).saveLastOpened(
+                id = doc.id,
+                type = "document",
+                title = doc.title,
+                subject = doc.subject,
+                youtubeVideoId = null,
+                uploaderName = doc.uploaderName
+            )
+        }
     }
 
     DocumentDetailScreen(

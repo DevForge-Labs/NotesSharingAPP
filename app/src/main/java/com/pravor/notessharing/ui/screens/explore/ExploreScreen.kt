@@ -26,6 +26,7 @@ fun ExploreRoute(
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -34,7 +35,8 @@ fun ExploreRoute(
         onTrendingSeeMoreClick = onTrendingSeeMoreClick,
         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
-        onDocumentClick = onDocumentClick
+        onDocumentClick = onDocumentClick,
+        onVideoClick = onVideoClick
     )
 }
 
@@ -45,6 +47,7 @@ fun ExploreScreen(
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -66,23 +69,8 @@ fun ExploreScreen(
                     onTrendingSeeMoreClick = onTrendingSeeMoreClick,
                     onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
                     onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
-                    onDocumentClick = { docId ->
-                        val isVideo = docId.startsWith("video-") || docId.startsWith("discover-video-")
-                        if (isVideo) {
-                            coroutineScope.launch {
-                                try {
-                                    val (title, fileUrls) = repository.resolveFilesForDocument(docId)
-                                    if (fileUrls.isNotEmpty()) {
-                                        selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
-                                    }
-                                } catch (e: Exception) {
-                                    // Ignore
-                                }
-                            }
-                        } else {
-                            onDocumentClick(docId)
-                        }
-                    }
+                    onDocumentClick = onDocumentClick,
+                    onVideoClick = onVideoClick
                 )
             }
         }

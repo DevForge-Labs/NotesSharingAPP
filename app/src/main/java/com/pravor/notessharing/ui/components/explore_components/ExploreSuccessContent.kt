@@ -15,6 +15,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.model.DiscoverFeedItem
 import com.pravor.notessharing.state.ExploreContent
@@ -28,7 +41,8 @@ fun ExploreSuccessContent(
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
-    onDocumentClick: (String) -> Unit
+    onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit
 ) {
     val visibleTrendingNotes = content.trendingNotes.take(7)
     val visibleRecommendedVideos = content.videoRecommendations.take(4)
@@ -69,20 +83,55 @@ fun ExploreSuccessContent(
             item(key = "videos-title", contentType = "section") {
                 SectionHeader("📺 Recommended Videos")
             }
-            items(
-                items = visibleRecommendedVideos,
-                key = { it.id },
-                contentType = { "video" }
-            ) { video ->
-                VideoRecommendationCard(video)
-            }
-            if (content.videoRecommendations.size > visibleRecommendedVideos.size) {
-                item(key = "videos-see-more", contentType = "action") {
-                    TextButton(
-                        onClick = onRecommendedVideosSeeMoreClick,
-                        modifier = Modifier.fillMaxWidth()
+            if (visibleRecommendedVideos.isEmpty()) {
+                item(key = "videos-empty", contentType = "empty") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
-                        Text("See More")
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "No videos available yet",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(
+                    items = visibleRecommendedVideos,
+                    key = { it.id },
+                    contentType = { "video" }
+                ) { video ->
+                    VideoRecommendationCard(
+                        video = video,
+                        onClick = { onVideoClick(video.id) }
+                    )
+                }
+                if (content.videoRecommendations.size > visibleRecommendedVideos.size) {
+                    item(key = "videos-see-more", contentType = "action") {
+                        TextButton(
+                            onClick = onRecommendedVideosSeeMoreClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("See More")
+                        }
                     }
                 }
             }
@@ -121,7 +170,16 @@ fun ExploreSuccessContent(
                     }
                 }
             ) { item ->
-                DiscoverFeedItem(item, onClick = { onDocumentClick(item.id) })
+                DiscoverFeedItem(
+                    item = item,
+                    onClick = {
+                        if (item is DiscoverFeedItem.Video) {
+                            onVideoClick(item.id)
+                        } else {
+                            onDocumentClick(item.id)
+                        }
+                    }
+                )
             }
             if (content.discoverItems.size > visibleDiscoverItems.size) {
                 item(key = "discover-see-more", contentType = "action") {

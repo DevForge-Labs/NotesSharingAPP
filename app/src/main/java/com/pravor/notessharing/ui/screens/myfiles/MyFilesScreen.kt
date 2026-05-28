@@ -34,16 +34,18 @@ import com.pravor.notessharing.viewmodel.MyFilesViewModel
 @Composable
 fun MyFilesRoute(
     onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit,
     viewModel: MyFilesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    MyFilesScreen(uiState = uiState, onDocumentClick = onDocumentClick)
+    MyFilesScreen(uiState = uiState, onDocumentClick = onDocumentClick, onVideoClick = onVideoClick)
 }
 
 @Composable
 fun MyFilesScreen(
     uiState: MyFilesUiState,
     onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -68,16 +70,7 @@ fun MyFilesScreen(
                         val fileType = savedFile?.fileType ?: uploadedFile?.fileType
                         
                         if (fileType == com.pravor.notessharing.model.FileType.Video) {
-                            coroutineScope.launch {
-                                try {
-                                    val (title, fileUrls) = repository.resolveFilesForDocument(docId)
-                                    if (fileUrls.isNotEmpty()) {
-                                        selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
-                                    }
-                                } catch (e: Exception) {
-                                    // Ignore
-                                }
-                            }
+                            onVideoClick(docId)
                         } else {
                             onDocumentClick(docId)
                         }

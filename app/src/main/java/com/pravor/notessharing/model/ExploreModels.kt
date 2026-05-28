@@ -19,7 +19,10 @@ data class VideoRecommendation(
     val title: String,
     val channelName: String,
     val duration: String,
-    val subject: String
+    val subject: String,
+    val youtubeVideoId: String = "",
+    val upvotes: Int = 0,
+    val bookmarks: Int = 0
 )
 
 @Immutable

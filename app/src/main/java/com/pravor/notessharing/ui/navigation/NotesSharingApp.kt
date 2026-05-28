@@ -159,6 +159,9 @@ fun NotesSharingApp(
                     },
                     onDocumentClick = { docId ->
                         navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
                     }
                 )
             }
@@ -181,6 +184,9 @@ fun NotesSharingApp(
                     },
                     onDocumentClick = { docId ->
                         navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
                     }
                 )
             }
@@ -193,13 +199,21 @@ fun NotesSharingApp(
                 )
             }
             composable(AppDestination.RecommendedVideos.route) {
-                RecommendedVideosRoute(onBackClick = { navController.popBackStack() })
+                RecommendedVideosRoute(
+                    onBackClick = { navController.popBackStack() },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                    }
+                )
             }
             composable(AppDestination.Discover.route) {
                 DiscoverRoute(
                     onBackClick = { navController.popBackStack() },
                     onDocumentClick = { docId ->
                         navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
                     }
                 )
             }
@@ -230,6 +244,9 @@ fun NotesSharingApp(
                 MyFilesRoute(
                     onDocumentClick = { docId ->
                         navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
                     }
                 )
             }
@@ -247,6 +264,23 @@ fun NotesSharingApp(
                     onBackClick = { navController.popBackStack() },
                     onNavigateToDetail = { docId ->
                         navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    }
+                )
+            }
+            composable(
+                route = AppDestination.VideoDetail.route,
+                arguments = listOf(
+                    androidx.navigation.navArgument("videoId") {
+                        type = androidx.navigation.NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+                com.pravor.notessharing.ui.screens.video.VideoDetailRoute(
+                    videoId = videoId,
+                    onBackClick = { navController.popBackStack() },
+                    onNavigateToVideoDetail = { vidId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(vidId))
                     }
                 )
             }
