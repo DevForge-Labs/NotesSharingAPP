@@ -5,18 +5,33 @@ import com.pravor.notessharing.model.VideoDetail
 import com.pravor.notessharing.model.toVideoDetail
 import com.pravor.notessharing.viewmodel.DummyData
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 class VideoDetailRepository {
     private val firestore = FirebaseFirestore.getInstance()
-    private val documentsCollection = firestore.collection("documents")
     private val usersCollection = firestore.collection("users")
 
     suspend fun getVideo(videoId: String): VideoDetail? {
         return try {
-            val snapshot = documentsCollection.document(videoId).get().await()
-            if (snapshot.exists()) {
-                val data = snapshot.data
-                data?.toVideoDetail(videoId)
+            val collections = listOf("documents", "videos")
+            var foundData: Map<String, Any>? = null
+            coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            val snap = firestore.collection(col).document(videoId).get().await()
+                            if (snap.exists()) snap.data else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                foundData = deferreds.awaitAll().firstOrNull { it != null }
+            }
+            if (foundData != null) {
+                foundData?.toVideoDetail(videoId)
             } else {
                 getDummyVideoDetail(videoId)
             }
@@ -44,14 +59,27 @@ class VideoDetailRepository {
 
     suspend fun getRelatedVideos(video: VideoDetail): List<VideoDetail> {
         return try {
-            val snapshot = documentsCollection
-                .whereEqualTo("semester", video.semester)
-                .whereEqualTo("subject", video.subject)
-                .limit(10)
-                .get()
-                .await()
+            val collections = listOf("documents", "videos")
+            val allRelatedDocs = coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            firestore.collection(col)
+                                .whereEqualTo("semester", video.semester)
+                                .whereEqualTo("subject", video.subject)
+                                .limit(10)
+                                .get()
+                                .await()
+                                .documents
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+                }
+                deferreds.awaitAll().flatten()
+            }
 
-            val realRelated = snapshot.documents.mapNotNull { d ->
+            val realRelated = allRelatedDocs.mapNotNull { d ->
                 if (d.id == video.id) return@mapNotNull null
                 val data = d.data ?: return@mapNotNull null
                 
@@ -63,7 +91,7 @@ class VideoDetailRepository {
 
                 if (!isVideo) return@mapNotNull null
                 data.toVideoDetail(d.id)
-            }.take(3)
+            }.distinctBy { it.id }.take(3)
 
             if (realRelated.isNotEmpty()) {
                 realRelated

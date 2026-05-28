@@ -60,6 +60,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
+import androidx.compose.material3.CircularProgressIndicator
 import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.HomeUiState
@@ -474,27 +477,66 @@ private fun ContinueReadingCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left: Tinted Icon Container
+                    // Left: Tinted Icon Container or Thumbnail
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        accentColor.copy(alpha = 0.22f),
-                                        accentColor.copy(alpha = 0.06f)
-                                    )
-                                )
-                            ),
+                            .clip(RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = previewIcon,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(26.dp)
-                        )
+                        var hasImageLoaded by remember { mutableStateOf(false) }
+                        var imageLoadError by remember { mutableStateOf(false) }
+                        
+                        if (!item.thumbnailUrl.isNullOrBlank() && !imageLoadError) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(item.thumbnailUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = item.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onSuccess = { hasImageLoaded = true },
+                                onError = { imageLoadError = true }
+                            )
+                        }
+                        
+                        // Show fallback or shimmer
+                        if (item.thumbnailUrl.isNullOrBlank() || imageLoadError) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                accentColor.copy(alpha = 0.22f),
+                                                accentColor.copy(alpha = 0.06f)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = previewIcon,
+                                    contentDescription = null,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                        } else if (!hasImageLoaded) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 1.5.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
 
                     Spacer(Modifier.width(14.dp))

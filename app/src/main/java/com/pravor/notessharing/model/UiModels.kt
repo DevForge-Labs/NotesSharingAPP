@@ -20,7 +20,10 @@ data class FeedItem(
     val isSaved: Boolean,
     val bookmarksCount: Int = 0,
     val youtubeVideoId: String? = null,
-    val youtubeUrl: String? = null
+    val youtubeUrl: String? = null,
+    val thumbnailUrl: String? = null,
+    val thumbnailGenerated: Boolean? = null,
+    val thumbnailType: String? = null
 )
 
 @Immutable
