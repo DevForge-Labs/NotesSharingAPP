@@ -24,7 +24,8 @@ sealed interface HomeUiState {
 data class HomeContent(
     val selectedCategory: Category,
     val categories: List<Category>,
-    val feedItems: List<FeedItem>
+    val feedItems: List<FeedItem>,
+    val recentlyOpened: FeedItem? = null
 )
 
 sealed interface ExploreUiState {

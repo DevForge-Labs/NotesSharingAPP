@@ -1,8 +1,10 @@
 package com.pravor.notessharing.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pravor.notessharing.data.RecentlyOpenedRepository
 import com.pravor.notessharing.model.Category
 import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.model.FileType
@@ -15,54 +17,170 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
+    private val recentlyOpenedRepository = RecentlyOpenedRepository(application)
+
     private val _uiState = MutableStateFlow<HomeUiState>(
         HomeUiState.Success(
             HomeContent(
                 selectedCategory = Category.Notes,
                 categories = DummyData.categories,
-                feedItems = DummyData.feedItems
+                feedItems = DummyData.feedItems,
+                recentlyOpened = null
             )
         )
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private val firestore = FirebaseFirestore.getInstance()
+    private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    private val userService = com.pravor.notessharing.firebase.FirestoreUserService()
+    private var profileJob: kotlinx.coroutines.Job? = null
+
+    private val authListener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
+        val uid = firebaseAuth.currentUser?.uid
+        if (uid != null) {
+            startObservingProfile(uid)
+        } else {
+            profileJob?.cancel()
+            loadRealDocuments(null)
+        }
+    }
 
     init {
+        observeUserProfileState()
+        refreshRecentlyOpened()
+    }
+
+    private fun observeUserProfileState() {
+        viewModelScope.launch {
+            val currentUid = auth.currentUser?.uid
+            if (currentUid != null) {
+                startObservingProfile(currentUid)
+            }
+            auth.addAuthStateListener(authListener)
+        }
+    }
+
+    private fun startObservingProfile(uid: String) {
+        profileJob?.cancel()
+        profileJob = viewModelScope.launch {
+            userService.observeUserProfile(uid).collect { profile ->
+                val semester = profile?.semester
+                loadRealDocuments(semester)
+            }
+        }
+    }
+
+    fun refreshRecentlyOpened() {
+        val lastOpened = recentlyOpenedRepository.getLastOpened()
+        _uiState.update { current ->
+            if (current is HomeUiState.Success) {
+                current.copy(content = current.content.copy(recentlyOpened = lastOpened))
+            } else {
+                HomeUiState.Success(
+                    HomeContent(
+                        selectedCategory = Category.Notes,
+                        categories = DummyData.categories,
+                        feedItems = DummyData.feedItems,
+                        recentlyOpened = lastOpened
+                    )
+                )
+            }
+        }
         loadRealDocuments()
     }
 
-    fun loadRealDocuments() {
+    fun loadRealDocuments(forcedSemester: String? = null) {
         viewModelScope.launch {
             try {
-                val snapshot = firestore.collection("documents")
-                    .orderBy("uploadedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                    .get()
-                    .await()
+                val semester = forcedSemester ?: run {
+                    val currentUid = auth.currentUser?.uid
+                    if (currentUid != null) {
+                        userService.getUserProfile(currentUid)?.semester
+                    } else {
+                        null
+                    }
+                }
+
+                val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
+
+                val snapshot = if (hasSemester) {
+                    firestore.collection("documents")
+                        .whereEqualTo("semester", semester)
+                        .get()
+                        .await()
+                } else {
+                    firestore.collection("documents")
+                        .orderBy("uploadedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                        .get()
+                        .await()
+                }
                 
                 val realItems = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
-                    documentToFeedItem(data)
+                    val item = documentToFeedItem(data)
+                    val timestamp = data["uploadedAt"] as? Long ?: (data["uploadTimestamp"] as? Long ?: 0L)
+                    item to timestamp
+                }.sortedWith(
+                    compareByDescending<Pair<FeedItem, Long>> { it.first.upvotes }
+                        .thenByDescending { it.second }
+                ).map { it.first }
+                
+                val mergedFeedItems = if (hasSemester) {
+                    realItems.distinctBy { it.id }
+                } else {
+                    (realItems + DummyData.feedItems).distinctBy { it.id }
                 }
                 
-                val mergedFeedItems = (realItems + DummyData.feedItems).distinctBy { it.id }
-                
                 _uiState.update { current ->
+                    val lastOpened = recentlyOpenedRepository.getLastOpened()
                     if (current is HomeUiState.Success) {
-                        current.copy(content = current.content.copy(feedItems = mergedFeedItems))
+                        current.copy(content = current.content.copy(
+                            feedItems = mergedFeedItems,
+                            recentlyOpened = lastOpened
+                        ))
                     } else {
                         HomeUiState.Success(
                             HomeContent(
                                 selectedCategory = Category.Notes,
                                 categories = DummyData.categories,
-                                feedItems = mergedFeedItems
+                                feedItems = mergedFeedItems,
+                                recentlyOpened = lastOpened
                             )
                         )
                     }
                 }
             } catch (e: Exception) {
-                // Keep dummy data on failure
+                val semester = forcedSemester ?: run {
+                    val currentUid = auth.currentUser?.uid
+                    if (currentUid != null) {
+                        userService.getUserProfile(currentUid)?.semester
+                    } else {
+                        null
+                    }
+                }
+                val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
+                
+                _uiState.update { current ->
+                    val lastOpened = recentlyOpenedRepository.getLastOpened()
+                    val fallbackItems = if (hasSemester) emptyList() else DummyData.feedItems
+                    if (current is HomeUiState.Success) {
+                        current.copy(content = current.content.copy(
+                            feedItems = fallbackItems,
+                            recentlyOpened = lastOpened
+                        ))
+                    } else {
+                        HomeUiState.Success(
+                            HomeContent(
+                                selectedCategory = Category.Notes,
+                                categories = DummyData.categories,
+                                feedItems = fallbackItems,
+                                recentlyOpened = lastOpened
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -81,10 +199,6 @@ class HomeViewModel : ViewModel() {
         val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
         val uploadDate = sdf.format(java.util.Date(uploadTimestamp))
         
-        val title = doc["title"] as? String ?: ""
-        val description = doc["description"] as? String ?: ""
-        val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-        
         val docType = doc["documentType"] as? String ?: (doc["type"] as? String ?: "Notes")
         val fileType = when (docType) {
             "PYQ" -> FileType.Pyq
@@ -95,15 +209,29 @@ class HomeViewModel : ViewModel() {
             else -> FileType.Pdf
         }
         
+        val subject = doc["subject"] as? String ?: ""
+        val displayTitle = if (fileType == FileType.Video) {
+            subject.ifBlank { doc["title"] as? String ?: "" }
+        } else {
+            doc["title"] as? String ?: ""
+        }
+
+        val description = doc["description"] as? String ?: ""
+        val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+        
         val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
         val downloads = (doc["downloads"] as? Long ?: (doc["downloadsCount"] as? Long ?: 0L)).toInt()
+        val bookmarks = (doc["bookmarks"] as? Long ?: 0L).toInt()
+
+        val youtubeUrl = doc["youtubeUrl"] as? String
+        val youtubeVideoId = doc["youtubeVideoId"] as? String
         
         return FeedItem(
             id = id,
             uploaderName = uploaderName,
             uploaderInitials = initials,
             uploadDate = uploadDate,
-            title = title,
+            title = displayTitle,
             description = description,
             tags = tags,
             fileType = fileType,
@@ -111,7 +239,10 @@ class HomeViewModel : ViewModel() {
             comments = 0,
             downloads = downloads,
             isUpvoted = false,
-            isSaved = false
+            isSaved = false,
+            bookmarksCount = bookmarks,
+            youtubeVideoId = youtubeVideoId,
+            youtubeUrl = youtubeUrl
         )
     }
 
@@ -156,5 +287,11 @@ class HomeViewModel : ViewModel() {
                 current
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        auth.removeAuthStateListener(authListener)
+        profileJob?.cancel()
     }
 }

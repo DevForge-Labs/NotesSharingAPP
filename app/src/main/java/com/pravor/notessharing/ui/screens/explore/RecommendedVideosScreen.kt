@@ -1,8 +1,18 @@
 package com.pravor.notessharing.ui.screens.explore
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.state.ExploreUiState
@@ -13,28 +23,116 @@ import com.pravor.notessharing.viewmodel.ExploreViewModel
 @Composable
 fun RecommendedVideosRoute(
     onBackClick: () -> Unit,
+    onVideoClick: (String) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    RecommendedVideosScreen(uiState = uiState, onBackClick = onBackClick)
+    RecommendedVideosScreen(uiState = uiState, onBackClick = onBackClick, onVideoClick = onVideoClick)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecommendedVideosScreen(
     uiState: ExploreUiState,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onVideoClick: (String) -> Unit
 ) {
-    when (uiState) {
-        ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true)
-        ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here")
-        is ExploreUiState.Error -> StatePanel("Explore failed", uiState.message)
-        is ExploreUiState.Success -> ExploreExpandedListScaffold(
-            title = "Recommended Videos",
-            onBackClick = onBackClick
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Recommended Videos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            items(uiState.content.videoRecommendations, key = { it.id }, contentType = { "video" }) { video ->
-                VideoRecommendationCard(video)
+            when (uiState) {
+                ExploreUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                ExploreUiState.Empty -> {
+                    EmptyVideosState()
+                }
+                is ExploreUiState.Error -> {
+                    StatePanel("Explore failed", uiState.message)
+                }
+                is ExploreUiState.Success -> {
+                    val videos = uiState.content.videoRecommendations
+                    if (videos.isEmpty()) {
+                        EmptyVideosState()
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(videos, key = { it.id }, contentType = { "video" }) { video ->
+                                VideoRecommendationCard(
+                                    video = video,
+                                    onClick = { onVideoClick(video.id) }
+                                )
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyVideosState() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(56.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "No videos available yet",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Check back later for curated campus videos.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }

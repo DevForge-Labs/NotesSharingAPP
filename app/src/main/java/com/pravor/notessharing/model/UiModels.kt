@@ -17,7 +17,10 @@ data class FeedItem(
     val comments: Int,
     val downloads: Int,
     val isUpvoted: Boolean,
-    val isSaved: Boolean
+    val isSaved: Boolean,
+    val bookmarksCount: Int = 0,
+    val youtubeVideoId: String? = null,
+    val youtubeUrl: String? = null
 )
 
 @Immutable
