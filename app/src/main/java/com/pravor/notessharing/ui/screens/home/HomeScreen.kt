@@ -1,5 +1,6 @@
 package com.pravor.notessharing.ui.screens.home
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +63,7 @@ import com.pravor.notessharing.viewmodel.MyFilesViewModel
 fun HomeRoute(
     onViewAllLibraryClick: () -> Unit = {},
     onSeeMoreClick: () -> Unit = {},
+    onDocumentClick: (String) -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
     myFilesViewModel: MyFilesViewModel = viewModel()
 ) {
@@ -73,10 +75,12 @@ fun HomeRoute(
         onUpvoteClick = viewModel::toggleUpvote,
         onBookmarkClick = viewModel::toggleSaved,
         onViewAllLibraryClick = onViewAllLibraryClick,
-        onSeeMoreClick = onSeeMoreClick
+        onSeeMoreClick = onSeeMoreClick,
+        onDocumentClick = onDocumentClick
     )
 }
 
+@SuppressLint("UnusedCrossfadeTargetStateParameter")
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -85,6 +89,7 @@ fun HomeScreen(
     onBookmarkClick: (String) -> Unit,
     onViewAllLibraryClick: () -> Unit,
     onSeeMoreClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -114,15 +119,24 @@ fun HomeScreen(
                     onViewAllLibraryClick = onViewAllLibraryClick,
                     onSeeMoreClick = onSeeMoreClick,
                     onDocumentClick = { docId ->
-                        coroutineScope.launch {
-                            try {
-                                val (title, fileUrls) = repository.resolveFilesForDocument(docId)
-                                if (fileUrls.isNotEmpty()) {
-                                    selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
+                        val feedItem = state.content.feedItems.find { it.id == docId }
+                        val savedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.savedFiles?.find { it.id == docId }
+                        val uploadedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.uploadedFiles?.find { it.id == docId }
+                        val fileType = feedItem?.fileType ?: savedFile?.fileType ?: uploadedFile?.fileType
+                        
+                        if (fileType == com.pravor.notessharing.model.FileType.Video) {
+                            coroutineScope.launch {
+                                try {
+                                    val (title, fileUrls) = repository.resolveFilesForDocument(docId)
+                                    if (fileUrls.isNotEmpty()) {
+                                        selectedUploadForViewer = com.pravor.notessharing.ui.components.UploadViewerData(title, fileUrls)
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore
                                 }
-                            } catch (e: Exception) {
-                                // Ignore
                             }
+                        } else {
+                            onDocumentClick(docId)
                         }
                     },
                     listState = feedListState
@@ -362,7 +376,8 @@ private fun HomePreview() {
             onUpvoteClick = {},
             onBookmarkClick = {},
             onViewAllLibraryClick = {},
-            onSeeMoreClick = {}
+            onSeeMoreClick = {},
+            onDocumentClick = {}
         )
     }
 }

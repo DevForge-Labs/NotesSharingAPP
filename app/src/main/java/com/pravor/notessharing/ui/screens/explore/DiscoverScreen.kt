@@ -14,16 +14,18 @@ import com.pravor.notessharing.viewmodel.ExploreViewModel
 @Composable
 fun DiscoverRoute(
     onBackClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    DiscoverScreen(uiState = uiState, onBackClick = onBackClick)
+    DiscoverScreen(uiState = uiState, onBackClick = onBackClick, onDocumentClick = onDocumentClick)
 }
 
 @Composable
 fun DiscoverScreen(
     uiState: ExploreUiState,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onDocumentClick: (String) -> Unit
 ) {
     when (uiState) {
         ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true)
@@ -45,7 +47,11 @@ fun DiscoverScreen(
                     }
                 }
             ) { item ->
-                DiscoverFeedItemCard(item)
+                DiscoverFeedItemCard(item, onClick = {
+                    if (item !is DiscoverFeedItem.Video) {
+                        onDocumentClick(item.id)
+                    }
+                })
             }
         }
     }

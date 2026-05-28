@@ -27,6 +27,10 @@ sealed class AppDestination(
     data object Welcome : AppDestination("welcome", "Welcome", Icons.Filled.Home)
     data object Login : AppDestination("login", "Login", Icons.Filled.Home)
     data object SignUp : AppDestination("signup", "Sign Up", Icons.Filled.Home)
+    
+    data object DocumentDetail : AppDestination("document_detail/{documentId}", "Document Detail", Icons.Filled.Explore) {
+        fun createRoute(documentId: String) = "document_detail/$documentId"
+    }
 }
 
 val bottomDestinations = listOf(
