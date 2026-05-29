@@ -18,7 +18,8 @@ data class TrendingNote(
     val uploaderName: String = "",
     val uploaderPhotoUrl: String = "",
     val contributorLevel: String = "",
-    val documentType: String = "Notes",
+    val documentType: String = "",
+    val type: String? = null,
     val bookmarks: Int = 0
 )
 

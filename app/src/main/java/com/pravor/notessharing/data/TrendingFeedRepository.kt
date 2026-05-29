@@ -113,6 +113,7 @@ class TrendingFeedRepository(private val context: Context) {
             put("uploaderPhotoUrl", note.uploaderPhotoUrl)
             put("contributorLevel", note.contributorLevel)
             put("documentType", note.documentType)
+            put("type", note.type ?: "")
             put("bookmarks", note.bookmarks)
         }
     }
@@ -133,7 +134,8 @@ class TrendingFeedRepository(private val context: Context) {
             uploaderName = obj.optString("uploaderName"),
             uploaderPhotoUrl = obj.optString("uploaderPhotoUrl"),
             contributorLevel = obj.optString("contributorLevel"),
-            documentType = obj.optString("documentType", "Notes"),
+            documentType = obj.optString("documentType", ""),
+            type = obj.optString("type").ifBlank { null },
             bookmarks = obj.optInt("bookmarks", 0)
         )
     }
@@ -287,7 +289,8 @@ class TrendingFeedRepository(private val context: Context) {
             val uploaderId = data["uploaderId"] as? String ?: ""
             val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
             val uploaderPhotoUrl = data["uploaderPhotoUrl"] as? String ?: ""
-            val documentType = data["documentType"] as? String ?: data["type"] as? String ?: "Notes"
+            val documentTypeField = data["documentType"] as? String
+            val typeField = data["type"] as? String
             val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
 
             val contributorLevel = if (uploaderId.isNotEmpty()) {
@@ -311,7 +314,8 @@ class TrendingFeedRepository(private val context: Context) {
                 uploaderName = uploaderName,
                 uploaderPhotoUrl = uploaderPhotoUrl,
                 contributorLevel = contributorLevel,
-                documentType = documentType,
+                documentType = documentTypeField ?: "",
+                type = typeField,
                 bookmarks = bookmarks
             )
         }

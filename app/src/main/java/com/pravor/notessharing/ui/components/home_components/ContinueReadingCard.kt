@@ -52,8 +52,29 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.pravor.notessharing.model.FeedItem
+
+// Singleton memory cache to prevent redundant database hits on scroll recompositions
+object ContinueReadingPreviewCache {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Triple<String, Boolean, String?>>()
+
+    fun get(itemId: String): Triple<String, Boolean, String?>? = cache[itemId]
+
+    fun put(itemId: String, url: String, isImage: Boolean, docType: String?) {
+        cache[itemId] = Triple(url, isImage, docType)
+    }
+}
 
 @Composable
 fun ContinueReadingCard(
@@ -67,54 +88,111 @@ fun ContinueReadingCard(
     
     val repository = remember { com.pravor.notessharing.data.DocumentDetailRepository() }
     var firstFileUrl by remember(item.id) { mutableStateOf<String?>(null) }
+    var isImage by remember(item.id) { mutableStateOf(false) }
+    var isLoading by remember(item.id) { mutableStateOf(true) }
+    var resolvedDocType by remember(item.id) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(item.id) {
-        if (!isVideo) {
-            val docDetail = repository.getDocument(item.id)
-            val fileList = docDetail?.fileUrls
-            if (fileList != null) {
-                // Priority 1: Check if there's an image file first for better preview
-                val imageFile = fileList.firstOrNull {
-                    it.contains(".jpg", ignoreCase = true) ||
-                    it.contains(".png", ignoreCase = true) ||
-                    it.contains(".jpeg", ignoreCase = true) ||
-                    it.contains(".webp", ignoreCase = true) ||
-                    it.contains("unsplash.com", ignoreCase = true) ||
-                    it.contains("photo-", ignoreCase = true)
+        if (isVideo) {
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        if (!item.thumbnailUrl.isNullOrBlank()) {
+            firstFileUrl = item.thumbnailUrl
+            isImage = true
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        val cached = ContinueReadingPreviewCache.get(item.id)
+        if (cached != null) {
+            firstFileUrl = cached.first
+            isImage = cached.second
+            resolvedDocType = cached.third
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val doc = repository.getDocument(item.id)
+                if (doc != null) {
+                    val urlToUse = if (!doc.thumbnailUrl.isNullOrBlank()) {
+                        doc.thumbnailUrl
+                    } else if (doc.fileUrls.isNotEmpty()) {
+                        doc.fileUrls.first()
+                    } else {
+                        null
+                    }
+                    val isImg = urlToUse != null && (
+                        !doc.thumbnailUrl.isNullOrBlank() ||
+                        urlToUse.contains(".jpg", ignoreCase = true) ||
+                        urlToUse.contains(".jpeg", ignoreCase = true) ||
+                        urlToUse.contains(".png", ignoreCase = true) ||
+                        urlToUse.contains(".webp", ignoreCase = true) ||
+                        urlToUse.contains("unsplash.com", ignoreCase = true)
+                    )
+
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        firstFileUrl = urlToUse
+                        isImage = isImg
+                        resolvedDocType = doc.documentType
+                        ContinueReadingPreviewCache.put(item.id, urlToUse ?: "", isImg, doc.documentType)
+                    }
                 }
-                // Priority 2: Fall back to first document attachment URL
-                firstFileUrl = imageFile ?: fileList.firstOrNull()
+            } catch (e: Exception) {
+                // Fallback
+            } finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    isLoading = false
+                }
             }
         }
     }
     
-    // Assignment detection priority:
-    // (1) existing fileType/category/model if available (e.g., FileType.LabManual)
-    // (2) tag check
-    // (3) title/description fallback
-    val isAssignment = item.fileType == com.pravor.notessharing.model.FileType.LabManual ||
-            item.tags.any { it.equals("assignment", ignoreCase = true) } ||
-            item.title.contains("assignment", ignoreCase = true) ||
-            item.description.contains("assignment", ignoreCase = true)
+    val rawDocType = (item.documentType ?: item.type ?: resolvedDocType)
+        ?.lowercase(java.util.Locale.ROOT)?.trim()
 
-    val isPyq = item.fileType == com.pravor.notessharing.model.FileType.Pyq ||
-            item.tags.any { it.equals("pyq", ignoreCase = true) } ||
-            item.title.contains("pyq", ignoreCase = true) ||
-            item.description.contains("pyq", ignoreCase = true)
+    val isPyq = when (rawDocType) {
+        "pyq" -> true
+        "cheatsheet", "cheat sheet", "assignment", "notes" -> false
+        else -> item.fileType == com.pravor.notessharing.model.FileType.Pyq ||
+                item.tags.any { it.equals("pyq", ignoreCase = true) } ||
+                item.title.contains("pyq", ignoreCase = true) ||
+                item.description.contains("pyq", ignoreCase = true)
+    }
 
-    val isCheatSheet = item.fileType == com.pravor.notessharing.model.FileType.CheatSheet ||
-            item.tags.any { it.equals("cheat sheet", ignoreCase = true) || it.equals("cheatsheet", ignoreCase = true) || it.equals("formula", ignoreCase = true) } ||
-            item.title.contains("cheat", ignoreCase = true) ||
-            item.title.contains("formula", ignoreCase = true) ||
-            item.description.contains("cheat", ignoreCase = true) ||
-            item.description.contains("formula", ignoreCase = true)
+    val isCheatSheet = when (rawDocType) {
+        "cheatsheet", "cheat sheet" -> true
+        "pyq", "assignment", "notes" -> false
+        else -> item.fileType == com.pravor.notessharing.model.FileType.CheatSheet ||
+                item.tags.any { it.equals("cheat sheet", ignoreCase = true) || it.equals("cheatsheet", ignoreCase = true) || it.equals("formula", ignoreCase = true) } ||
+                item.title.contains("cheat", ignoreCase = true) ||
+                item.title.contains("formula", ignoreCase = true) ||
+                item.description.contains("cheat", ignoreCase = true) ||
+                item.description.contains("formula", ignoreCase = true)
+    }
 
-    val isNotes = item.fileType == com.pravor.notessharing.model.FileType.Notes ||
-            item.tags.any { it.equals("notes", ignoreCase = true) || it.equals("lecture", ignoreCase = true) } ||
-            item.title.contains("notes", ignoreCase = true) ||
-            item.title.contains("lecture", ignoreCase = true) ||
-            item.description.contains("notes", ignoreCase = true) ||
-            item.description.contains("lecture", ignoreCase = true)
+    val isAssignment = when (rawDocType) {
+        "assignment" -> true
+        "pyq", "cheatsheet", "cheat sheet", "notes" -> false
+        else -> item.fileType == com.pravor.notessharing.model.FileType.LabManual ||
+                item.tags.any { it.equals("assignment", ignoreCase = true) } ||
+                item.title.contains("assignment", ignoreCase = true) ||
+                item.description.contains("assignment", ignoreCase = true)
+    }
+
+    val isNotes = when (rawDocType) {
+        "notes" -> true
+        "pyq", "cheatsheet", "cheat sheet", "assignment" -> false
+        else -> item.fileType == com.pravor.notessharing.model.FileType.Notes ||
+                item.tags.any { it.equals("notes", ignoreCase = true) || it.equals("lecture", ignoreCase = true) } ||
+                item.title.contains("notes", ignoreCase = true) ||
+                item.title.contains("lecture", ignoreCase = true) ||
+                item.description.contains("notes", ignoreCase = true) ||
+                item.description.contains("lecture", ignoreCase = true)
+    }
 
     val previewIcon = when {
         isVideo -> Icons.Default.PlayArrow
@@ -292,46 +370,69 @@ fun ContinueReadingCard(
                             }
                         }
                     } else {
-                        var hasDocThumbnailError by remember(item.id) { mutableStateOf(firstFileUrl.isNullOrBlank()) }
-                        if (!firstFileUrl.isNullOrBlank() && !hasDocThumbnailError) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                AsyncImage(
-                                    model = firstFileUrl,
-                                    contentDescription = item.title,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    onError = { hasDocThumbnailError = true }
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(
-                                                    Color.Transparent,
-                                                    Color.Black.copy(alpha = 0.42f)
-                                                )
-                                            )
-                                        )
-                                )
-                                // Clean minimal icon tag floating at bottom-right
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .align(Alignment.BottomEnd)
-                                        .graphicsLayer(translationX = -12f, translationY = -8f)
-                                        .background(accentColor, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = previewIcon,
-                                        contentDescription = null,
-                                        tint = Color(0xFF10151D),
-                                        modifier = Modifier.size(10.dp)
+                        var hasImageLoaded by remember(item.id) { mutableStateOf(false) }
+                        var imageLoadError by remember(item.id) { mutableStateOf(false) }
+
+                        if (isLoading) {
+                            ShimmerPlaceholder()
+                        } else {
+                            val showThumbnail = isImage && !firstFileUrl.isNullOrBlank() && !imageLoadError
+                            if (showThumbnail) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(firstFileUrl)
+                                            .crossfade(true)
+                                            .size(300, 200)
+                                            .memoryCachePolicy(CachePolicy.ENABLED)
+                                            .diskCachePolicy(CachePolicy.ENABLED)
+                                            .build(),
+                                        contentDescription = item.title,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                        onSuccess = { hasImageLoaded = true },
+                                        onError = { imageLoadError = true }
                                     )
+                                    if (hasImageLoaded) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            Color.Transparent,
+                                                            Color.Black.copy(alpha = 0.2f),
+                                                            Color.Black.copy(alpha = 0.42f)
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                    }
+                                    // Clean minimal icon tag floating at bottom-right
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .align(Alignment.BottomEnd)
+                                            .graphicsLayer(translationX = -12f, translationY = -8f)
+                                            .background(accentColor, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = previewIcon,
+                                            contentDescription = null,
+                                            tint = Color(0xFF10151D),
+                                            modifier = Modifier.size(10.dp)
+                                        )
+                                    }
                                 }
                             }
-                        } else {
+
+                            val showShimmer = isImage && !firstFileUrl.isNullOrBlank() && !hasImageLoaded && !imageLoadError
+                            val showFallback = (!isImage || firstFileUrl.isNullOrBlank() || imageLoadError) && !showShimmer
+
+                            if (showShimmer) {
+                                ShimmerPlaceholder()
+                            } else if (showFallback) {
                             val placeholderType = when {
                                 isNotes -> "Notes"
                                 isPyq -> "PYQ"
@@ -644,6 +745,7 @@ fun ContinueReadingCard(
                         }
                     }
                 }
+                }
 
                 Spacer(Modifier.height(6.dp))
 
@@ -735,4 +837,36 @@ fun ContinueReadingCard(
             }
         }
     }
+}
+
+@Composable
+private fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer-translate"
+    )
+
+    val shimmerColors = listOf(
+        Color(0xFF2A2C39),
+        Color(0xFF3F4257),
+        Color(0xFF2A2C39)
+    )
+
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(translateAnim - 200f, translateAnim - 200f),
+        end = Offset(translateAnim, translateAnim)
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(brush)
+    )
 }

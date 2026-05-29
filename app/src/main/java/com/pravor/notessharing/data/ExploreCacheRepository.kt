@@ -49,6 +49,8 @@ class ExploreCacheRepository(context: Context) {
                     put("thumbnailUrl", it.thumbnailUrl ?: "")
                     put("thumbnailGenerated", it.thumbnailGenerated ?: false)
                     put("thumbnailType", it.thumbnailType ?: "")
+                    put("documentType", it.documentType)
+                    put("type", it.type ?: "")
                 })
             }
             json.put("trendingNotes", trendingArray)
@@ -171,7 +173,9 @@ class ExploreCacheRepository(context: Context) {
                         isBookmarked = obj.getBoolean("isBookmarked"),
                         thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
                         thumbnailGenerated = if (obj.has("thumbnailGenerated")) obj.getBoolean("thumbnailGenerated") else null,
-                        thumbnailType = obj.optString("thumbnailType").ifBlank { null }
+                        thumbnailType = obj.optString("thumbnailType").ifBlank { null },
+                        documentType = obj.optString("documentType", ""),
+                        type = obj.optString("type").ifBlank { null }
                     ))
                 }
             }
@@ -309,6 +313,8 @@ class ExploreCacheRepository(context: Context) {
             val thumbnailUrlsArray = JSONArray()
             item.thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
             put("thumbnailUrls", thumbnailUrlsArray)
+            put("documentType", item.documentType ?: "")
+            put("type", item.type ?: "")
         }
     }
 
@@ -356,7 +362,9 @@ class ExploreCacheRepository(context: Context) {
                     if (single.isNotBlank()) list.add(single)
                 }
                 list
-            }
+            },
+            documentType = obj.optString("documentType").ifBlank { null },
+            type = obj.optString("type").ifBlank { null }
         )
     }
 

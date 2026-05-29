@@ -57,7 +57,9 @@ fun DocumentDetailRoute(
                 thumbnailUrl = doc.thumbnailUrl,
                 thumbnailGenerated = doc.thumbnailGenerated,
                 thumbnailType = doc.thumbnailType,
-                thumbnailUrls = doc.thumbnailUrls
+                thumbnailUrls = doc.thumbnailUrls,
+                documentType = doc.documentType,
+                typeField = doc.documentType
             )
         }
     }

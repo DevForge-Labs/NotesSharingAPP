@@ -75,7 +75,9 @@ data class DocumentDetail(
             thumbnailUrl = thumbnailUrl,
             thumbnailGenerated = thumbnailGenerated,
             thumbnailType = thumbnailType,
-            thumbnailUrls = thumbnailUrls
+            thumbnailUrls = thumbnailUrls,
+            documentType = documentType,
+            type = documentType
         )
     }
 }

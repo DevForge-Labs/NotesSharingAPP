@@ -108,6 +108,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val thumbnailUrl = data["thumbnailUrl"] as? String
                     val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
                     val thumbnailType = data["thumbnailType"] as? String
+                    val documentTypeField = data["documentType"] as? String
+                    val typeField = data["type"] as? String
+
                     com.pravor.notessharing.model.TrendingNote(
                         id = id,
                         title = title,
@@ -118,7 +121,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         isBookmarked = false,
                         thumbnailUrl = thumbnailUrl,
                         thumbnailGenerated = thumbnailGenerated,
-                        thumbnailType = thumbnailType
+                        thumbnailType = thumbnailType,
+                        documentType = documentTypeField ?: "",
+                        type = typeField
                     )
                 }
 
@@ -262,6 +267,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         val thumbnailGenerated = doc["thumbnailGenerated"] as? Boolean
         val thumbnailType = doc["thumbnailType"] as? String
 
+        val documentTypeField = doc["documentType"] as? String
+        val typeField = doc["type"] as? String
+
         return FeedItem(
             id = id,
             uploaderName = uploaderName,
@@ -281,7 +289,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             youtubeUrl = youtubeUrl,
             thumbnailUrl = thumbnailUrl,
             thumbnailGenerated = thumbnailGenerated,
-            thumbnailType = thumbnailType
+            thumbnailType = thumbnailType,
+            documentType = documentTypeField,
+            type = typeField
         )
     }
 }

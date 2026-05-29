@@ -24,7 +24,9 @@ data class FeedItem(
     val thumbnailUrl: String? = null,
     val thumbnailGenerated: Boolean? = null,
     val thumbnailType: String? = null,
-    val thumbnailUrls: List<String> = emptyList()
+    val thumbnailUrls: List<String> = emptyList(),
+    val documentType: String? = null,
+    val type: String? = null
 )
 
 @Immutable

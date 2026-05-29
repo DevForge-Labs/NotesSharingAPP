@@ -246,6 +246,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val thumbnailGenerated = doc["thumbnailGenerated"] as? Boolean
         val thumbnailType = doc["thumbnailType"] as? String
 
+        val documentTypeField = doc["documentType"] as? String
+        val typeField = doc["type"] as? String
+
         return FeedItem(
             id = id,
             uploaderName = uploaderName,
@@ -265,7 +268,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             youtubeUrl = youtubeUrl,
             thumbnailUrl = thumbnailUrl,
             thumbnailGenerated = thumbnailGenerated,
-            thumbnailType = thumbnailType
+            thumbnailType = thumbnailType,
+            documentType = documentTypeField,
+            type = typeField
         )
     }
 

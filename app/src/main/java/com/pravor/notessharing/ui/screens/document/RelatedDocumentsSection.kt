@@ -47,7 +47,8 @@ fun RelatedDocumentsSection(
                     isBookmarked = false,
                     thumbnailUrl = relatedDoc.thumbnailUrl,
                     thumbnailGenerated = relatedDoc.thumbnailGenerated,
-                    thumbnailType = relatedDoc.thumbnailType
+                    thumbnailType = relatedDoc.thumbnailType,
+                    documentType = relatedDoc.documentType
                 )
                 TrendingNoteCard(
                     note = trendingNote,

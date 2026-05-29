@@ -127,7 +127,19 @@ fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
         Column(
             Modifier.padding(14.dp)
         ) {
-            val docType = getDocumentTypeFromTitle(note.title)
+            val documentTypeField = if (note.documentType.isNotBlank()) note.documentType else null
+            val typeField = note.type
+
+            val rawDocType = (documentTypeField ?: typeField)
+                ?.lowercase(java.util.Locale.ROOT)?.trim()
+
+            val docType = when (rawDocType) {
+                "pyq" -> "PYQ"
+                "cheatsheet", "cheat sheet" -> "Cheat Sheet"
+                "assignment" -> "Assignment"
+                "notes" -> "Notes"
+                else -> getDocumentTypeFromTitle(note.title)
+            }
             val previewIcon = when (docType) {
                 "PYQ" -> Icons.Default.Help
                 "Assignment" -> Icons.Default.Assignment
