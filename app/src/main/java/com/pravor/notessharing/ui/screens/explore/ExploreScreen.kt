@@ -1,6 +1,15 @@
 package com.pravor.notessharing.ui.screens.explore
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -30,8 +39,11 @@ fun ExploreRoute(
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     ExploreScreen(
         uiState = uiState,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
         onTrendingSeeMoreClick = onTrendingSeeMoreClick,
         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
@@ -40,9 +52,12 @@ fun ExploreRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
     uiState: ExploreUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
@@ -56,22 +71,52 @@ fun ExploreScreen(
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
 
     val listState = rememberLazyListState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     Box(modifier = modifier.fillMaxSize()) {
-        Crossfade(targetState = uiState, label = "explore-state", modifier = Modifier.fillMaxSize()) { state ->
-            when (state) {
-                ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
-                ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
-                is ExploreUiState.Error -> StatePanel("Explore failed", state.message, modifier = Modifier.padding(top = 96.dp))
-                is ExploreUiState.Success -> ExploreSuccessContent(
-                    content = state.content,
-                    listState = listState,
-                    onTrendingSeeMoreClick = onTrendingSeeMoreClick,
-                    onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
-                    onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
-                    onDocumentClick = onDocumentClick,
-                    onVideoClick = onVideoClick
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Crossfade(targetState = uiState, label = "explore-state", modifier = Modifier.fillMaxSize()) { state ->
+                when (state) {
+                    ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
+                    ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
+                    is ExploreUiState.Error -> StatePanel("Explore failed", state.message, modifier = Modifier.padding(top = 96.dp))
+                    is ExploreUiState.Success -> ExploreSuccessContent(
+                        content = state.content,
+                        listState = listState,
+                        onTrendingSeeMoreClick = onTrendingSeeMoreClick,
+                        onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
+                        onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
+                        onDocumentClick = onDocumentClick,
+                        onVideoClick = onVideoClick
+                    )
+                }
+            }
+
+            // Helper text overlay when user pulls down
+            androidx.compose.animation.AnimatedVisibility(
+                visible = pullToRefreshState.distanceFraction > 0.1f && !isRefreshing,
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    tonalElevation = 4.dp
+                ) {
+                    Text(
+                        text = "Pull down to refresh feed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
 

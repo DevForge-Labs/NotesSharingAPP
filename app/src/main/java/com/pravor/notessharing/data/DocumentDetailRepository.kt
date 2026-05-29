@@ -5,18 +5,33 @@ import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.model.toDocumentDetail
 import com.pravor.notessharing.viewmodel.DummyData
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 class DocumentDetailRepository {
     private val firestore = FirebaseFirestore.getInstance()
-    private val documentsCollection = firestore.collection("documents")
     private val usersCollection = firestore.collection("users")
 
     suspend fun getDocument(documentId: String): DocumentDetail? {
         return try {
-            val snapshot = documentsCollection.document(documentId).get().await()
-            if (snapshot.exists()) {
-                val data = snapshot.data
-                data?.toDocumentDetail(documentId)
+            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+            var foundData: Map<String, Any>? = null
+            coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            val snap = firestore.collection(col).document(documentId).get().await()
+                            if (snap.exists()) snap.data else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                foundData = deferreds.awaitAll().firstOrNull { it != null }
+            }
+            if (foundData != null) {
+                foundData?.toDocumentDetail(documentId)
             } else {
                 getDummyDocumentDetail(documentId)
             }
@@ -44,19 +59,31 @@ class DocumentDetailRepository {
 
     suspend fun getRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> {
         return try {
-            // Retrieve documents from Firestore
-            val snapshot = documentsCollection
-                .whereEqualTo("semester", doc.semester)
-                .whereEqualTo("subject", doc.subject)
-                .whereEqualTo("documentType", doc.documentType)
-                .limit(4)
-                .get()
-                .await()
+            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+            val allRelatedDocs = coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            firestore.collection(col)
+                                .whereEqualTo("semester", doc.semester)
+                                .whereEqualTo("subject", doc.subject)
+                                .whereEqualTo("documentType", doc.documentType)
+                                .limit(4)
+                                .get()
+                                .await()
+                                .documents
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+                }
+                deferreds.awaitAll().flatten()
+            }
 
-            val firestoreRelated = snapshot.documents.mapNotNull { d ->
+            val firestoreRelated = allRelatedDocs.mapNotNull { d ->
                 if (d.id == doc.id) null
                 else d.data?.toDocumentDetail(d.id)
-            }.take(3)
+            }.distinctBy { it.id }.take(3)
 
             if (firestoreRelated.isNotEmpty()) {
                 firestoreRelated

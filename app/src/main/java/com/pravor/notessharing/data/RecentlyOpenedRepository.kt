@@ -14,7 +14,11 @@ class RecentlyOpenedRepository(context: Context) {
         title: String,
         subject: String,
         youtubeVideoId: String?,
-        uploaderName: String
+        uploaderName: String,
+        thumbnailUrl: String? = null,
+        thumbnailGenerated: Boolean? = null,
+        thumbnailType: String? = null,
+        thumbnailUrls: List<String> = emptyList()
     ) {
         val json = JSONObject()
             .put("id", id)
@@ -24,6 +28,13 @@ class RecentlyOpenedRepository(context: Context) {
             .put("youtubeVideoId", youtubeVideoId ?: "")
             .put("timestamp", System.currentTimeMillis())
             .put("uploaderName", uploaderName)
+            .put("thumbnailUrl", thumbnailUrl ?: "")
+            .put("thumbnailGenerated", thumbnailGenerated ?: false)
+            .put("thumbnailType", thumbnailType ?: "")
+        
+        val thumbnailUrlsArray = org.json.JSONArray()
+        thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
+        json.put("thumbnailUrls", thumbnailUrlsArray)
         
         preferences.edit().putString(KEY_LAST_OPENED, json.toString()).apply()
     }
@@ -39,6 +50,20 @@ class RecentlyOpenedRepository(context: Context) {
             val youtubeVideoId = json.optString("youtubeVideoId").ifBlank { null }
             val timestamp = json.getLong("timestamp")
             val uploaderName = json.optString("uploaderName", "Anonymous")
+            
+            val thumbnailUrl = json.optString("thumbnailUrl").ifBlank { null }
+            val thumbnailGenerated = if (json.has("thumbnailGenerated")) json.getBoolean("thumbnailGenerated") else null
+            val thumbnailType = json.optString("thumbnailType").ifBlank { null }
+            
+            val thumbnailUrlsArray = json.optJSONArray("thumbnailUrls")
+            val thumbnailUrlsList = mutableListOf<String>()
+            if (thumbnailUrlsArray != null) {
+                for (i in 0 until thumbnailUrlsArray.length()) {
+                    thumbnailUrlsList.add(thumbnailUrlsArray.getString(i))
+                }
+            } else if (!thumbnailUrl.isNullOrBlank()) {
+                thumbnailUrlsList.add(thumbnailUrl)
+            }
 
             val fileType = if (type == "video") FileType.Video else FileType.Pdf
             
@@ -65,7 +90,11 @@ class RecentlyOpenedRepository(context: Context) {
                 isSaved = false,
                 bookmarksCount = 0,
                 youtubeVideoId = youtubeVideoId,
-                youtubeUrl = null
+                youtubeUrl = null,
+                thumbnailUrl = thumbnailUrl,
+                thumbnailGenerated = thumbnailGenerated,
+                thumbnailType = thumbnailType,
+                thumbnailUrls = thumbnailUrlsList
             )
         } catch (e: Exception) {
             null

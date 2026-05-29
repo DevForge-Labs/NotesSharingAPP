@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val recentlyOpenedRepository = RecentlyOpenedRepository(application)
@@ -105,19 +108,32 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
                 val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
 
-                val snapshot = if (hasSemester) {
-                    firestore.collection("documents")
-                        .whereEqualTo("semester", semester)
-                        .get()
-                        .await()
-                } else {
-                    firestore.collection("documents")
-                        .orderBy("uploadedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                        .get()
-                        .await()
+                val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+                val allDocs = coroutineScope {
+                    val deferreds = collections.map { col ->
+                        async {
+                            try {
+                                if (hasSemester) {
+                                    firestore.collection(col)
+                                        .whereEqualTo("semester", semester)
+                                        .get()
+                                        .await()
+                                        .documents
+                                } else {
+                                    firestore.collection(col)
+                                        .get()
+                                        .await()
+                                        .documents
+                                }
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
+                        }
+                    }
+                    deferreds.awaitAll().flatten()
                 }
                 
-                val realItems = snapshot.documents.mapNotNull { doc ->
+                val realItems = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     val item = documentToFeedItem(data)
                     val timestamp = data["uploadedAt"] as? Long ?: (data["uploadTimestamp"] as? Long ?: 0L)
@@ -226,6 +242,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val youtubeUrl = doc["youtubeUrl"] as? String
         val youtubeVideoId = doc["youtubeVideoId"] as? String
         
+        val thumbnailUrl = doc["thumbnailUrl"] as? String
+        val thumbnailGenerated = doc["thumbnailGenerated"] as? Boolean
+        val thumbnailType = doc["thumbnailType"] as? String
+
         return FeedItem(
             id = id,
             uploaderName = uploaderName,
@@ -242,7 +262,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             isSaved = false,
             bookmarksCount = bookmarks,
             youtubeVideoId = youtubeVideoId,
-            youtubeUrl = youtubeUrl
+            youtubeUrl = youtubeUrl,
+            thumbnailUrl = thumbnailUrl,
+            thumbnailGenerated = thumbnailGenerated,
+            thumbnailType = thumbnailType
         )
     }
 

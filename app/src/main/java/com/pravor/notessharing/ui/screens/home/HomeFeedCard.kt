@@ -53,6 +53,7 @@ import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.model.FileType
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatItem
+import com.pravor.notessharing.ui.components.VideoPlaceholder
 
 private const val THUMBNAIL_QUALITY_HQ = "hqdefault"
 
@@ -111,24 +112,7 @@ fun HomeFeedCard(
                             }
                         }
                     } else {
-                        // Fallback UI
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF1E1E24), Color(0xFF121214))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        VideoPlaceholder(modifier = Modifier.fillMaxSize())
                     }
                 }
 
@@ -367,32 +351,7 @@ private fun VideoCardPreview(youtubeVideoId: String, title: String) {
                 }
             }
         } else {
-            // Fallback UI
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color(0xFF1E1E24), Color(0xFF121214))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        modifier = Modifier.size(36.dp)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Video unavailable",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            VideoPlaceholder(modifier = Modifier.fillMaxSize())
         }
     }
 }

@@ -1,0 +1,36 @@
+import { getStorage } from "firebase-admin/storage";
+import * as crypto from "crypto";
+
+/**
+ * Downloads a file from the default Firebase Storage bucket into memory as a Buffer.
+ * @param storagePath The path to the file in the bucket.
+ */
+export async function downloadFile(storagePath: string): Promise<Buffer> {
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+  const [buffer] = await file.download();
+  return buffer;
+}
+
+/**
+ * Uploads a compressed thumbnail buffer to Firebase Storage, sets the public access token,
+ * and returns the persistent download URL.
+ * @param thumbnailPath The path where the thumbnail will be saved.
+ * @param buffer The compressed image buffer.
+ */
+export async function uploadThumbnail(thumbnailPath: string, buffer: Buffer, contentType: string): Promise<string> {
+  const bucket = getStorage().bucket();
+  const file = bucket.file(thumbnailPath);
+  const downloadToken = crypto.randomUUID();
+
+  await file.save(buffer, {
+    metadata: {
+      contentType: contentType,
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
+    },
+  });
+
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(thumbnailPath)}?alt=media&token=${downloadToken}`;
+}

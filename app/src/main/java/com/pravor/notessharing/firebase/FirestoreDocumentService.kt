@@ -5,14 +5,13 @@ import kotlinx.coroutines.tasks.await
 
 class FirestoreDocumentService {
     private val firestore = FirebaseFirestore.getInstance()
-    private val documentsCollection = firestore.collection("documents")
-
-    suspend fun saveDocument(doc: Map<String, Any>) {
+    suspend fun saveDocument(collectionName: String, doc: Map<String, Any>) {
         val docId = doc["documentId"] as? String
+        val collection = firestore.collection(collectionName)
         if (docId != null) {
-            documentsCollection.document(docId).set(doc).await()
+            collection.document(docId).set(doc).await()
         } else {
-            documentsCollection.add(doc).await()
+            collection.add(doc).await()
         }
     }
 }
