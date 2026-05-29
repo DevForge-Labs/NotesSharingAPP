@@ -110,6 +110,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val thumbnailType = data["thumbnailType"] as? String
                     val documentTypeField = data["documentType"] as? String
                     val typeField = data["type"] as? String
+                    val examYearVal = data["examYear"] as? String
 
                     com.pravor.notessharing.model.TrendingNote(
                         id = id,
@@ -123,7 +124,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         thumbnailGenerated = thumbnailGenerated,
                         thumbnailType = thumbnailType,
                         documentType = documentTypeField ?: "",
-                        type = typeField
+                        type = typeField,
+                        examYear = examYearVal
                     )
                 }
 

@@ -62,6 +62,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        title: String,
         description: String = "",
         onProgress: (Float) -> Unit
     ) {
@@ -75,6 +76,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            title = title,
             description = description,
             onProgress = onProgress
         )
@@ -85,6 +87,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        title: String,
         description: String = "",
         onProgress: (Float) -> Unit
     ) {
@@ -98,6 +101,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            title = title,
             description = description,
             onProgress = onProgress
         )
@@ -108,6 +112,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        title: String,
         description: String = "",
         onProgress: (Float) -> Unit
     ) {
@@ -121,6 +126,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            title = title,
             description = description,
             onProgress = onProgress
         )
@@ -145,6 +151,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = youtubePreview,
             examYear = null,
             examType = null,
+            title = null,
             description = description,
             onProgress = onProgress
         )
@@ -160,6 +167,7 @@ class UploadRepository(private val context: Context) {
         youtubePreview: YoutubePreview?,
         examYear: String?,
         examType: String?,
+        title: String? = null,
         description: String = "",
         onProgress: (Float) -> Unit
     ) {
@@ -362,7 +370,7 @@ class UploadRepository(private val context: Context) {
                 else -> "application/octet-stream"
             }
 
-            val formattedTitle = subject.trim()
+            val formattedTitle = if (!title.isNullOrBlank()) title.trim() else subject.trim()
 
             val doc = mutableMapOf<String, Any>(
                 "documentId" to documentId,

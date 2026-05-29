@@ -2,6 +2,7 @@ package com.pravor.notessharing.ui.screens.document
 
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,22 +11,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.data.RecentlyOpenedRepository
 import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.ui.components.StatePanel
+import com.pravor.notessharing.ui.components.utils.getSubjectColor
+import com.pravor.notessharing.ui.components.utils.normalizeSubject
 import com.pravor.notessharing.viewmodel.DocumentDetailUiState
 import com.pravor.notessharing.viewmodel.DocumentDetailViewModel
 
@@ -85,7 +96,10 @@ fun DocumentDetailScreen(
             TopAppBar(
                 title = {
                     val titleText = when (uiState) {
-                        is DocumentDetailUiState.Success -> uiState.document.subject.ifBlank { uiState.document.title }
+                        is DocumentDetailUiState.Success -> {
+                            val doc = uiState.document
+                            doc.title.ifBlank { doc.subject.ifBlank { "Untitled Document" } }
+                        }
                         else -> "Document Details"
                     }
                     Text(
@@ -175,21 +189,104 @@ fun DocumentDetailSuccessContent(
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // 1. DOCUMENT PREVIEW SECTION (Mixed adapters inside preview section handles horizontal/vertical margins)
+        // 1. SUBJECT SECTION (Pill/Chip visual with Upvotes on the far right)
+        item(key = "subject-section") {
+            if (doc.subject.isNotBlank()) {
+                val normalized = remember(doc.subject) { normalizeSubject(doc.subject) }
+                val subjectColor = remember(normalized) { getSubjectColor(normalized) }
+                val displayColor = if (subjectColor == Color(0xFF78909C)) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    subjectColor
+                }
+                // Interactive Upvote State (Local UI Feedback keyed by document ID)
+                var isUpvoted by remember(doc.id) { mutableStateOf(false) }
+                val upvoteCount = if (isUpvoted) 1 else 0
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp), // Compensate for the clickable upvote Row's horizontal padding
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Subject Chip
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = displayColor.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, displayColor.copy(alpha = 0.5f)),
+                        modifier = Modifier.height(40.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = null,
+                                tint = displayColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = doc.subject,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = displayColor
+                                )
+                            )
+                        }
+                    }
+
+                    // Interactive Upvote Indicator (Far Right)
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                isUpvoted = !isUpvoted
+                                // Future ready action integration:
+                                // onUpvoteClick(doc.id)
+                            }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val indicatorColor = if (isUpvoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Upvotes",
+                            tint = indicatorColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = "$upvoteCount",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = indicatorColor
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. DOCUMENT INFO SECTION (Redesigned metadata chips)
+        item(key = "metadata-section") {
+            DocumentMetadataSection(
+                doc = doc,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+
+        // 3. DOCUMENT PREVIEW SECTION (Mixed adapters inside preview section handles horizontal/vertical margins)
         item(key = "preview-section") {
             AttachmentPreviewSection(
                 doc = doc,
                 onDownloadClick = onDownloadClick,
                 onShareClick = onShareClick,
                 modifier = Modifier // No horizontal padding here so images scroll edge-to-edge
-            )
-        }
-
-        // 2. DOCUMENT INFO SECTION
-        item(key = "metadata-section") {
-            DocumentMetadataSection(
-                doc = doc,
-                modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
 
@@ -223,7 +320,7 @@ fun DocumentDetailSuccessContent(
             }
         }
 
-        // 3. UPLOADER DETAILS SECTION
+        // 4. UPLOADER DETAILS SECTION
         item(key = "uploader-section") {
             Card(
                 modifier = Modifier
@@ -244,7 +341,7 @@ fun DocumentDetailSuccessContent(
             }
         }
 
-        // 4. RELATED DOCUMENTS
+        // 5. RELATED DOCUMENTS
         if (relatedDocuments.isNotEmpty()) {
             item(key = "related-section") {
                 RelatedDocumentsSection(

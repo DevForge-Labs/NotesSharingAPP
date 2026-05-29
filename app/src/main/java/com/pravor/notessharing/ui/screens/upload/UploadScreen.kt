@@ -128,6 +128,7 @@ fun UploadRoute(
         onBranchChange = viewModel::selectBranch,
         onSemesterChange = viewModel::selectSemester,
         onSubjectChange = viewModel::updateSubject,
+        onTitleChange = viewModel::updateTitle,
         onDescriptionChange = viewModel::updateDescription,
         onTypeSelected = viewModel::selectUploadType,
         onExamYearChange = viewModel::selectExamYear,
@@ -147,6 +148,7 @@ fun UploadScreen(
     onBranchChange: (String) -> Unit,
     onSemesterChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
+    onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
     onExamYearChange: (String) -> Unit,
@@ -173,7 +175,7 @@ fun UploadScreen(
     val isFormValid = uiState.metadataComplete && uiState.errorMessage == null && when (uiState.selectedType) {
         UploadType.Pyq -> uiState.selectedFiles.size == 1 && uiState.selectedExamYear.isNotBlank() && uiState.selectedExamType.isNotBlank()
         UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && com.pravor.notessharing.model.extractYoutubeVideoId(uiState.youtubeUrl) != null
-        UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> uiState.selectedFiles.isNotEmpty()
+        UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> uiState.selectedFiles.isNotEmpty() && uiState.title.isNotBlank()
         null -> false
     }
 
@@ -200,6 +202,7 @@ fun UploadScreen(
                     onBranchChange = onBranchChange,
                     onSemesterChange = onSemesterChange,
                     onSubjectChange = onSubjectChange,
+                    onTitleChange = onTitleChange,
                     onDescriptionChange = onDescriptionChange,
                     onTypeSelected = onTypeSelected,
                     onExamYearChange = onExamYearChange,
@@ -286,6 +289,7 @@ fun MetadataSection(
     onBranchChange: (String) -> Unit,
     onSemesterChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
+    onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
     onExamYearChange: (String) -> Unit,
@@ -350,6 +354,35 @@ fun MetadataSection(
                 onValueChange = onTypeSelected
             )
 
+            if (uiState.selectedType in listOf(UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedTextField(
+                        value = uiState.title,
+                        onValueChange = onTitleChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Title") },
+                        placeholder = { Text("Enter a title for this upload...") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
+                    val showTitleError = uiState.title.isBlank() && uiState.selectedType != null
+                    if (showTitleError) {
+                        Text(
+                            text = "Title is required",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+
             if (uiState.selectedType == UploadType.Pyq) {
                 DropdownField(
                     label = "Exam Year",
@@ -382,12 +415,19 @@ fun MetadataSection(
                 }
             }
 
+            val descriptionPlaceholder = when (uiState.selectedType) {
+                UploadType.Notes -> "Mention teacher name or section name..."
+                UploadType.Assignment -> "Mention teacher name or section name..."
+                UploadType.CheatSheet -> "How it helps..."
+                else -> "Optional description..."
+            }
+
             OutlinedTextField(
                 value = uiState.description,
                 onValueChange = onDescriptionChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Description") },
-                placeholder = { Text("Optional description...") },
+                placeholder = { Text(descriptionPlaceholder, maxLines = 2) },
                 singleLine = false,
                 minLines = 1,
                 maxLines = 10,
