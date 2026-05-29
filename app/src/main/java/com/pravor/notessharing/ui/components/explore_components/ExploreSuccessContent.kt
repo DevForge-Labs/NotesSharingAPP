@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -75,7 +76,11 @@ fun ExploreSuccessContent(
             }
             item(key = "trending-carousel", contentType = "carousel") {
                 ScrollableRowWithIndicator {
-                    items(visibleTrendingNotes, key = { it.id }, contentType = { "trending-note" }) { note ->
+                    itemsIndexed(
+                        items = visibleTrendingNotes,
+                        key = { index, note -> note.id.ifBlank { "trending_note_$index" } },
+                        contentType = { _, _ -> "trending-note" }
+                    ) { _, note ->
                         TrendingNoteCard(note, onClick = { onDocumentClick(note.id) })
                     }
                 }
@@ -114,11 +119,11 @@ fun ExploreSuccessContent(
                     }
                 }
             } else {
-                items(
+                itemsIndexed(
                     items = visibleRecommendedVideos,
-                    key = { it.id },
-                    contentType = { "video" }
-                ) { video ->
+                    key = { index, video -> video.id.ifBlank { "video_$index" } },
+                    contentType = { _, _ -> "video" }
+                ) { _, video ->
                     VideoRecommendationCard(
                         video = video,
                         onClick = { onVideoClick(video.id) }
@@ -140,7 +145,11 @@ fun ExploreSuccessContent(
             }
             item(key = "collections-carousel", contentType = "carousel") {
                 ScrollableRowWithIndicator {
-                    items(content.studyCollections, key = { it.id }, contentType = { "collection" }) { collection ->
+                    itemsIndexed(
+                        items = content.studyCollections,
+                        key = { index, collection -> collection.id.ifBlank { "collection_$index" } },
+                        contentType = { _, _ -> "collection" }
+                    ) { _, collection ->
                         CollectionCard(collection)
                     }
                 }
@@ -150,7 +159,11 @@ fun ExploreSuccessContent(
             }
             item(key = "revision-carousel", contentType = "carousel") {
                 ScrollableRowWithIndicator {
-                    items(content.revisionCards, key = { it.id }, contentType = { "revision" }) { revision ->
+                    itemsIndexed(
+                        items = content.revisionCards,
+                        key = { index, revision -> revision.id.ifBlank { "revision_$index" } },
+                        contentType = { _, _ -> "revision" }
+                    ) { _, revision ->
                         RevisionCard(revision)
                     }
                 }
@@ -158,18 +171,18 @@ fun ExploreSuccessContent(
             item(key = "discover-title", contentType = "section") {
                 SectionHeader("🌍 Discover")
             }
-            items(
+            itemsIndexed(
                 items = visibleDiscoverItems,
-                key = { it.id },
-                contentType = {
-                    when (it) {
+                key = { index, item -> item.id.ifBlank { "discover_$index" } },
+                contentType = { _, item ->
+                    when (item) {
                         is DiscoverFeedItem.Collection -> "discover-collection"
                         is DiscoverFeedItem.ContributorPost -> "discover-contributor"
                         is DiscoverFeedItem.Note -> "discover-note"
                         is DiscoverFeedItem.Video -> "discover-video"
                     }
                 }
-            ) { item ->
+            ) { _, item ->
                 DiscoverFeedItem(
                     item = item,
                     onClick = {

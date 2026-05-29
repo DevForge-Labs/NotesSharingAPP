@@ -3,6 +3,7 @@ package com.pravor.notessharing.ui.screens.explore
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
@@ -88,7 +89,7 @@ fun RecommendedVideosScreen(
                             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            items(videos, key = { it.id }, contentType = { "video" }) { video ->
+                            itemsIndexed(videos, key = { index, video -> video.id.ifBlank { "video_$index" } }, contentType = { _, _ -> "video" }) { _, video ->
                                 VideoRecommendationCard(
                                     video = video,
                                     onClick = { onVideoClick(video.id) }
