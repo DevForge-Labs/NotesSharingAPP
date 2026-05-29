@@ -51,6 +51,7 @@ class ExploreCacheRepository(context: Context) {
                     put("thumbnailType", it.thumbnailType ?: "")
                     put("documentType", it.documentType)
                     put("type", it.type ?: "")
+                    put("examYear", it.examYear ?: "")
                 })
             }
             json.put("trendingNotes", trendingArray)
@@ -175,7 +176,8 @@ class ExploreCacheRepository(context: Context) {
                         thumbnailGenerated = if (obj.has("thumbnailGenerated")) obj.getBoolean("thumbnailGenerated") else null,
                         thumbnailType = obj.optString("thumbnailType").ifBlank { null },
                         documentType = obj.optString("documentType", ""),
-                        type = obj.optString("type").ifBlank { null }
+                        type = obj.optString("type").ifBlank { null },
+                        examYear = obj.optString("examYear").ifBlank { null }
                     ))
                 }
             }

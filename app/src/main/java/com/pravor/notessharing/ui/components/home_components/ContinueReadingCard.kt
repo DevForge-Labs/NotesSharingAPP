@@ -59,20 +59,43 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.ui.geometry.Offset
+import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.pravor.notessharing.model.FeedItem
+import com.pravor.notessharing.ui.components.utils.SubjectBadge
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
-// Singleton memory cache to prevent redundant database hits on scroll recompositions
-object ContinueReadingPreviewCache {
-    private val cache = java.util.concurrent.ConcurrentHashMap<String, Triple<String, Boolean, String?>>()
+private fun downloadThumbnailFile(imageUrl: String, destinationFile: File): Boolean {
+    var connection: HttpURLConnection? = null
+    return try {
+        destinationFile.parentFile?.mkdirs()
+        val url = URL(imageUrl)
+        connection = url.openConnection() as HttpURLConnection
+        connection.connectTimeout = 10000
+        connection.readTimeout = 10000
+        connection.requestMethod = "GET"
+        connection.connect()
 
-    fun get(itemId: String): Triple<String, Boolean, String?>? = cache[itemId]
-
-    fun put(itemId: String, url: String, isImage: Boolean, docType: String?) {
-        cache[itemId] = Triple(url, isImage, docType)
+        if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+            connection.inputStream.use { input ->
+                FileOutputStream(destinationFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            true
+        } else {
+            false
+        }
+    } catch (e: java.lang.Exception) {
+        false
+    } finally {
+        connection?.disconnect()
     }
 }
 
@@ -91,6 +114,7 @@ fun ContinueReadingCard(
     var isImage by remember(item.id) { mutableStateOf(false) }
     var isLoading by remember(item.id) { mutableStateOf(true) }
     var resolvedDocType by remember(item.id) { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(item.id) {
         if (isVideo) {
@@ -98,47 +122,93 @@ fun ContinueReadingCard(
             return@LaunchedEffect
         }
 
-        if (!item.thumbnailUrl.isNullOrBlank()) {
-            firstFileUrl = item.thumbnailUrl
-            isImage = true
-            isLoading = false
-            return@LaunchedEffect
+        val cacheDir = File(context.cacheDir, "continue-reading")
+        val localFile = File(cacheDir, "${item.id}.jpg")
+        val prefs = context.getSharedPreferences("continue_reading_file_cache", Context.MODE_PRIVATE)
+
+        // 1. Check if local cache file exists
+        if (localFile.exists()) {
+            val cachedRemoteUrl = prefs.getString("${item.id}_remote_url", null)
+            val cachedDocType = prefs.getString("${item.id}_doc_type", null)
+            val remoteUrlToUse = if (!item.thumbnailUrl.isNullOrBlank()) item.thumbnailUrl else null
+
+            // If the thumbnail URL hasn't changed, reuse the local file directly and skip network
+            if (remoteUrlToUse == null || remoteUrlToUse == cachedRemoteUrl) {
+                firstFileUrl = localFile.absolutePath
+                isImage = true
+                resolvedDocType = cachedDocType
+                isLoading = false
+                return@LaunchedEffect
+            } else {
+                // Invalidate cache if the URL has changed
+                try {
+                    localFile.delete()
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
         }
 
-        val cached = ContinueReadingPreviewCache.get(item.id)
-        if (cached != null) {
-            firstFileUrl = cached.first
-            isImage = cached.second
-            resolvedDocType = cached.third
-            isLoading = false
-            return@LaunchedEffect
-        }
-
+        // 2. Fetch and download the file to persistent local storage in a background thread
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val doc = repository.getDocument(item.id)
-                if (doc != null) {
-                    val urlToUse = if (!doc.thumbnailUrl.isNullOrBlank()) {
+                // If item.thumbnailUrl is blank, query the database for latest document metadata
+                val remoteUrlToUse = if (!item.thumbnailUrl.isNullOrBlank()) {
+                    item.thumbnailUrl
+                } else {
+                    val doc = repository.getDocument(item.id)
+                    if (doc != null && !doc.thumbnailUrl.isNullOrBlank()) {
                         doc.thumbnailUrl
-                    } else if (doc.fileUrls.isNotEmpty()) {
+                    } else if (doc != null && doc.fileUrls.isNotEmpty()) {
                         doc.fileUrls.first()
                     } else {
                         null
                     }
-                    val isImg = urlToUse != null && (
-                        !doc.thumbnailUrl.isNullOrBlank() ||
-                        urlToUse.contains(".jpg", ignoreCase = true) ||
-                        urlToUse.contains(".jpeg", ignoreCase = true) ||
-                        urlToUse.contains(".png", ignoreCase = true) ||
-                        urlToUse.contains(".webp", ignoreCase = true) ||
-                        urlToUse.contains("unsplash.com", ignoreCase = true)
-                    )
+                }
 
+                if (!remoteUrlToUse.isNullOrBlank()) {
+                    val isImg = remoteUrlToUse.contains(".jpg", ignoreCase = true) ||
+                                remoteUrlToUse.contains(".jpeg", ignoreCase = true) ||
+                                remoteUrlToUse.contains(".png", ignoreCase = true) ||
+                                remoteUrlToUse.contains(".webp", ignoreCase = true) ||
+                                remoteUrlToUse.contains("unsplash.com", ignoreCase = true) ||
+                                remoteUrlToUse.contains("firebasestorage.googleapis.com", ignoreCase = true)
+
+                    if (isImg) {
+                        val success = downloadThumbnailFile(remoteUrlToUse, localFile)
+                        if (success) {
+                            prefs.edit()
+                                .putString("${item.id}_remote_url", remoteUrlToUse)
+                                .putString("${item.id}_doc_type", item.documentType)
+                                .apply()
+
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                firstFileUrl = localFile.absolutePath
+                                isImage = true
+                                resolvedDocType = item.documentType
+                            }
+                        } else {
+                            // Fallback to direct remote URL if download fails
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                firstFileUrl = remoteUrlToUse
+                                isImage = true
+                                resolvedDocType = item.documentType
+                            }
+                        }
+                    } else {
+                        // Not an image file
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            firstFileUrl = remoteUrlToUse
+                            isImage = false
+                            resolvedDocType = item.documentType
+                        }
+                    }
+                } else {
+                    // No URL available
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        firstFileUrl = urlToUse
-                        isImage = isImg
-                        resolvedDocType = doc.documentType
-                        ContinueReadingPreviewCache.put(item.id, urlToUse ?: "", isImg, doc.documentType)
+                        firstFileUrl = null
+                        isImage = false
+                        resolvedDocType = item.documentType
                     }
                 }
             } catch (e: Exception) {
@@ -381,7 +451,7 @@ fun ContinueReadingCard(
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
-                                            .data(firstFileUrl)
+                                            .data(if (firstFileUrl?.startsWith("http") == false) File(firstFileUrl) else firstFileUrl)
                                             .crossfade(true)
                                             .size(300, 200)
                                             .memoryCachePolicy(CachePolicy.ENABLED)
@@ -801,13 +871,9 @@ fun ContinueReadingCard(
 
                     Spacer(Modifier.height(4.dp))
 
-                    Text(
-                        text = supportingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (supportingText.isNotBlank()) {
+                        SubjectBadge(subject = supportingText)
+                    }
                 }
 
                 Column {

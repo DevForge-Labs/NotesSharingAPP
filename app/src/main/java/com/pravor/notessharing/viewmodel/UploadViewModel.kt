@@ -70,6 +70,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 selectedFiles = emptyList(),
                 youtubeUrl = "",
                 description = "",
+                title = "",
                 youtubePreview = null,
                 youtubeError = null,
                 selectedExamYear = "",
@@ -78,6 +79,10 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 uploadSuccess = false
             )
         }
+    }
+
+    fun updateTitle(title: String) {
+        _uiState.update { it.copy(title = title, errorMessage = null, uploadSuccess = false) }
     }
 
     fun updateDescription(description: String) {
@@ -261,6 +266,10 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> {
+                if (state.title.isBlank()) {
+                    _uiState.update { it.copy(errorMessage = "Title is required.") }
+                    return
+                }
                 if (state.selectedFiles.isEmpty()) {
                     _uiState.update { it.copy(errorMessage = "Please select at least one file to upload.") }
                     return
@@ -309,6 +318,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             semester = state.selectedSemester,
                             subject = state.subject,
                             selectedFiles = state.selectedFiles,
+                            title = state.title,
                             description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
@@ -320,6 +330,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             semester = state.selectedSemester,
                             subject = state.subject,
                             selectedFiles = state.selectedFiles,
+                            title = state.title,
                             description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
@@ -331,6 +342,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             semester = state.selectedSemester,
                             subject = state.subject,
                             selectedFiles = state.selectedFiles,
+                            title = state.title,
                             description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }

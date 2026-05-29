@@ -43,6 +43,8 @@ import coil.request.ImageRequest
 import com.pravor.notessharing.data.DocumentDetailRepository
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.ui.components.DocumentPlaceholder
+import com.pravor.notessharing.ui.components.utils.SubjectBadge
+import com.pravor.notessharing.ui.components.utils.getDocumentTypeFromTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -227,13 +229,34 @@ fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
                         DocumentPlaceholder(documentType = docType, modifier = Modifier.fillMaxSize())
                     }
                 }
+
+                // Overlay badge on thumbnail in top-right corner
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color.Black.copy(alpha = 0.65f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = docType.uppercase(),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(Modifier.height(12.dp))
 
             // 2. SUBJECT NAME (Main Title)
+            val isTitleValid = note.title.isNotBlank() && note.title != "Untitled Document"
+            val displayTitle = if (isTitleValid) note.title else note.subject
+
             Text(
-                text = note.subject,
+                text = displayTitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
@@ -241,21 +264,45 @@ fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            // 3. DOCUMENT TYPE CHIP (Metadata below subject name)
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = accentColor.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
+            // 3. SUBJECT BADGE (Primary position below title area)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = docType.uppercase(),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = accentColor,
-                    fontWeight = FontWeight.Bold
-                )
+                if (note.subject.isNotBlank()) {
+                    SubjectBadge(subject = note.subject)
+                }
+
+                // Conditional Year Badge for PYQ documents (Aligned Far Right)
+                if (docType == "PYQ" && !note.examYear.isNullOrBlank()) {
+                    val normalizedSubject = remember(note.subject) { com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject) }
+                    val subjectBadgeColor = remember(normalizedSubject) { com.pravor.notessharing.ui.components.utils.getSubjectColor(normalizedSubject) }
+                    val yearColor = subjectBadgeColor
+                    val yearBgColor = subjectBadgeColor.copy(alpha = 0.12f)
+                    val yearBorderColor = subjectBadgeColor.copy(alpha = 0.45f)
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = yearBgColor,
+                        border = BorderStroke(1.dp, yearBorderColor)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = note.examYear,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                color = yearColor,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -288,47 +335,5 @@ fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
                 Text(note.upvotes.toString())
             }
         }
-    }
-}
-
-@Composable
-private fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer-translate"
-    )
-
-    val shimmerColors = listOf(
-        Color(0xFF2A2C39),
-        Color(0xFF3F4257),
-        Color(0xFF2A2C39)
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(translateAnim - 200f, translateAnim - 200f),
-        end = Offset(translateAnim, translateAnim)
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(brush)
-    )
-}
-
-private fun getDocumentTypeFromTitle(title: String): String {
-    val t = title.lowercase(java.util.Locale.ROOT)
-    return when {
-        t.contains("pyq") || t.contains("solved") || t.contains("exam") || t.contains("paper") -> "PYQ"
-        t.contains("cheat") || t.contains("formula") || t.contains("quick") || t.contains("sheet") -> "Cheat Sheet"
-        t.contains("lab") || t.contains("assignment") || t.contains("manual") || t.contains("practice") -> "Assignment"
-        else -> "Notes"
     }
 }
