@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.screens.explore
 
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,18 +43,18 @@ fun DiscoverScreen(
             title = "Discover",
             onBackClick = onBackClick
         ) {
-            items(
+            itemsIndexed(
                 items = uiState.content.discoverItems,
-                key = { it.id },
-                contentType = {
-                    when (it) {
+                key = { index, item -> item.id.ifBlank { "discover_$index" } },
+                contentType = { _, item ->
+                    when (item) {
                         is DiscoverFeedItem.Collection -> "discover-collection"
                         is DiscoverFeedItem.ContributorPost -> "discover-contributor"
                         is DiscoverFeedItem.Note -> "discover-note"
                         is DiscoverFeedItem.Video -> "discover-video"
                     }
                 }
-            ) { item ->
+            ) { _, item ->
                 DiscoverFeedItemCard(item, onClick = {
                     if (item is DiscoverFeedItem.Video) {
                         onVideoClick(item.id)

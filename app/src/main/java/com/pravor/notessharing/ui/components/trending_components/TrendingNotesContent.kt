@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -91,11 +92,11 @@ fun TrendingNotesContent(
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(
+                            itemsIndexed(
                                 items = documentNotes,
-                                key = { it.id },
-                                contentType = { "trending-note-card" }
-                            ) { note ->
+                                key = { index, note -> note.id.ifBlank { "trending-note-card-$index" } },
+                                contentType = { _, _ -> "trending-note-card" }
+                            ) { _, note ->
                                 TrendingNoteDiscoveryCard(
                                     note = note,
                                     detailRepository = detailRepository,
