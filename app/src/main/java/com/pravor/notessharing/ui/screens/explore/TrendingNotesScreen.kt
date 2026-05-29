@@ -17,7 +17,7 @@ import com.pravor.notessharing.model.FileType
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.ui.components.StatePanel
-import com.pravor.notessharing.ui.screens.home.HomeFeedCard
+import com.pravor.notessharing.ui.components.home_components.HomeFeedCard
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 
 @Composable
