@@ -174,6 +174,29 @@ class TrendingFeedRepository(private val context: Context) {
         return collections.all { isCollectionEnd[it] == true }
     }
 
+    private fun isVideoResource(data: Map<String, Any>): Boolean {
+        val docType = (data["documentType"] as? String ?: data["type"] as? String ?: "").trim()
+        val contentType = (data["contentType"] as? String ?: "").trim()
+        val hasYoutubeLink = (data["hasYoutubeLink"] as? Boolean) == true || (data["hasYoutubeLink"] as? String)?.lowercase() == "true"
+        val sourceType = (data["sourceType"] as? String ?: "").trim()
+        val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
+        val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
+        val resourceType = (data["resourceType"] as? String ?: "").trim()
+        val source = (data["source"] as? String ?: "").trim()
+
+        return docType.equals("VIDEO", ignoreCase = true) ||
+                docType.equals("YouTube Resource", ignoreCase = true) ||
+                docType.equals("Videos", ignoreCase = true) ||
+                contentType.equals("VIDEO", ignoreCase = true) ||
+                hasYoutubeLink ||
+                sourceType.equals("youtube", ignoreCase = true) ||
+                sourceType.equals("video", ignoreCase = true) ||
+                youtubeUrl.isNotBlank() ||
+                youtubeVideoId.isNotBlank() ||
+                resourceType.equals("VIDEO", ignoreCase = true) ||
+                source.equals("YOUTUBE", ignoreCase = true)
+    }
+
     private suspend fun fetchPageFromFirestore(isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
         val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "documents")
 
@@ -187,7 +210,7 @@ class TrendingFeedRepository(private val context: Context) {
         coroutineScope {
             val deferreds = collections.map { col ->
                 async {
-                    if (isCollectionEnd[col] == true) return@async emptyList<DocumentSnapshot>()
+                    if (isCollectionEnd[col] == true) return@async Pair(emptyList<DocumentSnapshot>(), null)
                     try {
                         var query = firestore.collection(col)
                             .orderBy("upvotes", Query.Direction.DESCENDING)
@@ -202,16 +225,32 @@ class TrendingFeedRepository(private val context: Context) {
                         if (snap.isEmpty) {
                             isCollectionEnd[col] = true
                         }
-                        snap.documents
+                        
+                        val docs = snap.documents
+                        val nonVideoDocs = docs.filter { doc ->
+                            val data = doc.data ?: emptyMap<String, Any>()
+                            !isVideoResource(data)
+                        }
+
+                        val advanceCursorTo = if (nonVideoDocs.isEmpty() && docs.isNotEmpty()) {
+                            docs.last()
+                        } else {
+                            null
+                        }
+
+                        Pair(nonVideoDocs, advanceCursorTo)
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        emptyList<DocumentSnapshot>()
+                        Pair(emptyList<DocumentSnapshot>(), null)
                     }
                 }
             }
             val results = deferreds.awaitAll()
-            results.forEachIndexed { index, docs ->
+            results.forEachIndexed { index, (docs, advanceCursorTo) ->
                 val col = collections[index]
+                if (advanceCursorTo != null) {
+                    lastSnapshots[col] = advanceCursorTo
+                }
                 docs.forEach { doc ->
                     allCandidates.add(Pair(doc, col))
                 }

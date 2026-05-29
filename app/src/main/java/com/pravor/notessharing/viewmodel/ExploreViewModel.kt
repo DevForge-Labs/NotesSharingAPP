@@ -81,6 +81,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val sourceType = (data["sourceType"] as? String ?: "").trim()
                     val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
                     val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
+                    val resourceType = (data["resourceType"] as? String ?: "").trim()
+                    val source = (data["source"] as? String ?: "").trim()
 
                     val isVideo = docType.equals("VIDEO", ignoreCase = true) ||
                             docType.equals("YouTube Resource", ignoreCase = true) ||
@@ -90,7 +92,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             sourceType.equals("youtube", ignoreCase = true) ||
                             sourceType.equals("video", ignoreCase = true) ||
                             youtubeUrl.isNotBlank() ||
-                            youtubeVideoId.isNotBlank()
+                            youtubeVideoId.isNotBlank() ||
+                            resourceType.equals("VIDEO", ignoreCase = true) ||
+                            source.equals("YOUTUBE", ignoreCase = true)
 
                     if (isVideo) {
                         return@mapNotNull null
