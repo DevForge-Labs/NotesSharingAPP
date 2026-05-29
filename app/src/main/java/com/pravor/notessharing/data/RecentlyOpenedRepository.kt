@@ -18,7 +18,9 @@ class RecentlyOpenedRepository(context: Context) {
         thumbnailUrl: String? = null,
         thumbnailGenerated: Boolean? = null,
         thumbnailType: String? = null,
-        thumbnailUrls: List<String> = emptyList()
+        thumbnailUrls: List<String> = emptyList(),
+        documentType: String? = null,
+        typeField: String? = null
     ) {
         val json = JSONObject()
             .put("id", id)
@@ -31,6 +33,8 @@ class RecentlyOpenedRepository(context: Context) {
             .put("thumbnailUrl", thumbnailUrl ?: "")
             .put("thumbnailGenerated", thumbnailGenerated ?: false)
             .put("thumbnailType", thumbnailType ?: "")
+            .put("documentType", documentType ?: "")
+            .put("typeField", typeField ?: "")
         
         val thumbnailUrlsArray = org.json.JSONArray()
         thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
@@ -65,6 +69,9 @@ class RecentlyOpenedRepository(context: Context) {
                 thumbnailUrlsList.add(thumbnailUrl)
             }
 
+            val documentType = json.optString("documentType").ifBlank { null }
+            val typeField = json.optString("typeField").ifBlank { null }
+
             val fileType = if (type == "video") FileType.Video else FileType.Pdf
             
             val initials = uploaderName.split(" ")
@@ -94,7 +101,9 @@ class RecentlyOpenedRepository(context: Context) {
                 thumbnailUrl = thumbnailUrl,
                 thumbnailGenerated = thumbnailGenerated,
                 thumbnailType = thumbnailType,
-                thumbnailUrls = thumbnailUrlsList
+                thumbnailUrls = thumbnailUrlsList,
+                documentType = documentType,
+                type = typeField
             )
         } catch (e: Exception) {
             null

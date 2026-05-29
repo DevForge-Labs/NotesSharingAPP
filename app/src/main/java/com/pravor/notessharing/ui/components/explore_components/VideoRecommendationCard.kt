@@ -104,36 +104,53 @@ fun VideoRecommendationCard(
             // Right: Video details
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = video.subject.ifBlank { video.title },
+                    text = video.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                
+                Spacer(Modifier.height(4.dp))
+                
                 Text(
-                    text = video.channelName,
+                    text = video.subject,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 
                 Spacer(Modifier.height(8.dp))
                 
-                // Real stats: Upvotes and bookmarks count
+                // Real stats and contributor metadata row
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    StatItem(
-                        icon = Icons.Default.ThumbUp,
-                        value = video.upvotes.toString()
+                    Text(
+                        text = video.channelName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    StatItem(
-                        icon = Icons.Default.Bookmark,
-                        value = video.bookmarks.toString()
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        StatItem(
+                            icon = Icons.Default.ThumbUp,
+                            value = video.upvotes.toString()
+                        )
+                        StatItem(
+                            icon = Icons.Default.Bookmark,
+                            value = video.bookmarks.toString()
+                        )
+                    }
                 }
             }
         }
