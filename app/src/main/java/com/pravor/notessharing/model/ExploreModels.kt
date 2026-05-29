@@ -13,7 +13,13 @@ data class TrendingNote(
     val isBookmarked: Boolean,
     val thumbnailUrl: String? = null,
     val thumbnailGenerated: Boolean? = null,
-    val thumbnailType: String? = null
+    val thumbnailType: String? = null,
+    val description: String = "",
+    val uploaderName: String = "",
+    val uploaderPhotoUrl: String = "",
+    val contributorLevel: String = "",
+    val documentType: String = "Notes",
+    val bookmarks: Int = 0
 )
 
 @Immutable

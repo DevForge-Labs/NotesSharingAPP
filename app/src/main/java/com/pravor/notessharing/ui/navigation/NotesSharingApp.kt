@@ -14,7 +14,7 @@ import com.pravor.notessharing.ui.components.BottomNavBar
 import com.pravor.notessharing.ui.screens.explore.DiscoverRoute
 import com.pravor.notessharing.ui.screens.explore.ExploreRoute
 import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
-import com.pravor.notessharing.ui.screens.explore.TrendingNotesRoute
+import com.pravor.notessharing.ui.screens.trending.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
 import com.pravor.notessharing.ui.screens.profile.ProfileRoute

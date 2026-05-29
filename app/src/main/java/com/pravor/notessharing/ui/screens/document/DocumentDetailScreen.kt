@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.data.RecentlyOpenedRepository
@@ -55,7 +56,8 @@ fun DocumentDetailRoute(
                 uploaderName = doc.uploaderName,
                 thumbnailUrl = doc.thumbnailUrl,
                 thumbnailGenerated = doc.thumbnailGenerated,
-                thumbnailType = doc.thumbnailType
+                thumbnailType = doc.thumbnailType,
+                thumbnailUrls = doc.thumbnailUrls
             )
         }
     }
@@ -81,7 +83,7 @@ fun DocumentDetailScreen(
             TopAppBar(
                 title = {
                     val titleText = when (uiState) {
-                        is DocumentDetailUiState.Success -> uiState.document.title
+                        is DocumentDetailUiState.Success -> uiState.document.subject.ifBlank { uiState.document.title }
                         else -> "Document Details"
                     }
                     Text(
@@ -185,7 +187,6 @@ fun DocumentDetailSuccessContent(
         item(key = "metadata-section") {
             DocumentMetadataSection(
                 doc = doc,
-                contributorLevel = contributorLevel,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
@@ -197,28 +198,51 @@ fun DocumentDetailSuccessContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                         Text(
                             text = "Description",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = doc.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodyLarge,
+                            lineHeight = 24.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
         }
 
-        // 3. RELATED DOCUMENTS
+        // 3. UPLOADER DETAILS SECTION
+        item(key = "uploader-section") {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Box(modifier = Modifier.padding(18.dp)) {
+                    UploaderInfoCard(
+                        uploaderName = doc.uploaderName,
+                        uploaderPhotoUrl = doc.uploaderPhotoUrl,
+                        contributorLevel = contributorLevel,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // 4. RELATED DOCUMENTS
         if (relatedDocuments.isNotEmpty()) {
             item(key = "related-section") {
                 RelatedDocumentsSection(

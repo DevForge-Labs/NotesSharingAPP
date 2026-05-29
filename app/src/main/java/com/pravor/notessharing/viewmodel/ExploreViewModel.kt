@@ -178,7 +178,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val freshContent = ExploreContent(
                     topics = DummyData.topics,
                     popularUploads = (realFeed + DummyData.feedItems).distinctBy { it.id },
-                    trendingNotes = (realTrending + DummyData.trendingNotes).distinctBy { it.id },
+                    trendingNotes = realTrending,
                     videoRecommendations = realVideos,
                     studyCollections = DummyData.studyCollections,
                     subjectHubs = DummyData.subjectHubs,
@@ -196,7 +196,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             ExploreContent(
                                 topics = DummyData.topics,
                                 popularUploads = DummyData.feedItems,
-                                trendingNotes = DummyData.trendingNotes,
+                                trendingNotes = emptyList(),
                                 videoRecommendations = emptyList(),
                                 studyCollections = DummyData.studyCollections,
                                 subjectHubs = DummyData.subjectHubs,

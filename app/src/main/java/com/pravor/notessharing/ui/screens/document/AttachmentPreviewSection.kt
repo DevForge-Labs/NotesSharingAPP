@@ -122,7 +122,8 @@ fun AttachmentPreviewSection(
                         AttachmentPreviewCard(
                             url = url,
                             fileSize = indSize,
-                            thumbnailUrl = if (index == 0) doc.thumbnailUrl else null,
+                            thumbnailUrl = doc.thumbnailUrls.getOrNull(index),
+                            documentType = doc.documentType,
                             onDownloadClick = { onDownloadClick(url) },
                             onShareClick = { onShareClick(url) }
                         )

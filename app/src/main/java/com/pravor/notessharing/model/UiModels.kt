@@ -23,7 +23,8 @@ data class FeedItem(
     val youtubeUrl: String? = null,
     val thumbnailUrl: String? = null,
     val thumbnailGenerated: Boolean? = null,
-    val thumbnailType: String? = null
+    val thumbnailType: String? = null,
+    val thumbnailUrls: List<String> = emptyList()
 )
 
 @Immutable

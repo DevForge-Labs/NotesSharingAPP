@@ -42,6 +42,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.pravor.notessharing.data.DocumentDetailRepository
 import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.ui.components.DocumentPlaceholder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -211,97 +212,7 @@ fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
                     if (showShimmer) {
                         ShimmerPlaceholder()
                     } else if (showFallback) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxHeight()
-                        ) {
-                            Box(
-                                modifier = Modifier.size(width = 54.dp, height = 72.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Canvas(modifier = Modifier.fillMaxSize()) {
-                                    val w = size.width
-                                    val h = size.height
-                                    val foldSize = 10.dp.toPx()
-                                    val cornerRadius = 6.dp.toPx()
-
-                                    val path = Path().apply {
-                                        moveTo(0f, cornerRadius)
-                                        quadraticTo(0f, 0f, cornerRadius, 0f)
-                                        lineTo(w - foldSize, 0f)
-                                        lineTo(w, foldSize)
-                                        lineTo(w, h - cornerRadius)
-                                        quadraticTo(w, h, w - cornerRadius, h)
-                                        lineTo(cornerRadius, h)
-                                        quadraticTo(0f, h, 0f, h - cornerRadius)
-                                        close()
-                                    }
-
-                                    drawPath(
-                                        path = path,
-                                        color = Color(0xFF2E3544).copy(alpha = 0.88f)
-                                    )
-
-                                    val foldPath = Path().apply {
-                                        moveTo(w - foldSize, 0f)
-                                        lineTo(w - foldSize, foldSize - 1.5.dp.toPx())
-                                        quadraticTo(w - foldSize, foldSize, w - foldSize + 1.5.dp.toPx(), foldSize)
-                                        lineTo(w, foldSize)
-                                        close()
-                                    }
-                                    drawPath(
-                                        path = foldPath,
-                                        color = Color(0xFF414B60).copy(alpha = 0.95f)
-                                    )
-
-                                    drawPath(
-                                        path = path,
-                                        color = Color.White.copy(alpha = 0.12f),
-                                        style = Stroke(width = 1.dp.toPx())
-                                    )
-                                }
-
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp, start = 6.dp, end = 6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = previewIcon,
-                                        contentDescription = null,
-                                        tint = accentColor.copy(alpha = 0.85f),
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    
-                                    Spacer(Modifier.height(8.dp))
-                                    
-                                    Column(
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(30.dp)
-                                                .height(2.dp)
-                                                .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(1.dp))
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(22.dp)
-                                                .height(2.dp)
-                                                .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(1.dp))
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(26.dp)
-                                                .height(2.dp)
-                                                .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(1.dp))
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        DocumentPlaceholder(documentType = docType, modifier = Modifier.fillMaxSize())
                     }
                 }
             }

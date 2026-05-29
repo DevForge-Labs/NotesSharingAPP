@@ -69,6 +69,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 selectedType = type,
                 selectedFiles = emptyList(),
                 youtubeUrl = "",
+                description = "",
                 youtubePreview = null,
                 youtubeError = null,
                 selectedExamYear = "",
@@ -77,6 +78,10 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 uploadSuccess = false
             )
         }
+    }
+
+    fun updateDescription(description: String) {
+        _uiState.update { it.copy(description = description, errorMessage = null, uploadSuccess = false) }
     }
 
     fun selectExamYear(year: String) {
@@ -148,10 +153,6 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         val imageCount = files.count { 
             val ext = it.displayName.substringAfterLast('.', "").lowercase()
             ext in listOf("jpg", "jpeg", "png", "webp")
-        }
-        
-        if (pdfCount > 0 && imageCount > 0) {
-            return "Please upload either PDF documents or images, not both together."
         }
         
         val selectedType = _uiState.value.selectedType
@@ -296,7 +297,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             youtubeUrl = state.youtubeUrl,
                             youtubePreview = state.youtubePreview,
                             examYear = state.selectedExamYear,
-                            examType = state.selectedExamType
+                            examType = state.selectedExamType,
+                            description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
                         }
@@ -306,7 +308,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
-                            selectedFiles = state.selectedFiles
+                            selectedFiles = state.selectedFiles,
+                            description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
                         }
@@ -316,7 +319,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
-                            selectedFiles = state.selectedFiles
+                            selectedFiles = state.selectedFiles,
+                            description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
                         }
@@ -326,7 +330,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
-                            selectedFiles = state.selectedFiles
+                            selectedFiles = state.selectedFiles,
+                            description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
                         }
@@ -337,7 +342,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             semester = state.selectedSemester,
                             subject = state.subject,
                             youtubeUrl = state.youtubeUrl,
-                            youtubePreview = state.youtubePreview
+                            youtubePreview = state.youtubePreview,
+                            description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
                         }

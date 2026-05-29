@@ -62,6 +62,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -74,6 +75,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -83,6 +85,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -95,6 +98,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -104,6 +108,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -116,6 +121,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -126,6 +132,7 @@ class UploadRepository(private val context: Context) {
         subject: String,
         youtubeUrl: String,
         youtubePreview: YoutubePreview?,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -138,6 +145,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = youtubePreview,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -152,6 +160,7 @@ class UploadRepository(private val context: Context) {
         youtubePreview: YoutubePreview?,
         examYear: String?,
         examType: String?,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         val uploaderId = FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
@@ -185,7 +194,7 @@ class UploadRepository(private val context: Context) {
             val doc = mapOf(
                 "documentId" to documentId,
                 "title" to title,
-                "description" to "",
+                "description" to description,
                 "branch" to branch,
                 "semester" to semester,
                 "subject" to displaySubject,
@@ -249,7 +258,7 @@ class UploadRepository(private val context: Context) {
                 val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,
                     "title" to file.displayName,
-                    "description" to "",
+                    "description" to description,
                     "branch" to branch,
                     "semester" to semester,
                     "subject" to displaySubject,
@@ -271,6 +280,7 @@ class UploadRepository(private val context: Context) {
                     "fileUrl" to downloadUrl,
                     "downloadUrl" to downloadUrl,
                     "storagePath" to uploadedPath,
+                    "storagePaths" to listOf(uploadedPath),
                     "fileSize" to file.sizeBytes,
                     "fileExtension" to ext,
                     "isVerified" to false,
@@ -352,12 +362,12 @@ class UploadRepository(private val context: Context) {
                 else -> "application/octet-stream"
             }
 
-            val formattedTitle = "${subject.trim()} ${type.label}"
+            val formattedTitle = subject.trim()
 
             val doc = mutableMapOf<String, Any>(
                 "documentId" to documentId,
                 "title" to formattedTitle,
-                "description" to "",
+                "description" to description,
                 "branch" to branch,
                 "semester" to semester,
                 "subject" to displaySubject,
@@ -379,6 +389,7 @@ class UploadRepository(private val context: Context) {
                 "fileUrl" to downloadUrls.first(),
                 "downloadUrl" to downloadUrls.first(),
                 "storagePath" to storagePaths.first(),
+                "storagePaths" to storagePaths,
                 "fileSize" to totalBytes,
                 "fileExtension" to firstFileExtension,
                 "isVerified" to false,

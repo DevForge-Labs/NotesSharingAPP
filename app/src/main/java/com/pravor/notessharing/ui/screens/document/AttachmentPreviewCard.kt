@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.pravor.notessharing.ui.components.DocumentPlaceholder
 
 @Composable
 fun AttachmentPreviewCard(
@@ -36,7 +37,8 @@ fun AttachmentPreviewCard(
     onDownloadClick: () -> Unit,
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
-    thumbnailUrl: String? = null
+    thumbnailUrl: String? = null,
+    documentType: String? = null
 ) {
     val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
     
@@ -93,19 +95,10 @@ fun AttachmentPreviewCard(
                 }
 
                 if (thumbnailUrl.isNullOrBlank() || hasError) {
-                    if (isPdf) {
-                        PdfPreviewCard(
-                            url = url,
-                            contentDescription = fileName,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        GenericPreviewCard(
-                            url = url,
-                            contentDescription = fileName,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    DocumentPlaceholder(
+                        documentType = documentType ?: "Notes",
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
 

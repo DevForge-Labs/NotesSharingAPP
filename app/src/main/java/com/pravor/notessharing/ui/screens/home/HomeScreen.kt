@@ -72,6 +72,8 @@ import com.pravor.notessharing.ui.components.CompactStudyFileRow
 import com.pravor.notessharing.ui.components.NotesSearchBar
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
+import com.pravor.notessharing.ui.components.DocumentPlaceholder
+import com.pravor.notessharing.ui.components.VideoPlaceholder
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.DummyData
 import com.pravor.notessharing.viewmodel.HomeViewModel
@@ -383,23 +385,7 @@ private fun ContinueReadingCard(
                                 }
                             }
                         } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(Color(0xFF1E1E24), Color(0xFF121214))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                            VideoPlaceholder(modifier = Modifier.fillMaxSize())
                         }
                     }
 
@@ -503,26 +489,10 @@ private fun ContinueReadingCard(
                         
                         // Show fallback or shimmer
                         if (item.thumbnailUrl.isNullOrBlank() || imageLoadError) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                accentColor.copy(alpha = 0.22f),
-                                                accentColor.copy(alpha = 0.06f)
-                                            )
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = previewIcon,
-                                    contentDescription = null,
-                                    tint = accentColor,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                            }
+                            DocumentPlaceholder(
+                                documentType = badgeText,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         } else if (!hasImageLoaded) {
                             Box(
                                 modifier = Modifier

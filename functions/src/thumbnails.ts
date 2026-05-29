@@ -15,91 +15,149 @@ export async function generateThumbnailForDocument(
   docId: string,
   data: any
 ) {
+  // 2. Resolve storage paths
+  let storagePaths: string[] = [];
+  if (data.storagePaths && Array.isArray(data.storagePaths) && data.storagePaths.length > 0) {
+    storagePaths = data.storagePaths;
+  } else if (data.storagePath) {
+    storagePaths = [data.storagePath];
+  } else if (data.fileUrl) {
+    storagePaths = [data.fileUrl];
+  } else if (data.fileUrls && Array.isArray(data.fileUrls) && data.fileUrls.length > 0) {
+    storagePaths = data.fileUrls;
+  }
+
+  if (storagePaths.length === 0) {
+    logger.warn(`Document ${docId} has no storagePath, fileUrl, fileUrls, or storagePaths. Cannot generate thumbnail.`);
+    return;
+  }
+
   // 1. Skip if thumbnail is already generated to prevent loop/duplicate execution
   if (data.thumbnailGenerated === true) {
-    logger.info(`Document ${docId} already has thumbnail generated. Skipping.`);
-    return;
+    const fileCount = data.fileUrls && Array.isArray(data.fileUrls) ? data.fileUrls.length : storagePaths.length;
+    const hasAllThumbnails = data.thumbnailUrls && Array.isArray(data.thumbnailUrls) && data.thumbnailUrls.length >= fileCount;
+    if (hasAllThumbnails || fileCount <= 1) {
+      logger.info(`Document ${docId} already has all thumbnails generated. Skipping.`);
+      return;
+    }
   }
 
-  // 2. Resolve storage path
-  const storagePath = data.storagePath || data.fileUrl;
-  if (!storagePath) {
-    logger.warn(`Document ${docId} has no storagePath or fileUrl. Cannot generate thumbnail.`);
-    return;
-  }
-
-  logger.info(`Generating thumbnail for document ${docId} in collection ${collectionName} with storagePath ${storagePath}`);
+  logger.info(`Generating thumbnails for document ${docId} in collection ${collectionName} with storagePaths:`, storagePaths);
 
   try {
-    // 3. Determine file type (PDF vs Image)
-    const fileExtension = (data.fileExtension || storagePath.split(".").pop() || "").toLowerCase();
-    const isPdf = fileExtension === "pdf" || data.fileType === "pdf";
+    const thumbnailUrls: string[] = [];
+    let firstThumbnailType: string | null = null;
 
-    // 4. Download original file bytes
-    const originalBuffer = await downloadFile(storagePath);
-    logger.info(`Downloaded file of size ${originalBuffer.length} bytes`);
+    for (let index = 0; index < storagePaths.length; index++) {
+      const storagePath = storagePaths[index];
+      const fileExtension = (storagePath.split("?")[0].split(".").pop() || "").toLowerCase();
+      const isPdf = fileExtension === "pdf";
+      const isImage = ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExtension);
 
-    let thumbnailBuffer: Buffer;
-    let thumbnailStoragePath: string;
-    let contentType: string;
-
-    const parts = storagePath.split("/");
-    const originalFileName = parts.pop();
-    const parentFolder = parts.join("/");
-
-    if (isPdf) {
-      // PDF Flow: Pure JS conversion to WebP thumbnail
-      logger.info("Processing PDF document: extracting page 1 using pdfjs-dist...");
-      const page1ImageBuffer = await convertPdfPageToImage(originalBuffer, docId);
-      logger.info("Compressing extracted PDF preview to WebP...");
-      thumbnailBuffer = await resizeAndCompressImageToWebp(page1ImageBuffer);
-      contentType = "image/webp";
-
-      // Naming format for PDFs:
-      // pyqs: pyqs/Semester 4/thumbnails/coa-pyq-uuid.webp (to avoid collision in shared parent folder)
-      // others: notes/doc-folder/thumbnail.webp (directly under doc-folder)
-      if (collectionName === "pyqs" && originalFileName) {
-        const fileNameWithoutExt = originalFileName.includes(".")
-          ? originalFileName.substring(0, originalFileName.lastIndexOf("."))
-          : originalFileName;
-        thumbnailStoragePath = `${parentFolder}/thumbnails/${fileNameWithoutExt}.webp`;
-      } else {
-        thumbnailStoragePath = `${parentFolder}/thumbnail.webp`;
+      if (!isPdf && !isImage) {
+        logger.info(`Attachment at index ${index} (${storagePath}) has unsupported type. Skipping.`);
+        thumbnailUrls.push("");
+        continue;
       }
-    } else {
-      // Image Flow: Unchanged flow to progressive JPEG thumbnail
-      logger.info("Processing image document: compressing image to JPEG...");
-      thumbnailBuffer = await resizeAndCompressImageToJpeg(originalBuffer);
-      contentType = "image/jpeg";
 
-      if (collectionName === "pyqs" && originalFileName) {
-        const fileNameWithoutExt = originalFileName.includes(".")
-          ? originalFileName.substring(0, originalFileName.lastIndexOf("."))
-          : originalFileName;
-        thumbnailStoragePath = `${parentFolder}/thumbnails/${fileNameWithoutExt}.jpg`;
-      } else {
-        thumbnailStoragePath = `${parentFolder}/thumbnails/preview.jpg`;
+      try {
+        let cleanPath = storagePath;
+        if (storagePath.startsWith("http://") || storagePath.startsWith("https://")) {
+          if (storagePath.includes("/o/")) {
+            const encodedPath = storagePath.split("/o/")[1].split("?")[0];
+            cleanPath = decodeURIComponent(encodedPath);
+          } else {
+            logger.warn(`Skipping HTTP URL download via Storage bucket: ${storagePath}`);
+            thumbnailUrls.push("");
+            continue;
+          }
+        }
+
+        const originalBuffer = await downloadFile(cleanPath);
+        logger.info(`Downloaded attachment ${index} of size ${originalBuffer.length} bytes`);
+
+        let thumbnailBuffer: Buffer;
+        let thumbnailStoragePath: string;
+        let contentType: string;
+
+        const parts = cleanPath.split("/");
+        const originalFileName = parts.pop();
+        const parentFolder = parts.join("/");
+
+        if (isPdf) {
+          logger.info(`Processing PDF attachment ${index}: extracting page 1...`);
+          const page1ImageBuffer = await convertPdfPageToImage(originalBuffer, docId);
+          logger.info(`Compressing PDF preview ${index} to WebP...`);
+          thumbnailBuffer = await resizeAndCompressImageToWebp(page1ImageBuffer);
+          contentType = "image/webp";
+
+          const fileNameWithoutExt = originalFileName && originalFileName.includes(".")
+            ? originalFileName.substring(0, originalFileName.lastIndexOf("."))
+            : `file_${index}`;
+
+          if (collectionName === "pyqs") {
+            thumbnailStoragePath = `${parentFolder}/thumbnails/${fileNameWithoutExt}.webp`;
+          } else {
+            thumbnailStoragePath = `${parentFolder}/thumbnails/${fileNameWithoutExt}_thumb.webp`;
+          }
+
+          if (index === 0) {
+            firstThumbnailType = "PDF";
+          }
+        } else {
+          logger.info(`Processing image attachment ${index}: compressing to JPEG...`);
+          thumbnailBuffer = await resizeAndCompressImageToJpeg(originalBuffer);
+          contentType = "image/jpeg";
+
+          const fileNameWithoutExt = originalFileName && originalFileName.includes(".")
+            ? originalFileName.substring(0, originalFileName.lastIndexOf("."))
+            : `file_${index}`;
+
+          if (collectionName === "pyqs") {
+            thumbnailStoragePath = `${parentFolder}/thumbnails/${fileNameWithoutExt}.jpg`;
+          } else {
+            thumbnailStoragePath = `${parentFolder}/thumbnails/${fileNameWithoutExt}_thumb.jpg`;
+          }
+
+          if (index === 0) {
+            firstThumbnailType = "IMAGE";
+          }
+        }
+
+        logger.info(`Uploading thumbnail for attachment ${index} to ${thumbnailStoragePath}...`);
+        const thumbnailUrl = await uploadThumbnail(thumbnailStoragePath, thumbnailBuffer, contentType);
+        logger.info(`Uploaded thumbnail for attachment ${index}. URL: ${thumbnailUrl}`);
+
+        thumbnailUrls.push(thumbnailUrl);
+      } catch (err) {
+        logger.error(`Error generating thumbnail for attachment ${index} (${storagePath}):`, err);
+        thumbnailUrls.push("");
       }
     }
 
-    // 5. Upload thumbnail and get the public download URL
-    logger.info(`Uploading thumbnail to ${thumbnailStoragePath} with content type ${contentType}...`);
-    const thumbnailUrl = await uploadThumbnail(thumbnailStoragePath, thumbnailBuffer, contentType);
-    logger.info(`Uploaded thumbnail. URL: ${thumbnailUrl}`);
+    if (thumbnailUrls.length === 0) {
+      logger.warn(`No thumbnails were generated for document ${docId}.`);
+      return;
+    }
 
     // 6. Update Firestore document with thumbnail metadata
     const db = getFirestore();
     const docRef = db.collection(collectionName).doc(docId);
 
-    await docRef.update({
-      thumbnailUrl: thumbnailUrl,
+    const updateData: any = {
+      thumbnailUrl: thumbnailUrls[0] || "",
+      thumbnailUrls: thumbnailUrls,
       thumbnailGenerated: true,
-      thumbnailType: isPdf ? "PDF" : "IMAGE",
-      previewAttachmentType: isPdf ? "PDF" : "IMAGE",
       previewGeneratedAt: Timestamp.now(),
-    });
+    };
 
-    logger.info(`Successfully updated document ${docId} in ${collectionName} with thumbnail metadata.`);
+    if (firstThumbnailType) {
+      updateData.thumbnailType = firstThumbnailType;
+      updateData.previewAttachmentType = firstThumbnailType;
+    }
+
+    await docRef.update(updateData);
+    logger.info(`Successfully updated document ${docId} in ${collectionName} with multiple thumbnail metadata.`);
   } catch (error) {
     logger.error(`Error generating thumbnail for document ${docId} in collection ${collectionName}:`, error);
   }

@@ -306,6 +306,9 @@ class ExploreCacheRepository(context: Context) {
             put("thumbnailUrl", item.thumbnailUrl ?: "")
             put("thumbnailGenerated", item.thumbnailGenerated ?: false)
             put("thumbnailType", item.thumbnailType ?: "")
+            val thumbnailUrlsArray = JSONArray()
+            item.thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
+            put("thumbnailUrls", thumbnailUrlsArray)
         }
     }
 
@@ -340,7 +343,20 @@ class ExploreCacheRepository(context: Context) {
             youtubeUrl = obj.optString("youtubeUrl").ifBlank { null },
             thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
             thumbnailGenerated = if (obj.has("thumbnailGenerated")) obj.getBoolean("thumbnailGenerated") else null,
-            thumbnailType = obj.optString("thumbnailType").ifBlank { null }
+            thumbnailType = obj.optString("thumbnailType").ifBlank { null },
+            thumbnailUrls = run {
+                val array = obj.optJSONArray("thumbnailUrls")
+                val list = mutableListOf<String>()
+                if (array != null) {
+                    for (j in 0 until array.length()) {
+                        list.add(array.getString(j))
+                    }
+                } else {
+                    val single = obj.optString("thumbnailUrl")
+                    if (single.isNotBlank()) list.add(single)
+                }
+                list
+            }
         )
     }
 

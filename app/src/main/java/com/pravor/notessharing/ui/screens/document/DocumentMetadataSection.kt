@@ -13,7 +13,6 @@ import com.pravor.notessharing.model.DocumentDetail
 @Composable
 fun DocumentMetadataSection(
     doc: DocumentDetail,
-    contributorLevel: String,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -52,18 +51,6 @@ fun DocumentMetadataSection(
                     fontWeight = FontWeight.SemiBold
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Uploader details card
-            UploaderInfoCard(
-                uploaderName = doc.uploaderName,
-                uploaderPhotoUrl = doc.uploaderPhotoUrl,
-                contributorLevel = contributorLevel,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }

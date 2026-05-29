@@ -9,13 +9,13 @@ import sharp from "sharp";
 export async function resizeAndCompressImageToJpeg(imageBuffer: Buffer): Promise<Buffer> {
   return sharp(imageBuffer)
     .resize({
-      width: 500,
-      height: 500,
+      width: 250,
+      height: 250,
       fit: "inside",
       withoutEnlargement: true,
     })
     .jpeg({
-      quality: 80,
+      quality: 70,
       progressive: true,
     })
     .toBuffer();
@@ -30,13 +30,13 @@ export async function resizeAndCompressImageToJpeg(imageBuffer: Buffer): Promise
 export async function resizeAndCompressImageToWebp(imageBuffer: Buffer): Promise<Buffer> {
   return sharp(imageBuffer)
     .resize({
-      width: 500,
-      height: 500,
+      width: 250,
+      height: 250,
       fit: "inside",
       withoutEnlargement: true,
     })
     .webp({
-      quality: 80,
+      quality: 70,
     })
     .toBuffer();
 }
