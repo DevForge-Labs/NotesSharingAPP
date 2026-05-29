@@ -102,9 +102,11 @@ fun UploadRoute(
     viewModel: UploadViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(uiState.uploadSuccess) {
         if (uiState.uploadSuccess) {
+            focusManager.clearFocus()
             onUploadSuccess()
             viewModel.clearUploadSuccess()
         }
@@ -126,6 +128,7 @@ fun UploadRoute(
         onBranchChange = viewModel::selectBranch,
         onSemesterChange = viewModel::selectSemester,
         onSubjectChange = viewModel::updateSubject,
+        onDescriptionChange = viewModel::updateDescription,
         onTypeSelected = viewModel::selectUploadType,
         onExamYearChange = viewModel::selectExamYear,
         onExamTypeChange = viewModel::selectExamType,
@@ -144,6 +147,7 @@ fun UploadScreen(
     onBranchChange: (String) -> Unit,
     onSemesterChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
     onExamYearChange: (String) -> Unit,
     onExamTypeChange: (String) -> Unit,
@@ -196,6 +200,7 @@ fun UploadScreen(
                     onBranchChange = onBranchChange,
                     onSemesterChange = onSemesterChange,
                     onSubjectChange = onSubjectChange,
+                    onDescriptionChange = onDescriptionChange,
                     onTypeSelected = onTypeSelected,
                     onExamYearChange = onExamYearChange,
                     onExamTypeChange = onExamTypeChange
@@ -281,6 +286,7 @@ fun MetadataSection(
     onBranchChange: (String) -> Unit,
     onSemesterChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
     onExamYearChange: (String) -> Unit,
     onExamTypeChange: (String) -> Unit
@@ -375,6 +381,24 @@ fun MetadataSection(
                     )
                 }
             }
+
+            OutlinedTextField(
+                value = uiState.description,
+                onValueChange = onDescriptionChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Description") },
+                placeholder = { Text("Optional description...") },
+                singleLine = false,
+                minLines = 1,
+                maxLines = 10,
+                shape = RoundedCornerShape(18.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                )
+            )
         }
     }
 }

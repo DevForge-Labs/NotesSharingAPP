@@ -5,33 +5,27 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.data.RecentlyOpenedRepository
 import com.pravor.notessharing.model.DocumentDetail
-import com.pravor.notessharing.model.TrendingNote
-import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatePanel
-import com.pravor.notessharing.ui.components.explore_components.TrendingNoteCard
 import com.pravor.notessharing.viewmodel.DocumentDetailUiState
 import com.pravor.notessharing.viewmodel.DocumentDetailViewModel
 
@@ -59,7 +53,11 @@ fun DocumentDetailRoute(
                 title = doc.title,
                 subject = doc.subject,
                 youtubeVideoId = null,
-                uploaderName = doc.uploaderName
+                uploaderName = doc.uploaderName,
+                thumbnailUrl = doc.thumbnailUrl,
+                thumbnailGenerated = doc.thumbnailGenerated,
+                thumbnailType = doc.thumbnailType,
+                thumbnailUrls = doc.thumbnailUrls
             )
         }
     }
@@ -85,14 +83,14 @@ fun DocumentDetailScreen(
             TopAppBar(
                 title = {
                     val titleText = when (uiState) {
-                        is DocumentDetailUiState.Success -> uiState.document.title
+                        is DocumentDetailUiState.Success -> uiState.document.subject.ifBlank { uiState.document.title }
                         else -> "Document Details"
                     }
                     Text(
                         text = titleText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge, // Increased size for better readability
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -172,305 +170,84 @@ fun DocumentDetailSuccessContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // 1. Info Card
-        item(key = "info-section") {
-            DocumentInfoCard(doc = doc, contributorLevel = contributorLevel)
+        // 1. DOCUMENT PREVIEW SECTION (Mixed adapters inside preview section handles horizontal/vertical margins)
+        item(key = "preview-section") {
+            AttachmentPreviewSection(
+                doc = doc,
+                onDownloadClick = onDownloadClick,
+                onShareClick = onShareClick,
+                modifier = Modifier // No horizontal padding here so images scroll edge-to-edge
+            )
+        }
+
+        // 2. DOCUMENT INFO SECTION
+        item(key = "metadata-section") {
+            DocumentMetadataSection(
+                doc = doc,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
 
         // Description if present
         if (doc.description.isNotBlank()) {
             item(key = "description-section") {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                         Text(
                             text = "Description",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = doc.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodyLarge,
+                            lineHeight = 24.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
         }
 
-        // 2. Attachments Card Section
-        item(key = "attachments-title") {
-            Text(
-                text = "Attachments",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        if (doc.fileUrls.isEmpty()) {
-            item(key = "attachments-empty") {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                ) {
-                    Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No attachments found for this document.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        } else {
-            items(doc.fileUrls) { url ->
-                AttachmentItemCard(
-                    url = url,
-                    onDownloadClick = { onDownloadClick(url) },
-                    onShareClick = { onShareClick(url) }
-                )
-            }
-        }
-
-        // 3. Related/Suggested Documents
-        if (relatedDocuments.isNotEmpty()) {
-            item(key = "related-title") {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Related Documents",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            item(key = "related-carousel") {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(relatedDocuments) { relatedDoc ->
-                        val trendingNote = TrendingNote(
-                            id = relatedDoc.id,
-                            title = relatedDoc.title,
-                            subject = relatedDoc.subject,
-                            downloads = relatedDoc.downloads,
-                            rating = 4.5,
-                            upvotes = relatedDoc.upvotes,
-                            isBookmarked = false
-                        )
-                        TrendingNoteCard(
-                            note = trendingNote,
-                            onClick = { onNavigateToDetail(relatedDoc.id) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DocumentInfoCard(doc: DocumentDetail, contributorLevel: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Type Badge
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer
-                ) {
-                    Text(
-                        text = doc.documentType.uppercase(),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // File Size Badge
-                if (doc.fileSize > 0) {
-                    Text(
-                        text = formatFileSize(doc.fileSize),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Subject and Semester
-            Text(
-                text = doc.subject,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = doc.semester,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Uploader details
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val initials = if (doc.uploaderName.isNotBlank()) {
-                    doc.uploaderName.split(" ")
-                        .filter { it.isNotBlank() }
-                        .take(2)
-                        .map { it.first().uppercase() }
-                        .joinToString("")
-                        .ifBlank { "UN" }
-                } else {
-                    "UN"
-                }
-
-                Avatar(text = initials, modifier = Modifier.size(42.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Uploaded by: ${doc.uploaderName}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    
-                    // Contributor level badge style matching level identity
-                    val badgeColor = when (contributorLevel) {
-                        "Gold Contributor" -> Color(0xFFFFD700)
-                        "Silver Contributor" -> Color(0xFFC0C0C0)
-                        "Bronze Contributor" -> Color(0xFFCD7F32)
-                        "Platinum Contributor" -> Color(0xFF00E5FF)
-                        else -> Color(0xFFD500F9)
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.WorkspacePremium,
-                            contentDescription = null,
-                            tint = badgeColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = contributorLevel,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AttachmentItemCard(
-    url: String,
-    onDownloadClick: () -> Unit,
-    onShareClick: () -> Unit
-) {
-    val fileName = getFileName(url)
-    val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
-    val fileType = if (isPdf) "PDF Document" else "Image File"
-    
-    val icon = if (isPdf) Icons.Default.FilePresent else Icons.Default.Image
-    val containerColor = if (isPdf) {
-        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
-    } else {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
-    }
-    val iconTint = if (isPdf) {
-        MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+        // 3. UPLOADER DETAILS SECTION
+        item(key = "uploader-section") {
+            Card(
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(containerColor, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(22.dp)
-                )
+                Box(modifier = Modifier.padding(18.dp)) {
+                    UploaderInfoCard(
+                        uploaderName = doc.uploaderName,
+                        uploaderPhotoUrl = doc.uploaderPhotoUrl,
+                        contributorLevel = contributorLevel,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = fileName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = fileType,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            IconButton(onClick = onDownloadClick) {
-                Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = "Download Attachment",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            IconButton(onClick = onShareClick) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share Attachment",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+        }
+
+        // 4. RELATED DOCUMENTS
+        if (relatedDocuments.isNotEmpty()) {
+            item(key = "related-section") {
+                RelatedDocumentsSection(
+                    relatedDocuments = relatedDocuments,
+                    onNavigateToDetail = onNavigateToDetail
                 )
             }
         }
@@ -512,7 +289,7 @@ fun DocumentDetailSkeleton() {
                         .height(16.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(4.dp))
                 )
-                Divider(color = MaterialTheme.colorScheme.surfaceContainer)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainer)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
@@ -582,26 +359,4 @@ fun DocumentDetailSkeleton() {
             }
         }
     }
-}
-
-private fun getFileName(url: String): String {
-    return try {
-        val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-        val path = decoded.substringBefore("?").substringAfterLast("/")
-        val name = path.ifBlank { "Attachment File" }
-        if (name.contains("%")) {
-            name.substringAfterLast("%")
-        } else {
-            name
-        }
-    } catch (e: Exception) {
-        "Attachment File"
-    }
-}
-
-private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "0 B"
-    val units = listOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.toDouble())).toInt()
-    return String.format("%.1f %s", size / Math.pow(1024.toDouble(), digitGroups.toDouble()), units[digitGroups])
 }

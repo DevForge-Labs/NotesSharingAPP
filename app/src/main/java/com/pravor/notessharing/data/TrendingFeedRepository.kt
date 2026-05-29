@@ -1,0 +1,321 @@
+package com.pravor.notessharing.data
+
+import android.content.Context
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.pravor.notessharing.model.TrendingNote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import coil.Coil
+import coil.ImageLoader
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+
+class TrendingFeedRepository(private val context: Context) {
+    private val firestore = FirebaseFirestore.getInstance()
+    private val preferences = context.getSharedPreferences("trending_feed_cache", Context.MODE_PRIVATE)
+
+    private val _trendingNotes = MutableStateFlow<List<TrendingNote>>(emptyList())
+    val trendingNotes: StateFlow<List<TrendingNote>> = _trendingNotes.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
+
+    private val lastSnapshots = mutableMapOf<String, DocumentSnapshot>()
+    private val isCollectionEnd = mutableMapOf<String, Boolean>()
+
+    companion object {
+        private const val KEY_FEED = "cached_trending_notes"
+        private const val CACHE_LIMIT = 100
+        private const val PAGE_SIZE = 10
+    }
+
+    init {
+        // Load cache immediately
+        _trendingNotes.value = getCachedNotes()
+
+        // Configure Coil image loader with 50MB disk cache and memory cache limits
+        try {
+            val imageLoader = ImageLoader.Builder(context)
+                .memoryCache {
+                    MemoryCache.Builder(context)
+                        .maxSizePercent(0.25)
+                        .build()
+                }
+                .diskCache {
+                    DiskCache.Builder()
+                        .directory(context.cacheDir.resolve("image_cache"))
+                        .maxSizeBytes(50 * 1024 * 1024L) // 50 MB
+                        .build()
+                }
+                .respectCacheHeaders(false)
+                .build()
+            Coil.setImageLoader(imageLoader)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun getCachedNotes(): List<TrendingNote> {
+        val raw = preferences.getString(KEY_FEED, null) ?: return emptyList()
+        return try {
+            val array = JSONArray(raw)
+            val list = mutableListOf<TrendingNote>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(deserializeTrendingNote(obj))
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun saveCachedNotes(notes: List<TrendingNote>) {
+        try {
+            val array = JSONArray()
+            notes.take(CACHE_LIMIT).forEach {
+                array.put(serializeTrendingNote(it))
+            }
+            preferences.edit().putString(KEY_FEED, array.toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun serializeTrendingNote(note: TrendingNote): JSONObject {
+        return JSONObject().apply {
+            put("id", note.id)
+            put("title", note.title)
+            put("subject", note.subject)
+            put("downloads", note.downloads)
+            put("rating", note.rating)
+            put("upvotes", note.upvotes)
+            put("isBookmarked", note.isBookmarked)
+            put("thumbnailUrl", note.thumbnailUrl ?: "")
+            put("thumbnailGenerated", note.thumbnailGenerated ?: false)
+            put("thumbnailType", note.thumbnailType ?: "")
+            put("description", note.description)
+            put("uploaderName", note.uploaderName)
+            put("uploaderPhotoUrl", note.uploaderPhotoUrl)
+            put("contributorLevel", note.contributorLevel)
+            put("documentType", note.documentType)
+            put("bookmarks", note.bookmarks)
+        }
+    }
+
+    private fun deserializeTrendingNote(obj: JSONObject): TrendingNote {
+        return TrendingNote(
+            id = obj.getString("id"),
+            title = obj.getString("title"),
+            subject = obj.getString("subject"),
+            downloads = obj.getInt("downloads"),
+            rating = obj.getDouble("rating"),
+            upvotes = obj.getInt("upvotes"),
+            isBookmarked = obj.getBoolean("isBookmarked"),
+            thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
+            thumbnailGenerated = if (obj.has("thumbnailGenerated")) obj.getBoolean("thumbnailGenerated") else null,
+            thumbnailType = obj.optString("thumbnailType").ifBlank { null },
+            description = obj.optString("description"),
+            uploaderName = obj.optString("uploaderName"),
+            uploaderPhotoUrl = obj.optString("uploaderPhotoUrl"),
+            contributorLevel = obj.optString("contributorLevel"),
+            documentType = obj.optString("documentType", "Notes"),
+            bookmarks = obj.optInt("bookmarks", 0)
+        )
+    }
+
+    suspend fun refresh() {
+        if (_isRefreshing.value) return
+        _isRefreshing.value = true
+        try {
+            val newNotes = fetchPageFromFirestore(isRefresh = true)
+            _trendingNotes.value = newNotes
+            saveCachedNotes(newNotes)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            _isRefreshing.value = false
+        }
+    }
+
+    suspend fun loadMore() {
+        if (_isLoadingMore.value || isAllCollectionsEnded()) return
+        _isLoadingMore.value = true
+        try {
+            val nextNotes = fetchPageFromFirestore(isRefresh = false)
+            if (nextNotes.isNotEmpty()) {
+                val merged = (_trendingNotes.value + nextNotes).distinctBy { it.id }
+                _trendingNotes.value = merged
+                saveCachedNotes(merged)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            _isLoadingMore.value = false
+        }
+    }
+
+    private fun isAllCollectionsEnded(): Boolean {
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "documents")
+        return collections.all { isCollectionEnd[it] == true }
+    }
+
+    private fun isVideoResource(data: Map<String, Any>): Boolean {
+        val docType = (data["documentType"] as? String ?: data["type"] as? String ?: "").trim()
+        val contentType = (data["contentType"] as? String ?: "").trim()
+        val hasYoutubeLink = (data["hasYoutubeLink"] as? Boolean) == true || (data["hasYoutubeLink"] as? String)?.lowercase() == "true"
+        val sourceType = (data["sourceType"] as? String ?: "").trim()
+        val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
+        val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
+        val resourceType = (data["resourceType"] as? String ?: "").trim()
+        val source = (data["source"] as? String ?: "").trim()
+
+        return docType.equals("VIDEO", ignoreCase = true) ||
+                docType.equals("YouTube Resource", ignoreCase = true) ||
+                docType.equals("Videos", ignoreCase = true) ||
+                contentType.equals("VIDEO", ignoreCase = true) ||
+                hasYoutubeLink ||
+                sourceType.equals("youtube", ignoreCase = true) ||
+                sourceType.equals("video", ignoreCase = true) ||
+                youtubeUrl.isNotBlank() ||
+                youtubeVideoId.isNotBlank() ||
+                resourceType.equals("VIDEO", ignoreCase = true) ||
+                source.equals("YOUTUBE", ignoreCase = true)
+    }
+
+    private suspend fun fetchPageFromFirestore(isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "documents")
+
+        if (isRefresh) {
+            lastSnapshots.clear()
+            isCollectionEnd.clear()
+        }
+
+        val allCandidates = mutableListOf<Pair<DocumentSnapshot, String>>()
+
+        coroutineScope {
+            val deferreds = collections.map { col ->
+                async {
+                    if (isCollectionEnd[col] == true) return@async Pair(emptyList<DocumentSnapshot>(), null)
+                    try {
+                        var query = firestore.collection(col)
+                            .orderBy("upvotes", Query.Direction.DESCENDING)
+                            .limit(PAGE_SIZE.toLong())
+
+                        val lastSnap = lastSnapshots[col]
+                        if (lastSnap != null) {
+                            query = query.startAfter(lastSnap)
+                        }
+
+                        val snap = query.get().await()
+                        if (snap.isEmpty) {
+                            isCollectionEnd[col] = true
+                        }
+                        
+                        val docs = snap.documents
+                        val nonVideoDocs = docs.filter { doc ->
+                            val data = doc.data ?: emptyMap<String, Any>()
+                            !isVideoResource(data)
+                        }
+
+                        val advanceCursorTo = if (nonVideoDocs.isEmpty() && docs.isNotEmpty()) {
+                            docs.last()
+                        } else {
+                            null
+                        }
+
+                        Pair(nonVideoDocs, advanceCursorTo)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Pair(emptyList<DocumentSnapshot>(), null)
+                    }
+                }
+            }
+            val results = deferreds.awaitAll()
+            results.forEachIndexed { index, (docs, advanceCursorTo) ->
+                val col = collections[index]
+                if (advanceCursorTo != null) {
+                    lastSnapshots[col] = advanceCursorTo
+                }
+                docs.forEach { doc ->
+                    allCandidates.add(Pair(doc, col))
+                }
+            }
+        }
+
+        // Sort all candidates by upvotes descending
+        allCandidates.sortByDescending { (doc, _) ->
+            doc.getLong("upvotes") ?: doc.getLong("likesCount") ?: 0L
+        }
+
+        // Take the top PAGE_SIZE (10)
+        val selected = allCandidates.take(PAGE_SIZE)
+
+        // Update the last snapshot for each collection based on what we actually took
+        selected.forEach { (doc, col) ->
+            lastSnapshots[col] = doc
+        }
+
+        // Now map the selected DocumentSnapshots to TrendingNote
+        val detailRepository = DocumentDetailRepository()
+        val mappedNotes = selected.map { (doc, _) ->
+            val data = doc.data ?: emptyMap<String, Any>()
+            val id = doc.id
+            val title = data["title"] as? String ?: "Untitled Document"
+            val subject = data["subject"] as? String ?: "General"
+            val downloads = (data["downloads"] as? Long ?: 0L).toInt()
+            val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
+            val thumbnailUrl = data["thumbnailUrl"] as? String
+            val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
+            val thumbnailType = data["thumbnailType"] as? String
+
+            val description = data["description"] as? String ?: ""
+            val uploaderId = data["uploaderId"] as? String ?: ""
+            val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
+            val uploaderPhotoUrl = data["uploaderPhotoUrl"] as? String ?: ""
+            val documentType = data["documentType"] as? String ?: data["type"] as? String ?: "Notes"
+            val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
+
+            val contributorLevel = if (uploaderId.isNotEmpty()) {
+                detailRepository.getUploaderContributorLevel(uploaderId) ?: "Bronze Contributor"
+            } else {
+                "Bronze Contributor"
+            }
+
+            TrendingNote(
+                id = id,
+                title = title,
+                subject = subject,
+                downloads = downloads,
+                rating = 4.5,
+                upvotes = upvotes,
+                isBookmarked = false,
+                thumbnailUrl = thumbnailUrl,
+                thumbnailGenerated = thumbnailGenerated,
+                thumbnailType = thumbnailType,
+                description = description,
+                uploaderName = uploaderName,
+                uploaderPhotoUrl = uploaderPhotoUrl,
+                contributorLevel = contributorLevel,
+                documentType = documentType,
+                bookmarks = bookmarks
+            )
+        }
+
+        mappedNotes
+    }
+}

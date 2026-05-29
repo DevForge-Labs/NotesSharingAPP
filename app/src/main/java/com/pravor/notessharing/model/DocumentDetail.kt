@@ -25,7 +25,11 @@ data class DocumentDetail(
     val fileSize: Long,
     val fileExtension: String,
     val fileType: String, // "pdf" or "image"
-    val attachmentCount: Int
+    val attachmentCount: Int,
+    val thumbnailUrl: String? = null,
+    val thumbnailGenerated: Boolean? = null,
+    val thumbnailType: String? = null,
+    val thumbnailUrls: List<String> = emptyList()
 ) {
     fun toFeedItem(): FeedItem {
         val initials = if (uploaderName.isNotBlank()) {
@@ -67,7 +71,11 @@ data class DocumentDetail(
             comments = 0,
             downloads = downloads,
             isUpvoted = false,
-            isSaved = false
+            isSaved = false,
+            thumbnailUrl = thumbnailUrl,
+            thumbnailGenerated = thumbnailGenerated,
+            thumbnailType = thumbnailType,
+            thumbnailUrls = thumbnailUrls
         )
     }
 }
@@ -95,6 +103,11 @@ fun Map<String, Any>.toDocumentDetail(id: String): DocumentDetail {
         fileSize = (this["fileSize"] as? Long) ?: 0L,
         fileExtension = this["fileExtension"] as? String ?: "",
         fileType = this["fileType"] as? String ?: "pdf",
-        attachmentCount = (this["attachmentCount"] as? Long)?.toInt() ?: fileUrlsList.size
+        attachmentCount = (this["attachmentCount"] as? Long)?.toInt() ?: fileUrlsList.size,
+        thumbnailUrl = this["thumbnailUrl"] as? String,
+        thumbnailGenerated = this["thumbnailGenerated"] as? Boolean,
+        thumbnailType = this["thumbnailType"] as? String,
+        thumbnailUrls = (this["thumbnailUrls"] as? List<*>)?.mapNotNull { it as? String }
+            ?: listOfNotNull(this["thumbnailUrl"] as? String)
     )
 }

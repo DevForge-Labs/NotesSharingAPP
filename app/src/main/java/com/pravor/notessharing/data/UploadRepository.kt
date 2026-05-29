@@ -12,6 +12,9 @@ import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.state.YoutubePreview
 import com.pravor.notessharing.viewmodel.DummyData
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import java.util.UUID
 
 class UploadRepository(private val context: Context) {
@@ -59,6 +62,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -71,6 +75,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -80,6 +85,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -92,6 +98,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -101,6 +108,7 @@ class UploadRepository(private val context: Context) {
         semester: String,
         subject: String,
         selectedFiles: List<SelectedUploadFile>,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -113,6 +121,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = null,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -123,6 +132,7 @@ class UploadRepository(private val context: Context) {
         subject: String,
         youtubeUrl: String,
         youtubePreview: YoutubePreview?,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -135,6 +145,7 @@ class UploadRepository(private val context: Context) {
             youtubePreview = youtubePreview,
             examYear = null,
             examType = null,
+            description = description,
             onProgress = onProgress
         )
     }
@@ -149,6 +160,7 @@ class UploadRepository(private val context: Context) {
         youtubePreview: YoutubePreview?,
         examYear: String?,
         examType: String?,
+        description: String = "",
         onProgress: (Float) -> Unit
     ) {
         val uploaderId = FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
@@ -182,7 +194,7 @@ class UploadRepository(private val context: Context) {
             val doc = mapOf(
                 "documentId" to documentId,
                 "title" to title,
-                "description" to "",
+                "description" to description,
                 "branch" to branch,
                 "semester" to semester,
                 "subject" to displaySubject,
@@ -209,11 +221,13 @@ class UploadRepository(private val context: Context) {
                 "tags" to emptyList<String>(),
                 "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: "")),
                 "youtubeVideoId" to videoId,
+                "youtubeId" to videoId,
                 "thumbnailUrl" to generatedThumb,
+                "youtubeThumbnailUrl" to generatedThumb,
                 "channelName" to channelName,
                 "videoTitle" to title
             )
-            firestoreService.saveDocument(filterNullValues(doc))
+            firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
             onProgress(1.0f)
         } else if (type == UploadType.Pyq) {
@@ -244,7 +258,7 @@ class UploadRepository(private val context: Context) {
                 val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,
                     "title" to file.displayName,
-                    "description" to "",
+                    "description" to description,
                     "branch" to branch,
                     "semester" to semester,
                     "subject" to displaySubject,
@@ -266,6 +280,7 @@ class UploadRepository(private val context: Context) {
                     "fileUrl" to downloadUrl,
                     "downloadUrl" to downloadUrl,
                     "storagePath" to uploadedPath,
+                    "storagePaths" to listOf(uploadedPath),
                     "fileSize" to file.sizeBytes,
                     "fileExtension" to ext,
                     "isVerified" to false,
@@ -275,8 +290,7 @@ class UploadRepository(private val context: Context) {
 
                 doc["examYear"] = examYear ?: ""
                 doc["examType"] = examType ?: ""
-
-                firestoreService.saveDocument(filterNullValues(doc))
+                firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             }
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, selectedFiles.size)
         } else {
@@ -348,12 +362,12 @@ class UploadRepository(private val context: Context) {
                 else -> "application/octet-stream"
             }
 
-            val formattedTitle = "${subject.trim()} ${type.label}"
+            val formattedTitle = subject.trim()
 
             val doc = mutableMapOf<String, Any>(
                 "documentId" to documentId,
                 "title" to formattedTitle,
-                "description" to "",
+                "description" to description,
                 "branch" to branch,
                 "semester" to semester,
                 "subject" to displaySubject,
@@ -375,6 +389,7 @@ class UploadRepository(private val context: Context) {
                 "fileUrl" to downloadUrls.first(),
                 "downloadUrl" to downloadUrls.first(),
                 "storagePath" to storagePaths.first(),
+                "storagePaths" to storagePaths,
                 "fileSize" to totalBytes,
                 "fileExtension" to firstFileExtension,
                 "isVerified" to false,
@@ -388,7 +403,7 @@ class UploadRepository(private val context: Context) {
                 "attachmentCount" to selectedFiles.size
             )
 
-            firestoreService.saveDocument(filterNullValues(doc))
+            firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
         }
     }
@@ -412,17 +427,31 @@ class UploadRepository(private val context: Context) {
 
     suspend fun getDocumentFileUrls(documentId: String): List<String> {
         return try {
-            val snapshot = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                .collection("documents")
-                .document(documentId)
-                .get()
-                .await()
-            if (snapshot.exists()) {
-                val fileUrls = (snapshot.get("fileUrls") as? List<*>)?.mapNotNull { it as? String }
+            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+            var foundData: Map<String, Any>? = null
+            coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            val snap = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                .collection(col)
+                                .document(documentId)
+                                .get()
+                                .await()
+                            if (snap.exists()) snap.data else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                foundData = deferreds.awaitAll().firstOrNull { it != null }
+            }
+            if (foundData != null) {
+                val fileUrls = (foundData?.get("fileUrls") as? List<*>)?.mapNotNull { it as? String }
                 if (fileUrls != null && fileUrls.isNotEmpty()) {
                     return fileUrls
                 }
-                val singleUrl = snapshot.getString("downloadUrl") ?: snapshot.getString("fileUrl") ?: snapshot.getString("youtubeUrl")
+                val singleUrl = foundData?.get("downloadUrl") as? String ?: foundData?.get("fileUrl") as? String ?: foundData?.get("youtubeUrl") as? String
                 if (singleUrl != null) {
                     return listOf(singleUrl)
                 }
@@ -435,19 +464,39 @@ class UploadRepository(private val context: Context) {
 
     suspend fun resolveFilesForDocument(id: String): Pair<String, List<String>> {
         // Try loading from Firestore first
-        val firestoreUrls = getDocumentFileUrls(id)
-        if (firestoreUrls.isNotEmpty()) {
-            val title = try {
-                com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    .collection("documents")
-                    .document(id)
-                    .get()
-                    .await()
-                    .getString("title") ?: "Document"
-            } catch (e: Exception) {
-                "Document"
+        try {
+            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+            var foundData: Map<String, Any>? = null
+            coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            val snap = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                .collection(col)
+                                .document(id)
+                                .get()
+                                .await()
+                            if (snap.exists()) snap.data else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                foundData = deferreds.awaitAll().firstOrNull { it != null }
             }
-            return title to firestoreUrls
+            if (foundData != null) {
+                val title = foundData?.get("title") as? String ?: "Document"
+                val fileUrls = (foundData?.get("fileUrls") as? List<*>)?.mapNotNull { it as? String }
+                if (fileUrls != null && fileUrls.isNotEmpty()) {
+                    return title to fileUrls
+                }
+                val singleUrl = foundData?.get("downloadUrl") as? String ?: foundData?.get("fileUrl") as? String ?: foundData?.get("youtubeUrl") as? String
+                if (singleUrl != null) {
+                    return title to listOf(singleUrl)
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
         }
 
         // Fallback to dummy data
@@ -517,5 +566,15 @@ class UploadRepository(private val context: Context) {
             return extFromUri
         }
         return "pdf" // Default fallback
+    }
+
+    private fun getCollectionName(type: UploadType): String {
+        return when (type) {
+            UploadType.Notes -> "notes"
+            UploadType.CheatSheet -> "cheatsheets"
+            UploadType.Assignment -> "assignments"
+            UploadType.Pyq -> "pyqs"
+            UploadType.Youtube -> "videos"
+        }
     }
 }

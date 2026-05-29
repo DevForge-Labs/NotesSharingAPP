@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.pravor.notessharing.model.VideoRecommendation
 import com.pravor.notessharing.ui.components.StatItem
+import com.pravor.notessharing.ui.components.VideoPlaceholder
 
 private const val THUMBNAIL_QUALITY_HQ = "hqdefault"
 
@@ -94,24 +95,7 @@ fun VideoRecommendationCard(
                         }
                     }
                 } else {
-                    // Fallback UI
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF1E1E24), Color(0xFF121214))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    VideoPlaceholder(modifier = Modifier.fillMaxSize())
                 }
             }
             

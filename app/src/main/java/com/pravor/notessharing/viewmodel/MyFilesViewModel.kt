@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 class MyFilesViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<MyFilesUiState>(MyFilesUiState.Loading)
@@ -41,12 +44,25 @@ class MyFilesViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val snapshot = firestore.collection("documents")
-                    .whereEqualTo("uploaderId", currentUid)
-                    .get()
-                    .await()
+                val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+                val allDocs = coroutineScope {
+                    val deferreds = collections.map { col ->
+                        async {
+                            try {
+                                firestore.collection(col)
+                                    .whereEqualTo("uploaderId", currentUid)
+                                    .get()
+                                    .await()
+                                    .documents
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
+                        }
+                    }
+                    deferreds.awaitAll().flatten()
+                }
                 
-                val realUploaded = snapshot.documents.mapNotNull { doc ->
+                val realUploaded = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     documentToStudyFile(data)
                 }

@@ -14,7 +14,7 @@ import com.pravor.notessharing.ui.components.BottomNavBar
 import com.pravor.notessharing.ui.screens.explore.DiscoverRoute
 import com.pravor.notessharing.ui.screens.explore.ExploreRoute
 import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
-import com.pravor.notessharing.ui.screens.explore.TrendingNotesRoute
+import com.pravor.notessharing.ui.screens.trending.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
 import com.pravor.notessharing.ui.screens.profile.ProfileRoute
@@ -61,6 +61,17 @@ fun NotesSharingApp(
                     destinations = bottomDestinations,
                     currentRoute = selectedBottomRoute,
                     onDestinationClick = { destination ->
+                        // Find the active tab root route in the backstack
+                        val activeTabRoute = navController.currentBackStack.value
+                            .lastOrNull { entry ->
+                                entry.destination.route in bottomDestinations.map { it.route }
+                            }?.destination?.route
+
+                        // Pop all nested destinations above the active tab root
+                        if (activeTabRoute != null) {
+                            navController.popBackStack(activeTabRoute, inclusive = false)
+                        }
+
                         if (destination == AppDestination.Home) {
                             navController.popBackStack(AppDestination.Home.route, inclusive = false)
                         } else {
