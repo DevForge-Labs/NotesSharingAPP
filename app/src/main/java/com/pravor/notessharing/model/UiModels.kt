@@ -26,7 +26,11 @@ data class FeedItem(
     val thumbnailType: String? = null,
     val thumbnailUrls: List<String> = emptyList(),
     val documentType: String? = null,
-    val type: String? = null
+    val type: String? = null,
+    val subject: String? = null,
+    val examYear: String? = null,
+    val section: String? = null,
+    val sectionDisplay: String? = null
 )
 
 @Immutable
@@ -36,7 +40,12 @@ data class StudyFile(
     val uploadDate: String,
     val fileType: FileType,
     val downloads: Int,
-    val upvotes: Int
+    val upvotes: Int,
+    val thumbnailUrl: String? = null,
+    val subject: String? = null,
+    val documentType: String? = null,
+    val examYear: String? = null,
+    val sectionDisplay: String? = null
 )
 
 @Immutable

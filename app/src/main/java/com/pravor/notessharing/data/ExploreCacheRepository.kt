@@ -317,6 +317,10 @@ class ExploreCacheRepository(context: Context) {
             put("thumbnailUrls", thumbnailUrlsArray)
             put("documentType", item.documentType ?: "")
             put("type", item.type ?: "")
+            put("subject", item.subject ?: "")
+            put("examYear", item.examYear ?: "")
+            put("section", item.section ?: "")
+            put("sectionDisplay", item.sectionDisplay ?: "")
         }
     }
 
@@ -366,7 +370,11 @@ class ExploreCacheRepository(context: Context) {
                 list
             },
             documentType = obj.optString("documentType").ifBlank { null },
-            type = obj.optString("type").ifBlank { null }
+            type = obj.optString("type").ifBlank { null },
+            subject = obj.optString("subject").ifBlank { null },
+            examYear = obj.optString("examYear").ifBlank { null },
+            section = obj.optString("section").ifBlank { null },
+            sectionDisplay = obj.optString("sectionDisplay").ifBlank { null }
         )
     }
 

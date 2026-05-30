@@ -294,6 +294,21 @@ fun ContinueReadingCard(
     val actionText = if (isVideo) "Continue Watching" else "Continue Reading"
     val lastOpenedText = formatRelativeTime(item.uploadDate, isVideo = isVideo)
     val supportingText = item.description.ifBlank { item.tags.firstOrNull().orEmpty() }.ifBlank { "General" }
+    val subtitleText = remember(item, isVideo, isPyq, isAssignment, isNotes, isCheatSheet) {
+        val subj = item.subject?.trim()?.ifBlank { null } ?: "General"
+        when {
+            isVideo || isNotes || isCheatSheet -> subj
+            isPyq -> {
+                val year = item.examYear?.trim()
+                if (!year.isNullOrBlank()) "$subj   •   $year" else subj
+            }
+            isAssignment -> {
+                val secDisp = item.sectionDisplay?.trim()?.ifBlank { null } ?: item.section?.trim()?.ifBlank { null }
+                if (!secDisp.isNullOrBlank()) "$subj   •   $secDisp" else subj
+            }
+            else -> supportingText
+        }
+    }
     
     val cardBrush = if (isVideo) {
         Brush.linearGradient(
@@ -451,7 +466,10 @@ fun ContinueReadingCard(
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
-                                            .data(if (firstFileUrl?.startsWith("http") == false) File(firstFileUrl) else firstFileUrl)
+                                            .data(run {
+                                                val url = firstFileUrl
+                                                if (url != null && !url.startsWith("http")) java.io.File(url) else url
+                                            })
                                             .crossfade(true)
                                             .size(300, 200)
                                             .memoryCachePolicy(CachePolicy.ENABLED)
@@ -871,8 +889,26 @@ fun ContinueReadingCard(
 
                     Spacer(Modifier.height(4.dp))
 
-                    if (supportingText.isNotBlank()) {
-                        SubjectBadge(subject = supportingText)
+                    if (isVideo || isPyq || isNotes || isCheatSheet || isAssignment) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text(
+                                text = subtitleText,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else {
+                        if (supportingText.isNotBlank()) {
+                            SubjectBadge(subject = supportingText)
+                        }
                     }
                 }
 
