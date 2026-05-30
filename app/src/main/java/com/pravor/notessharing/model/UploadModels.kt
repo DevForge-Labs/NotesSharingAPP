@@ -40,7 +40,15 @@ data class UploadItem(
 fun extractYoutubeVideoId(url: String): String? {
     val trimmed = url.trim()
     if (trimmed.isBlank()) return null
-    val pattern = "^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com\\/(?:[^\\/\\n\\s]+\\/\\S+\\/|(?:v|e(?:mbed)?)\\/|\\S*?[?&]v=)|youtu\\.be\\/|youtube\\.com\\/shorts\\/)([a-zA-Z0-9_-]{11})".toRegex(RegexOption.IGNORE_CASE)
+    val pattern = "^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com\\/(?:watch\\?(?:.*&)?v=|shorts\\/|live\\/|embed\\/|v\\/)|youtu\\.be\\/)([a-zA-Z0-9_-]{11})".toRegex(RegexOption.IGNORE_CASE)
+    val matchResult = pattern.find(trimmed)
+    return matchResult?.groupValues?.get(1)
+}
+
+fun extractYoutubePlaylistId(url: String): String? {
+    val trimmed = url.trim()
+    if (trimmed.isBlank()) return null
+    val pattern = "[?&]list=([a-zA-Z0-9_-]+)".toRegex(RegexOption.IGNORE_CASE)
     val matchResult = pattern.find(trimmed)
     return matchResult?.groupValues?.get(1)
 }

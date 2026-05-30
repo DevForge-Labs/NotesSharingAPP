@@ -1,4 +1,4 @@
-package com.pravor.notessharing.ui.screens.upload
+ package com.pravor.notessharing.ui.screens.upload
 
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -130,6 +130,8 @@ fun UploadRoute(
         onSubjectChange = viewModel::updateSubject,
         onTitleChange = viewModel::updateTitle,
         onDescriptionChange = viewModel::updateDescription,
+        onSectionChange = viewModel::updateSection,
+        onYoutubeResourceTypeChange = viewModel::selectYoutubeResourceType,
         onTypeSelected = viewModel::selectUploadType,
         onExamYearChange = viewModel::selectExamYear,
         onExamTypeChange = viewModel::selectExamType,
@@ -150,6 +152,8 @@ fun UploadScreen(
     onSubjectChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
+    onSectionChange: (String) -> Unit,
+    onYoutubeResourceTypeChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
     onExamYearChange: (String) -> Unit,
     onExamTypeChange: (String) -> Unit,
@@ -174,8 +178,15 @@ fun UploadScreen(
 
     val isFormValid = uiState.metadataComplete && uiState.errorMessage == null && when (uiState.selectedType) {
         UploadType.Pyq -> uiState.selectedFiles.size == 1 && uiState.selectedExamYear.isNotBlank() && uiState.selectedExamType.isNotBlank()
-        UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && com.pravor.notessharing.model.extractYoutubeVideoId(uiState.youtubeUrl) != null
-        UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> uiState.selectedFiles.isNotEmpty() && uiState.title.isNotBlank()
+        UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && (
+            if (uiState.youtubeResourceType == "playlist") {
+                com.pravor.notessharing.model.extractYoutubePlaylistId(uiState.youtubeUrl) != null
+            } else {
+                com.pravor.notessharing.model.extractYoutubeVideoId(uiState.youtubeUrl) != null
+            }
+        )
+        UploadType.Notes, UploadType.CheatSheet -> uiState.selectedFiles.isNotEmpty() && uiState.title.isNotBlank()
+        UploadType.Assignment -> uiState.selectedFiles.isNotEmpty() && uiState.title.isNotBlank() && uiState.section.isNotBlank()
         null -> false
     }
 
@@ -204,6 +215,8 @@ fun UploadScreen(
                     onSubjectChange = onSubjectChange,
                     onTitleChange = onTitleChange,
                     onDescriptionChange = onDescriptionChange,
+                    onSectionChange = onSectionChange,
+                    onYoutubeResourceTypeChange = onYoutubeResourceTypeChange,
                     onTypeSelected = onTypeSelected,
                     onExamYearChange = onExamYearChange,
                     onExamTypeChange = onExamTypeChange
@@ -222,6 +235,7 @@ fun UploadScreen(
                         )
                         UploadType.Youtube -> YoutubeUploadSection(
                             youtubeUrl = uiState.youtubeUrl,
+                            youtubeResourceType = uiState.youtubeResourceType,
                             isFetching = uiState.isFetchingYoutube,
                             preview = uiState.youtubePreview,
                             error = uiState.youtubeError,
@@ -291,6 +305,8 @@ fun MetadataSection(
     onSubjectChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
+    onSectionChange: (String) -> Unit,
+    onYoutubeResourceTypeChange: (String) -> Unit,
     onTypeSelected: (UploadType) -> Unit,
     onExamYearChange: (String) -> Unit,
     onExamTypeChange: (String) -> Unit
@@ -353,6 +369,46 @@ fun MetadataSection(
                 options = UploadType.values().toList(),
                 onValueChange = onTypeSelected
             )
+
+            if (uiState.selectedType == UploadType.Youtube) {
+                DropdownField(
+                    label = "Type",
+                    value = if (uiState.youtubeResourceType == "playlist") "Playlist" else "Video",
+                    options = listOf("Video", "Playlist"),
+                    onValueChange = { selected ->
+                        onYoutubeResourceTypeChange(selected.lowercase(java.util.Locale.ROOT))
+                    }
+                )
+            }
+
+            if (uiState.selectedType == UploadType.Assignment) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedTextField(
+                        value = uiState.section,
+                        onValueChange = onSectionChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Section") },
+                        placeholder = { Text("Enter section (e.g. CSE-32, ECE 2)...") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
+                    val showSectionError = uiState.section.isBlank() && uiState.selectedType == UploadType.Assignment
+                    if (showSectionError) {
+                        Text(
+                            text = "Section is required",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
 
             if (uiState.selectedType in listOf(UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -422,23 +478,25 @@ fun MetadataSection(
                 else -> "Optional description..."
             }
 
-            OutlinedTextField(
-                value = uiState.description,
-                onValueChange = onDescriptionChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Description") },
-                placeholder = { Text(descriptionPlaceholder, maxLines = 2) },
-                singleLine = false,
-                minLines = 1,
-                maxLines = 10,
-                shape = RoundedCornerShape(18.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+            if (uiState.selectedType != UploadType.Pyq && uiState.selectedType != UploadType.Youtube) {
+                OutlinedTextField(
+                    value = uiState.description,
+                    onValueChange = onDescriptionChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Description") },
+                    placeholder = { Text(descriptionPlaceholder, maxLines = 2) },
+                    singleLine = false,
+                    minLines = 1,
+                    maxLines = 10,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                    )
                 )
-            )
+            }
         }
     }
 }
@@ -579,6 +637,7 @@ private fun PyqUploadSection(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Button(
             onClick = onPickPdfs,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
             shape = RoundedCornerShape(18.dp),
             enabled = files.isEmpty()
         ) {
@@ -957,6 +1016,7 @@ fun GridImagePreviewCard(
 @Composable
 private fun YoutubeUploadSection(
     youtubeUrl: String,
+    youtubeResourceType: String,
     isFetching: Boolean,
     preview: YoutubePreview?,
     error: String?,
@@ -967,7 +1027,7 @@ private fun YoutubeUploadSection(
             value = youtubeUrl,
             onValueChange = onYoutubeUrlChange,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Paste YouTube URL") },
+            label = { Text(if (youtubeResourceType == "playlist") "Paste Playlist URL" else "Paste Video URL") },
             leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
             singleLine = true,
             shape = RoundedCornerShape(18.dp),
@@ -1133,8 +1193,13 @@ fun UploadSummaryCard(uiState: UploadUiState) {
                 SummaryRow("Exam Type", uiState.selectedExamType.ifBlank { "Required" })
             }
             
+            if (uiState.selectedType == UploadType.Assignment) {
+                SummaryRow("Section", uiState.section.ifBlank { "Required" })
+            }
+            
             if (uiState.selectedType == UploadType.Youtube) {
-                SummaryRow("YouTube URL", uiState.youtubeUrl.ifBlank { "Not provided" })
+                val label = if (uiState.youtubeResourceType == "playlist") "Playlist URL" else "Video URL"
+                SummaryRow(label, uiState.youtubeUrl.ifBlank { "Not provided" })
             } else {
                 SummaryRow("Files", uiState.selectedFiles.size.toString())
                 SummaryRow("Total Size", formatBytes(uiState.totalSizeBytes))
