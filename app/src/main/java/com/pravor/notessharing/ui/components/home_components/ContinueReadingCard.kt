@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -368,7 +369,7 @@ fun ContinueReadingCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(cardHeight)
+            .heightIn(min = cardHeight)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -839,7 +840,9 @@ fun ContinueReadingCard(
 
                 Text(
                     text = lastOpenedText,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        lineHeight = 14.sp
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -920,8 +923,8 @@ fun ContinueReadingCard(
                         Button(
                             onClick = onClick,
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                            modifier = Modifier.height(40.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                            modifier = Modifier.heightIn(min = 40.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = accentColor,
                                 contentColor = Color(0xFF10151D)
@@ -929,7 +932,9 @@ fun ContinueReadingCard(
                         ) {
                             Text(
                                 text = actionText,
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    lineHeight = 16.sp
+                                ),
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1
                             )
