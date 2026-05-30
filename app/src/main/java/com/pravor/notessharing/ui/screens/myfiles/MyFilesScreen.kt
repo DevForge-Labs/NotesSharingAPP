@@ -4,7 +4,10 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,20 +18,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.state.MyFilesContent
+import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.model.StudyFile
 import com.pravor.notessharing.state.MyFilesUiState
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
-import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
-import com.pravor.notessharing.ui.components.StudyFileCard
+import com.pravor.notessharing.ui.components.StudyHubShelfCard
 import com.pravor.notessharing.viewmodel.MyFilesViewModel
 
 @Composable
@@ -48,28 +48,19 @@ fun MyFilesScreen(
     onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
-    var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
-
     val listState = rememberLazyListState()
 
     Box(modifier = modifier.fillMaxSize()) {
         Crossfade(targetState = uiState, label = "my-files-state", modifier = Modifier.fillMaxSize()) { state ->
             when (state) {
-                MyFilesUiState.Loading -> StatePanel("Loading files", "Collecting your library", loading = true, modifier = Modifier.padding(top = 96.dp))
-                MyFilesUiState.Empty -> StatePanel("No files yet", "Saved and uploaded files will live here", modifier = Modifier.padding(top = 96.dp))
-                is MyFilesUiState.Error -> StatePanel("Files unavailable", state.message, modifier = Modifier.padding(top = 96.dp))
+                MyFilesUiState.Loading -> StatePanel("Loading downloads", "Collecting your downloaded study collection", loading = true, modifier = Modifier.padding(top = 96.dp))
+                MyFilesUiState.Empty -> StatePanel("No downloads yet", "Your offline study collection will appear here", modifier = Modifier.padding(top = 96.dp))
+                is MyFilesUiState.Error -> StatePanel("Downloads unavailable", state.message, modifier = Modifier.padding(top = 96.dp))
                 is MyFilesUiState.Success -> MyFilesSuccessContent(
-                    content = state.content,
                     listState = listState,
                     onDocumentClick = { docId ->
-                        val savedFile = state.content.savedFiles.find { it.id == docId }
-                        val uploadedFile = state.content.uploadedFiles.find { it.id == docId }
-                        val fileType = savedFile?.fileType ?: uploadedFile?.fileType
-                        
-                        if (fileType == com.pravor.notessharing.model.FileType.Video) {
+                        // In mock downloads or real downloads, check fileType
+                        if (docId.contains("video", ignoreCase = true)) {
                             onVideoClick(docId)
                         } else {
                             onDocumentClick(docId)
@@ -78,31 +69,24 @@ fun MyFilesScreen(
                 )
             }
         }
-
-        selectedUploadForViewer?.let { viewerData ->
-            com.pravor.notessharing.ui.components.GroupedUploadViewerDialog(
-                title = viewerData.title,
-                fileUrls = viewerData.fileUrls,
-                onDismiss = { selectedUploadForViewer = null },
-                onFileClick = { url ->
-                    try {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        // Ignore
-                    }
-                }
-            )
-        }
     }
 }
 
 @Composable
 private fun MyFilesSuccessContent(
-    content: MyFilesContent,
     listState: androidx.compose.foundation.lazy.LazyListState,
     onDocumentClick: (String) -> Unit
 ) {
+    // Beautiful offline downloads mockup representing a premium downloadable study collection
+    val downloadedFiles = remember {
+        listOf(
+            StudyFile("dl-os-scheduling", "OS CPU Scheduling Solved Examples", "Downloaded 2 days ago", FileType.StudyGuide, 203, 58, subject = "OS"),
+            StudyFile("dl-dbms-sql", "DBMS SQL Queries Lab Sheet", "Downloaded 3 days ago", FileType.Notes, 146, 41, subject = "DBMS"),
+            StudyFile("dl-cn-subnet", "CN TCP/IP Revision Sheet", "Downloaded 5 days ago", FileType.CheatSheet, 174, 46, subject = "CN"),
+            StudyFile("dl-dsa-sorting", "Sorting Algorithms Lab Notes", "Downloaded 6 days ago", FileType.LabManual, 267, 73, subject = "DSA")
+        )
+    }
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
@@ -119,14 +103,16 @@ private fun MyFilesSuccessContent(
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Your downloaded study collection",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            item(key = "saved-title", contentType = "section") { SectionHeader("Saved files") }
-            items(content.savedFiles, key = { it.id }, contentType = { "study-file" }) { file ->
-                StudyFileCard(file, onClick = { onDocumentClick(file.id) })
-            }
-            item(key = "uploaded-title", contentType = "section") { SectionHeader("Uploaded files") }
-            items(content.uploadedFiles, key = { it.id }, contentType = { "study-file" }) { file ->
-                StudyFileCard(file, onClick = { onDocumentClick(file.id) })
+
+            items(downloadedFiles, key = { it.id }, contentType = { "study-file" }) { file ->
+                StudyHubShelfCard(file = file, onClick = { onDocumentClick(file.id) })
             }
         }
         AdaptiveScrollbar(listState = listState)

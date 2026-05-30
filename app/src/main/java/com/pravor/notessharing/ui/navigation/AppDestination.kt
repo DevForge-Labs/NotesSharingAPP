@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -20,6 +21,8 @@ sealed class AppDestination(
     data object Upload : AppDestination("upload", "Upload", Icons.Filled.UploadFile)
     data object UploadSuccess : AppDestination("upload/success", "Upload Success", Icons.Filled.UploadFile)
     data object MyFiles : AppDestination("my_files", "My Files", Icons.Filled.UploadFile)
+    data object MyUploads : AppDestination("my_uploads", "My Uploads", Icons.Filled.UploadFile)
+    data object MyBookmarks : AppDestination("my_bookmarks", "My Bookmarks", Icons.Filled.Bookmark)
     data object Profile : AppDestination("profile", "Profile", Icons.Filled.Person)
     data object EditProfile : AppDestination("profile/edit", "Edit Profile", Icons.Filled.Person)
     

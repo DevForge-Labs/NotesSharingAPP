@@ -17,6 +17,8 @@ import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
 import com.pravor.notessharing.ui.screens.trending.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
+import com.pravor.notessharing.ui.screens.myfiles.MyUploadsScreen
+import com.pravor.notessharing.ui.screens.myfiles.MyBookmarksScreen
 import com.pravor.notessharing.ui.screens.profile.ProfileRoute
 import com.pravor.notessharing.ui.screens.profile.EditProfileRoute
 import com.pravor.notessharing.ui.screens.upload.UploadRoute
@@ -154,7 +156,17 @@ fun NotesSharingApp(
             }
             composable(AppDestination.Home.route) {
                 HomeRoute(
-                    onViewAllLibraryClick = {
+                    onMyUploadsClick = {
+                        navController.navigate(AppDestination.MyUploads.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onMyBookmarksClick = {
+                        navController.navigate(AppDestination.MyBookmarks.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onMyDownloadsClick = {
                         navController.navigate(AppDestination.MyFiles.route) {
                             launchSingleTop = true
                         }
@@ -253,6 +265,28 @@ fun NotesSharingApp(
             }
             composable(AppDestination.MyFiles.route) {
                 MyFilesRoute(
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                    }
+                )
+            }
+            composable(AppDestination.MyUploads.route) {
+                MyUploadsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onDocumentClick = { docId ->
+                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                    },
+                    onVideoClick = { videoId ->
+                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                    }
+                )
+            }
+            composable(AppDestination.MyBookmarks.route) {
+                MyBookmarksScreen(
+                    onBackClick = { navController.popBackStack() },
                     onDocumentClick = { docId ->
                         navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                     },

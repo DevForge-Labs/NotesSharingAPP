@@ -108,13 +108,23 @@ class MyFilesViewModel : ViewModel() {
         val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
         val downloads = (doc["downloads"] as? Long ?: (doc["downloadsCount"] as? Long ?: 0L)).toInt()
         
+        val thumbnailUrl = doc["thumbnailUrl"] as? String
+        val subject = doc["subject"] as? String
+        val examYear = doc["examYear"] as? String
+        val sectionDisplay = doc["sectionDisplay"] as? String ?: doc["section"] as? String
+
         return StudyFile(
             id = id,
             title = title,
             uploadDate = uploadDate,
             fileType = fileType,
             downloads = downloads,
-            upvotes = upvotes
+            upvotes = upvotes,
+            thumbnailUrl = thumbnailUrl,
+            subject = subject,
+            documentType = docType,
+            examYear = examYear,
+            sectionDisplay = sectionDisplay
         )
     }
 }

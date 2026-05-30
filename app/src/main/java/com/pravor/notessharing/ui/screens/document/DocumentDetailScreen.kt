@@ -70,7 +70,10 @@ fun DocumentDetailRoute(
                 thumbnailType = doc.thumbnailType,
                 thumbnailUrls = doc.thumbnailUrls,
                 documentType = doc.documentType,
-                typeField = doc.documentType
+                typeField = doc.documentType,
+                examYear = doc.examYear,
+                section = doc.section,
+                sectionDisplay = doc.sectionDisplay
             )
         }
     }

@@ -20,7 +20,10 @@ class RecentlyOpenedRepository(context: Context) {
         thumbnailType: String? = null,
         thumbnailUrls: List<String> = emptyList(),
         documentType: String? = null,
-        typeField: String? = null
+        typeField: String? = null,
+        examYear: String? = null,
+        section: String? = null,
+        sectionDisplay: String? = null
     ) {
         val json = JSONObject()
             .put("id", id)
@@ -35,6 +38,9 @@ class RecentlyOpenedRepository(context: Context) {
             .put("thumbnailType", thumbnailType ?: "")
             .put("documentType", documentType ?: "")
             .put("typeField", typeField ?: "")
+            .put("examYear", examYear ?: "")
+            .put("section", section ?: "")
+            .put("sectionDisplay", sectionDisplay ?: "")
         
         val thumbnailUrlsArray = org.json.JSONArray()
         thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
@@ -71,6 +77,9 @@ class RecentlyOpenedRepository(context: Context) {
 
             val documentType = json.optString("documentType").ifBlank { null }
             val typeField = json.optString("typeField").ifBlank { null }
+            val examYear = json.optString("examYear").ifBlank { null }
+            val section = json.optString("section").ifBlank { null }
+            val sectionDisplay = json.optString("sectionDisplay").ifBlank { null }
 
             val fileType = if (type == "video") FileType.Video else FileType.Pdf
             
@@ -103,7 +112,11 @@ class RecentlyOpenedRepository(context: Context) {
                 thumbnailType = thumbnailType,
                 thumbnailUrls = thumbnailUrlsList,
                 documentType = documentType,
-                type = typeField
+                type = typeField,
+                subject = subject,
+                examYear = examYear,
+                section = section,
+                sectionDisplay = sectionDisplay
             )
         } catch (e: Exception) {
             null

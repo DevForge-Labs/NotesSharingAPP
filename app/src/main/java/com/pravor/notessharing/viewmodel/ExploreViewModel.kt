@@ -249,11 +249,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
         
         val subject = doc["subject"] as? String ?: ""
-        val displayTitle = if (fileType == FileType.Video) {
-            subject.ifBlank { doc["title"] as? String ?: "" }
-        } else {
-            doc["title"] as? String ?: ""
-        }
+        val displayTitle = doc["title"] as? String ?: ""
 
         val description = doc["description"] as? String ?: ""
         val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
@@ -271,6 +267,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
         val documentTypeField = doc["documentType"] as? String
         val typeField = doc["type"] as? String
+        val subjectField = doc["subject"] as? String
+        val examYearField = (doc["examYear"] ?: doc["year"])?.toString()
+        val sectionField = doc["section"] as? String
+        val sectionDisplayField = doc["sectionDisplay"] as? String
 
         return FeedItem(
             id = id,
@@ -293,7 +293,11 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             thumbnailGenerated = thumbnailGenerated,
             thumbnailType = thumbnailType,
             documentType = documentTypeField,
-            type = typeField
+            type = typeField,
+            subject = subjectField,
+            examYear = examYearField,
+            section = sectionField,
+            sectionDisplay = sectionDisplayField
         )
     }
 }

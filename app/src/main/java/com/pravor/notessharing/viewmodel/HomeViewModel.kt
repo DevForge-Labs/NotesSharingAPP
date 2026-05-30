@@ -28,8 +28,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             HomeContent(
                 selectedCategory = Category.Notes,
                 categories = DummyData.categories,
-                feedItems = DummyData.feedItems,
-                recentlyOpened = null
+                feedItems = emptyList(),
+                recentlyOpened = null,
+                isLoadingFeed = true
             )
         )
     )
@@ -85,8 +86,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     HomeContent(
                         selectedCategory = Category.Notes,
                         categories = DummyData.categories,
-                        feedItems = DummyData.feedItems,
-                        recentlyOpened = lastOpened
+                        feedItems = emptyList(),
+                        recentlyOpened = lastOpened,
+                        isLoadingFeed = true
                     )
                 )
             }
@@ -154,7 +156,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     if (current is HomeUiState.Success) {
                         current.copy(content = current.content.copy(
                             feedItems = mergedFeedItems,
-                            recentlyOpened = lastOpened
+                            recentlyOpened = lastOpened,
+                            isLoadingFeed = false
                         ))
                     } else {
                         HomeUiState.Success(
@@ -162,7 +165,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                                 selectedCategory = Category.Notes,
                                 categories = DummyData.categories,
                                 feedItems = mergedFeedItems,
-                                recentlyOpened = lastOpened
+                                recentlyOpened = lastOpened,
+                                isLoadingFeed = false
                             )
                         )
                     }
@@ -184,7 +188,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     if (current is HomeUiState.Success) {
                         current.copy(content = current.content.copy(
                             feedItems = fallbackItems,
-                            recentlyOpened = lastOpened
+                            recentlyOpened = lastOpened,
+                            isLoadingFeed = false
                         ))
                     } else {
                         HomeUiState.Success(
@@ -192,7 +197,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                                 selectedCategory = Category.Notes,
                                 categories = DummyData.categories,
                                 feedItems = fallbackItems,
-                                recentlyOpened = lastOpened
+                                recentlyOpened = lastOpened,
+                                isLoadingFeed = false
                             )
                         )
                     }
@@ -226,11 +232,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         val subject = doc["subject"] as? String ?: ""
-        val displayTitle = if (fileType == FileType.Video) {
-            subject.ifBlank { doc["title"] as? String ?: "" }
-        } else {
-            doc["title"] as? String ?: ""
-        }
+        val displayTitle = doc["title"] as? String ?: ""
 
         val description = doc["description"] as? String ?: ""
         val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
@@ -248,6 +250,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         val documentTypeField = doc["documentType"] as? String
         val typeField = doc["type"] as? String
+        val subjectField = doc["subject"] as? String
+        val examYearField = (doc["examYear"] ?: doc["year"])?.toString()
+        val sectionField = doc["section"] as? String
+        val sectionDisplayField = doc["sectionDisplay"] as? String
 
         return FeedItem(
             id = id,
@@ -270,7 +276,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             thumbnailGenerated = thumbnailGenerated,
             thumbnailType = thumbnailType,
             documentType = documentTypeField,
-            type = typeField
+            type = typeField,
+            subject = subjectField,
+            examYear = examYearField,
+            section = sectionField,
+            sectionDisplay = sectionDisplayField
         )
     }
 
