@@ -11,6 +11,7 @@ import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.model.extractYoutubeVideoId
+import com.pravor.notessharing.model.extractYoutubePlaylistId
 import com.pravor.notessharing.state.UploadUiState
 import com.pravor.notessharing.state.YoutubePreview
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +70,9 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 selectedType = type,
                 selectedFiles = emptyList(),
                 youtubeUrl = "",
+                youtubeResourceType = "video",
                 description = "",
+                section = "",
                 title = "",
                 youtubePreview = null,
                 youtubeError = null,
@@ -87,6 +90,23 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateDescription(description: String) {
         _uiState.update { it.copy(description = description, errorMessage = null, uploadSuccess = false) }
+    }
+
+    fun updateSection(section: String) {
+        _uiState.update { it.copy(section = section, errorMessage = null, uploadSuccess = false) }
+    }
+
+    fun selectYoutubeResourceType(resourceType: String) {
+        _uiState.update {
+            it.copy(
+                youtubeResourceType = resourceType,
+                youtubeUrl = "",
+                youtubePreview = null,
+                youtubeError = null,
+                errorMessage = null,
+                uploadSuccess = false
+            )
+        }
     }
 
     fun selectExamYear(year: String) {
@@ -265,7 +285,26 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                     return
                 }
             }
-            UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment -> {
+            UploadType.Notes, UploadType.CheatSheet -> {
+                if (state.title.isBlank()) {
+                    _uiState.update { it.copy(errorMessage = "Title is required.") }
+                    return
+                }
+                if (state.selectedFiles.isEmpty()) {
+                    _uiState.update { it.copy(errorMessage = "Please select at least one file to upload.") }
+                    return
+                }
+                val validationError = validateSelectedFiles(state.selectedFiles)
+                if (validationError != null) {
+                    _uiState.update { it.copy(errorMessage = validationError) }
+                    return
+                }
+            }
+            UploadType.Assignment -> {
+                if (state.section.isBlank()) {
+                    _uiState.update { it.copy(errorMessage = "Section is required.") }
+                    return
+                }
                 if (state.title.isBlank()) {
                     _uiState.update { it.copy(errorMessage = "Title is required.") }
                     return
@@ -281,8 +320,15 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             UploadType.Youtube -> {
-                if (state.youtubeUrl.isBlank() || extractYoutubeVideoId(state.youtubeUrl) == null) {
-                    _uiState.update { it.copy(errorMessage = "A valid YouTube URL is required.") }
+                val isPlaylist = state.youtubeResourceType == "playlist"
+                val hasValidUrl = if (isPlaylist) {
+                    extractYoutubePlaylistId(state.youtubeUrl) != null
+                } else {
+                    extractYoutubeVideoId(state.youtubeUrl) != null
+                }
+                if (state.youtubeUrl.isBlank() || !hasValidUrl) {
+                    val label = if (isPlaylist) "playlist" else "YouTube"
+                    _uiState.update { it.copy(errorMessage = "A valid $label URL is required.") }
                     return
                 }
             }
@@ -337,13 +383,28 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
                     UploadType.Assignment -> {
+                        val normalizedSection = state.section
+                            .trim()
+                            .lowercase(Locale.ROOT)
+                            .replace(Regex("[\\s-]+"), "")
+                        
+                        val prefix = normalizedSection.takeWhile { it.isLetter() }.uppercase(Locale.ROOT)
+                        val suffix = normalizedSection.dropWhile { it.isLetter() }
+                        val sectionDisplay = if (prefix.isNotEmpty() && suffix.isNotEmpty()) {
+                            "$prefix-$suffix"
+                        } else {
+                            normalizedSection.uppercase(Locale.ROOT)
+                        }
+
                         repository.uploadAssignment(
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
                             selectedFiles = state.selectedFiles,
                             title = state.title,
-                            description = state.description
+                            description = state.description,
+                            section = normalizedSection,
+                            sectionDisplay = sectionDisplay
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
                         }
@@ -355,6 +416,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             subject = state.subject,
                             youtubeUrl = state.youtubeUrl,
                             youtubePreview = state.youtubePreview,
+                            youtubeResourceType = state.youtubeResourceType,
                             description = state.description
                         ) { progress ->
                             _uiState.update { it.copy(uploadProgress = progress) }
@@ -401,7 +463,13 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         val normalized = url.trim().lowercase()
         val hasValidPrefix = (normalized.startsWith("http://") || normalized.startsWith("https://")) &&
                 (normalized.contains("youtube.com") || normalized.contains("youtu.be"))
-        return hasValidPrefix && extractYoutubeVideoId(url) != null
+        if (!hasValidPrefix) return false
+        
+        return if (_uiState.value.youtubeResourceType == "playlist") {
+            extractYoutubePlaylistId(url) != null
+        } else {
+            extractYoutubeVideoId(url) != null
+        }
     }
 
     private fun getFileName(uri: Uri): String {

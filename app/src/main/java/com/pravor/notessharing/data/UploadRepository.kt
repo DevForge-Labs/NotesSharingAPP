@@ -114,6 +114,8 @@ class UploadRepository(private val context: Context) {
         selectedFiles: List<SelectedUploadFile>,
         title: String,
         description: String = "",
+        section: String,
+        sectionDisplay: String,
         onProgress: (Float) -> Unit
     ) {
         uploadDocument(
@@ -128,6 +130,8 @@ class UploadRepository(private val context: Context) {
             examType = null,
             title = title,
             description = description,
+            section = section,
+            sectionDisplay = sectionDisplay,
             onProgress = onProgress
         )
     }
@@ -138,6 +142,7 @@ class UploadRepository(private val context: Context) {
         subject: String,
         youtubeUrl: String,
         youtubePreview: YoutubePreview?,
+        youtubeResourceType: String = "video",
         description: String = "",
         onProgress: (Float) -> Unit
     ) {
@@ -153,6 +158,7 @@ class UploadRepository(private val context: Context) {
             examType = null,
             title = null,
             description = description,
+            youtubeResourceType = youtubeResourceType,
             onProgress = onProgress
         )
     }
@@ -169,6 +175,9 @@ class UploadRepository(private val context: Context) {
         examType: String?,
         title: String? = null,
         description: String = "",
+        section: String? = null,
+        sectionDisplay: String? = null,
+        youtubeResourceType: String? = null,
         onProgress: (Float) -> Unit
     ) {
         val uploaderId = FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
@@ -194,14 +203,10 @@ class UploadRepository(private val context: Context) {
 
         if (type == UploadType.Youtube) {
             val documentId = UUID.randomUUID().toString()
-            val videoId = youtubeUrl?.let { com.pravor.notessharing.model.extractYoutubeVideoId(it) } ?: ""
-            val generatedThumb = if (videoId.isNotBlank()) "https://img.youtube.com/vi/$videoId/hqdefault.jpg" else (youtubePreview?.thumbnailUrl ?: "")
-            val title = youtubePreview?.title ?: "YouTube Video"
-            val channelName = youtubePreview?.channelTitle ?: "YouTube Channel"
+            val isPlaylist = youtubeResourceType == "playlist"
             
-            val doc = mapOf(
+            val doc = mutableMapOf<String, Any?>(
                 "documentId" to documentId,
-                "title" to title,
                 "description" to description,
                 "branch" to branch,
                 "semester" to semester,
@@ -227,14 +232,39 @@ class UploadRepository(private val context: Context) {
                 "fileExtension" to "",
                 "isVerified" to false,
                 "tags" to emptyList<String>(),
-                "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: "")),
-                "youtubeVideoId" to videoId,
-                "youtubeId" to videoId,
-                "thumbnailUrl" to generatedThumb,
-                "youtubeThumbnailUrl" to generatedThumb,
-                "channelName" to channelName,
-                "videoTitle" to title
+                "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: ""))
             )
+
+            if (isPlaylist) {
+                val playlistId = youtubeUrl?.let { com.pravor.notessharing.model.extractYoutubePlaylistId(it) } ?: ""
+                val title = youtubePreview?.title ?: "YouTube Playlist"
+                val channelName = youtubePreview?.channelTitle ?: "YouTube Channel"
+                val generatedThumb = youtubePreview?.thumbnailUrl ?: ""
+                
+                doc["youtubeResourceType"] = "playlist"
+                doc["title"] = title
+                doc["playlistTitle"] = title
+                doc["channelName"] = channelName
+                doc["thumbnailUrl"] = generatedThumb
+                doc["youtubeThumbnailUrl"] = generatedThumb
+                doc["youtubeId"] = playlistId
+                doc["youtubePlaylistId"] = playlistId
+            } else {
+                val videoId = youtubeUrl?.let { com.pravor.notessharing.model.extractYoutubeVideoId(it) } ?: ""
+                val generatedThumb = if (videoId.isNotBlank()) "https://img.youtube.com/vi/$videoId/hqdefault.jpg" else (youtubePreview?.thumbnailUrl ?: "")
+                val title = youtubePreview?.title ?: "YouTube Video"
+                val channelName = youtubePreview?.channelTitle ?: "YouTube Channel"
+
+                doc["youtubeResourceType"] = "video"
+                doc["title"] = title
+                doc["videoTitle"] = title
+                doc["channelName"] = channelName
+                doc["thumbnailUrl"] = generatedThumb
+                doc["youtubeThumbnailUrl"] = generatedThumb
+                doc["youtubeId"] = videoId
+                doc["youtubeVideoId"] = videoId
+            }
+            
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
             onProgress(1.0f)
@@ -410,6 +440,11 @@ class UploadRepository(private val context: Context) {
                 "thumbnailUrl" to (if (fileType == "image") downloadUrls.first() else ""),
                 "attachmentCount" to selectedFiles.size
             )
+            
+            if (type == UploadType.Assignment) {
+                if (section != null) doc["section"] = section
+                if (sectionDisplay != null) doc["sectionDisplay"] = sectionDisplay
+            }
 
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)

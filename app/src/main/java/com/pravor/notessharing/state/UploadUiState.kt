@@ -22,7 +22,9 @@ data class UploadUiState(
     val selectedType: UploadType? = null,
     val selectedFiles: List<SelectedUploadFile> = emptyList(),
     val youtubeUrl: String = "",
+    val youtubeResourceType: String = "video",
     val description: String = "",
+    val section: String = "",
     val title: String = "",
     
     // PYQ specific metadata
