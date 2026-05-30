@@ -111,6 +111,7 @@ fun ContinueReadingCard(
     val isVideo = item.fileType == com.pravor.notessharing.model.FileType.Video
     
     val repository = remember { com.pravor.notessharing.data.DocumentDetailRepository() }
+    val videoRepository = remember { com.pravor.notessharing.data.VideoDetailRepository() }
     var firstFileUrl by remember(item.id) { mutableStateOf<String?>(null) }
     var isImage by remember(item.id) { mutableStateOf(false) }
     var isLoading by remember(item.id) { mutableStateOf(true) }
@@ -118,7 +119,12 @@ fun ContinueReadingCard(
     val context = LocalContext.current
 
     LaunchedEffect(item.id) {
-        if (isVideo) {
+        val isYouTubeVideo = isVideo && !item.youtubeVideoId.isNullOrBlank()
+        if (isYouTubeVideo && (!item.thumbnailUrl.isNullOrBlank() || !item.youtubeThumbnailUrl.isNullOrBlank())) {
+            isLoading = false
+            return@LaunchedEffect
+        }
+        if (!isYouTubeVideo && isVideo && (!item.thumbnailUrl.isNullOrBlank() || !item.youtubeThumbnailUrl.isNullOrBlank())) {
             isLoading = false
             return@LaunchedEffect
         }
@@ -156,52 +162,75 @@ fun ContinueReadingCard(
                 // If item.thumbnailUrl is blank, query the database for latest document metadata
                 val remoteUrlToUse = if (!item.thumbnailUrl.isNullOrBlank()) {
                     item.thumbnailUrl
+                } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
+                    item.youtubeThumbnailUrl
                 } else {
-                    val doc = repository.getDocument(item.id)
-                    if (doc != null && !doc.thumbnailUrl.isNullOrBlank()) {
-                        doc.thumbnailUrl
-                    } else if (doc != null && doc.fileUrls.isNotEmpty()) {
-                        doc.fileUrls.first()
+                    if (isYouTubeVideo) {
+                        val videoDoc = videoRepository.getVideo(item.id)
+                        if (videoDoc != null && !videoDoc.thumbnailUrl.isNullOrBlank()) {
+                            videoDoc.thumbnailUrl
+                        } else if (videoDoc != null && !videoDoc.youtubeThumbnailUrl.isNullOrBlank()) {
+                            videoDoc.youtubeThumbnailUrl
+                        } else {
+                            null
+                        }
                     } else {
-                        null
+                        val doc = repository.getDocument(item.id)
+                        if (doc != null && !doc.thumbnailUrl.isNullOrBlank()) {
+                            doc.thumbnailUrl
+                        } else if (doc != null && !doc.youtubeThumbnailUrl.isNullOrBlank()) {
+                            doc.youtubeThumbnailUrl
+                        } else if (doc != null && doc.fileUrls.isNotEmpty()) {
+                            doc.fileUrls.first()
+                        } else {
+                            null
+                        }
                     }
                 }
 
                 if (!remoteUrlToUse.isNullOrBlank()) {
-                    val isImg = remoteUrlToUse.contains(".jpg", ignoreCase = true) ||
-                                remoteUrlToUse.contains(".jpeg", ignoreCase = true) ||
-                                remoteUrlToUse.contains(".png", ignoreCase = true) ||
-                                remoteUrlToUse.contains(".webp", ignoreCase = true) ||
-                                remoteUrlToUse.contains("unsplash.com", ignoreCase = true) ||
-                                remoteUrlToUse.contains("firebasestorage.googleapis.com", ignoreCase = true)
-
-                    if (isImg) {
-                        val success = downloadThumbnailFile(remoteUrlToUse, localFile)
-                        if (success) {
-                            prefs.edit()
-                                .putString("${item.id}_remote_url", remoteUrlToUse)
-                                .putString("${item.id}_doc_type", item.documentType)
-                                .apply()
-
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                firstFileUrl = localFile.absolutePath
-                                isImage = true
-                                resolvedDocType = item.documentType
-                            }
-                        } else {
-                            // Fallback to direct remote URL if download fails
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                firstFileUrl = remoteUrlToUse
-                                isImage = true
-                                resolvedDocType = item.documentType
-                            }
-                        }
-                    } else {
-                        // Not an image file
+                    if (isVideo) {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                             firstFileUrl = remoteUrlToUse
-                            isImage = false
+                            isImage = true
                             resolvedDocType = item.documentType
+                        }
+                    } else {
+                        val isImg = remoteUrlToUse.contains(".jpg", ignoreCase = true) ||
+                                    remoteUrlToUse.contains(".jpeg", ignoreCase = true) ||
+                                    remoteUrlToUse.contains(".png", ignoreCase = true) ||
+                                    remoteUrlToUse.contains(".webp", ignoreCase = true) ||
+                                    remoteUrlToUse.contains("unsplash.com", ignoreCase = true) ||
+                                    remoteUrlToUse.contains("firebasestorage.googleapis.com", ignoreCase = true)
+
+                        if (isImg) {
+                            val success = downloadThumbnailFile(remoteUrlToUse, localFile)
+                            if (success) {
+                                prefs.edit()
+                                    .putString("${item.id}_remote_url", remoteUrlToUse)
+                                    .putString("${item.id}_doc_type", item.documentType)
+                                    .apply()
+
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    firstFileUrl = localFile.absolutePath
+                                    isImage = true
+                                    resolvedDocType = item.documentType
+                                }
+                            } else {
+                                // Fallback to direct remote URL if download fails
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    firstFileUrl = remoteUrlToUse
+                                    isImage = true
+                                    resolvedDocType = item.documentType
+                                }
+                            }
+                        } else {
+                            // Not an image file
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                firstFileUrl = remoteUrlToUse
+                                isImage = false
+                                resolvedDocType = item.documentType
+                            }
                         }
                     }
                 } else {
@@ -398,10 +427,49 @@ fun ContinueReadingCard(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isVideo) {
-                        var hasThumbnailError by remember { mutableStateOf(item.youtubeVideoId.isNullOrBlank()) }
-                        if (!hasThumbnailError) {
+                        val isYouTubeVideo = !item.youtubeVideoId.isNullOrBlank()
+                        val finalImageUrl = if (isYouTubeVideo) {
+                            if (!item.thumbnailUrl.isNullOrBlank()) {
+                                item.thumbnailUrl
+                            } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
+                                item.youtubeThumbnailUrl
+                            } else if (!firstFileUrl.isNullOrBlank()) {
+                                firstFileUrl
+                            } else {
+                                null
+                            }
+                        } else {
+                            val isYouTubeResource = item.type == "YouTube Resource" || item.documentType == "YouTube Resource"
+                            if (isYouTubeResource) {
+                                if (!item.thumbnailUrl.isNullOrBlank()) {
+                                    item.thumbnailUrl
+                                } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
+                                    item.youtubeThumbnailUrl
+                                } else if (!firstFileUrl.isNullOrBlank()) {
+                                    firstFileUrl
+                                } else {
+                                    null
+                                }
+                            } else {
+                                if (!item.thumbnailUrl.isNullOrBlank()) {
+                                    item.thumbnailUrl
+                                } else if (!firstFileUrl.isNullOrBlank()) {
+                                    firstFileUrl
+                                } else {
+                                    null
+                                }
+                            }
+                        }
+
+                        android.util.Log.d(
+                            "YouTubeHomeThumbnail",
+                            "ContinueReadingCard: Title: ${item.title}, Resource Type: ${if (isYouTubeVideo) "YouTube Video" else "Playlist/Other"}, thumbnailUrl: ${item.thumbnailUrl}, youtubeThumbnailUrl: ${item.youtubeThumbnailUrl}, Final URL: $finalImageUrl"
+                        )
+
+                        var hasThumbnailError by remember(finalImageUrl) { mutableStateOf(finalImageUrl.isNullOrBlank()) }
+                        if (!hasThumbnailError && !finalImageUrl.isNullOrBlank()) {
                             AsyncImage(
-                                model = "https://img.youtube.com/vi/${item.youtubeVideoId}/mqdefault.jpg",
+                                model = finalImageUrl,
                                 contentDescription = item.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,

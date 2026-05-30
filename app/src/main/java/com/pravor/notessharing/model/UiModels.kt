@@ -30,7 +30,8 @@ data class FeedItem(
     val subject: String? = null,
     val examYear: String? = null,
     val section: String? = null,
-    val sectionDisplay: String? = null
+    val sectionDisplay: String? = null,
+    val youtubeThumbnailUrl: String? = null
 )
 
 @Immutable

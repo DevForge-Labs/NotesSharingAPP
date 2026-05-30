@@ -100,10 +100,32 @@ fun HomeFeedCard(
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
-                    var hasThumbnailError by remember { mutableStateOf(item.youtubeVideoId.isNullOrBlank()) }
-                    if (!hasThumbnailError) {
+                    val isYouTubeResource = item.type == "YouTube Resource" || item.documentType == "YouTube Resource"
+                    val finalImageUrl = if (isYouTubeResource) {
+                        if (!item.thumbnailUrl.isNullOrBlank()) {
+                            item.thumbnailUrl
+                        } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
+                            item.youtubeThumbnailUrl
+                        } else {
+                            null
+                        }
+                    } else {
+                        if (!item.thumbnailUrl.isNullOrBlank()) {
+                            item.thumbnailUrl
+                        } else {
+                            null
+                        }
+                    }
+
+                    android.util.Log.d(
+                        "YouTubeHomeThumbnail",
+                        "FeedCard: Title: ${item.title}, Type: ${item.documentType ?: item.type}, thumbnailUrl: ${item.thumbnailUrl}, youtubeThumbnailUrl: ${item.youtubeThumbnailUrl}, Final URL: $finalImageUrl"
+                    )
+
+                    var hasThumbnailError by remember(finalImageUrl) { mutableStateOf(finalImageUrl.isNullOrBlank()) }
+                    if (!hasThumbnailError && !finalImageUrl.isNullOrBlank()) {
                         AsyncImage(
-                            model = "https://img.youtube.com/vi/${item.youtubeVideoId}/$THUMBNAIL_QUALITY_HQ.jpg",
+                            model = finalImageUrl,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
@@ -452,10 +474,32 @@ fun ForYouGridCard(
                 var imageLoadError by remember { mutableStateOf(false) }
 
                 if (isVideo) {
-                    var hasThumbnailError by remember { mutableStateOf(item.youtubeVideoId.isNullOrBlank()) }
-                    if (!hasThumbnailError) {
+                    val isYouTubeResource = item.type == "YouTube Resource" || item.documentType == "YouTube Resource"
+                    val finalImageUrl = if (isYouTubeResource) {
+                        if (!item.thumbnailUrl.isNullOrBlank()) {
+                            item.thumbnailUrl
+                        } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
+                            item.youtubeThumbnailUrl
+                        } else {
+                            null
+                        }
+                    } else {
+                        if (!item.thumbnailUrl.isNullOrBlank()) {
+                            item.thumbnailUrl
+                        } else {
+                            null
+                        }
+                    }
+
+                    android.util.Log.d(
+                        "YouTubeHomeThumbnail",
+                        "GridCard: Title: ${item.title}, Type: ${item.documentType ?: item.type}, thumbnailUrl: ${item.thumbnailUrl}, youtubeThumbnailUrl: ${item.youtubeThumbnailUrl}, Final URL: $finalImageUrl"
+                    )
+
+                    var hasThumbnailError by remember(finalImageUrl) { mutableStateOf(finalImageUrl.isNullOrBlank()) }
+                    if (!hasThumbnailError && !finalImageUrl.isNullOrBlank()) {
                         AsyncImage(
-                            model = "https://img.youtube.com/vi/${item.youtubeVideoId}/$THUMBNAIL_QUALITY_HQ.jpg",
+                            model = finalImageUrl,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
