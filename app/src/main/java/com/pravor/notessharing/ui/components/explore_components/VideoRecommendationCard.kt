@@ -51,11 +51,24 @@ fun VideoRecommendationCard(
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
-                var hasThumbnailError by remember { mutableStateOf(video.youtubeVideoId.isBlank()) }
+                val finalImageUrl = if (!video.thumbnailUrl.isNullOrBlank()) {
+                    video.thumbnailUrl
+                } else if (!video.youtubeThumbnailUrl.isNullOrBlank()) {
+                    video.youtubeThumbnailUrl
+                } else {
+                    null
+                }
+
+                android.util.Log.d(
+                    "VideoRecommendationCard",
+                    "Type: ${video.documentType}, Title: ${video.title}, thumbnailUrl: ${video.thumbnailUrl}, finalImageUrl: $finalImageUrl"
+                )
+
+                var hasThumbnailError by remember { mutableStateOf(finalImageUrl.isNullOrBlank()) }
                 
-                if (!hasThumbnailError) {
+                if (!hasThumbnailError && !finalImageUrl.isNullOrBlank()) {
                     AsyncImage(
-                        model = "https://img.youtube.com/vi/${video.youtubeVideoId}/$THUMBNAIL_QUALITY_HQ.jpg",
+                        model = finalImageUrl,
                         contentDescription = video.subject,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,

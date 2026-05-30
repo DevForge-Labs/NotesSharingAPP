@@ -23,7 +23,8 @@ class RecentlyOpenedRepository(context: Context) {
         typeField: String? = null,
         examYear: String? = null,
         section: String? = null,
-        sectionDisplay: String? = null
+        sectionDisplay: String? = null,
+        youtubeThumbnailUrl: String? = null
     ) {
         val json = JSONObject()
             .put("id", id)
@@ -41,6 +42,7 @@ class RecentlyOpenedRepository(context: Context) {
             .put("examYear", examYear ?: "")
             .put("section", section ?: "")
             .put("sectionDisplay", sectionDisplay ?: "")
+            .put("youtubeThumbnailUrl", youtubeThumbnailUrl ?: "")
         
         val thumbnailUrlsArray = org.json.JSONArray()
         thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
@@ -62,6 +64,7 @@ class RecentlyOpenedRepository(context: Context) {
             val uploaderName = json.optString("uploaderName", "Anonymous")
             
             val thumbnailUrl = json.optString("thumbnailUrl").ifBlank { null }
+            val youtubeThumbnailUrl = json.optString("youtubeThumbnailUrl").ifBlank { null }
             val thumbnailGenerated = if (json.has("thumbnailGenerated")) json.getBoolean("thumbnailGenerated") else null
             val thumbnailType = json.optString("thumbnailType").ifBlank { null }
             
@@ -116,7 +119,8 @@ class RecentlyOpenedRepository(context: Context) {
                 subject = subject,
                 examYear = examYear,
                 section = section,
-                sectionDisplay = sectionDisplay
+                sectionDisplay = sectionDisplay,
+                youtubeThumbnailUrl = youtubeThumbnailUrl
             )
         } catch (e: Exception) {
             null

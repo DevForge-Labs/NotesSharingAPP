@@ -105,7 +105,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val subject = data["subject"] as? String ?: ""
                     val downloads = (data["downloads"] as? Long ?: 0L).toInt()
                     val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
-                    val thumbnailUrl = data["thumbnailUrl"] as? String
+                    val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
+                        ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
                     val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
                     val thumbnailType = data["thumbnailType"] as? String
                     val documentTypeField = data["documentType"] as? String
@@ -159,6 +160,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
                     val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
                     val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
+                    val thumbnailUrlVal = data["thumbnailUrl"] as? String
+                    val youtubeThumbnailUrlVal = data["youtubeThumbnailUrl"] as? String
 
                     com.pravor.notessharing.model.VideoRecommendation(
                         id = id,
@@ -168,7 +171,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         subject = subject,
                         youtubeVideoId = youtubeVideoId,
                         upvotes = upvotes,
-                        bookmarks = bookmarks
+                        bookmarks = bookmarks,
+                        thumbnailUrl = thumbnailUrlVal,
+                        youtubeThumbnailUrl = youtubeThumbnailUrlVal,
+                        documentType = docType
                     )
                 }
 
@@ -261,7 +267,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         val youtubeUrl = doc["youtubeUrl"] as? String
         val youtubeVideoId = doc["youtubeVideoId"] as? String
         
-        val thumbnailUrl = doc["thumbnailUrl"] as? String
+        val thumbnailUrl = (doc["thumbnailUrl"] as? String)?.ifBlank { null }
+            ?: (doc["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
         val thumbnailGenerated = doc["thumbnailGenerated"] as? Boolean
         val thumbnailType = doc["thumbnailType"] as? String
 

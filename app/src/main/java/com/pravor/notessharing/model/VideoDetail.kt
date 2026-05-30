@@ -18,12 +18,18 @@ data class VideoDetail(
     val youtubeVideoId: String,
     val upvotes: Int,
     val downloads: Int,
-    val bookmarks: Int
+    val bookmarks: Int,
+    val thumbnailUrl: String? = null,
+    val youtubeThumbnailUrl: String? = null,
+    val youtubeResourceType: String = "video",
+    val youtubePlaylistId: String = ""
 )
 
 fun Map<String, Any>.toVideoDetail(id: String): VideoDetail {
     val youtubeUrlStr = this["youtubeUrl"] as? String ?: ""
     val extractedId = extractYoutubeVideoId(youtubeUrlStr) ?: (this["youtubeVideoId"] as? String ?: "")
+    val youtubeResourceType = this["youtubeResourceType"] as? String ?: "video"
+    val youtubePlaylistId = this["youtubePlaylistId"] as? String ?: this["youtubeId"] as? String ?: ""
     
     return VideoDetail(
         id = id,
@@ -40,6 +46,10 @@ fun Map<String, Any>.toVideoDetail(id: String): VideoDetail {
         youtubeVideoId = extractedId,
         upvotes = (this["upvotes"] as? Long)?.toInt() ?: (this["likesCount"] as? Long)?.toInt() ?: 0,
         downloads = (this["downloads"] as? Long)?.toInt() ?: (this["downloadsCount"] as? Long)?.toInt() ?: 0,
-        bookmarks = (this["bookmarks"] as? Long)?.toInt() ?: 0
+        bookmarks = (this["bookmarks"] as? Long)?.toInt() ?: 0,
+        thumbnailUrl = this["thumbnailUrl"] as? String,
+        youtubeThumbnailUrl = this["youtubeThumbnailUrl"] as? String,
+        youtubeResourceType = youtubeResourceType,
+        youtubePlaylistId = youtubePlaylistId
     )
 }

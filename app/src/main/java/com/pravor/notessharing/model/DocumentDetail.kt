@@ -32,7 +32,8 @@ data class DocumentDetail(
     val thumbnailUrls: List<String> = emptyList(),
     val examYear: String? = null,
     val section: String? = null,
-    val sectionDisplay: String? = null
+    val sectionDisplay: String? = null,
+    val youtubeThumbnailUrl: String? = null
 ) {
     fun toFeedItem(): FeedItem {
         val initials = if (uploaderName.isNotBlank()) {
@@ -84,7 +85,8 @@ data class DocumentDetail(
             subject = subject,
             examYear = examYear,
             section = section,
-            sectionDisplay = sectionDisplay
+            sectionDisplay = sectionDisplay,
+            youtubeThumbnailUrl = youtubeThumbnailUrl
         )
     }
 }
@@ -120,6 +122,7 @@ fun Map<String, Any>.toDocumentDetail(id: String): DocumentDetail {
             ?: listOfNotNull(this["thumbnailUrl"] as? String),
         examYear = (this["examYear"] ?: this["year"])?.toString(),
         section = this["section"] as? String,
-        sectionDisplay = this["sectionDisplay"] as? String
+        sectionDisplay = this["sectionDisplay"] as? String,
+        youtubeThumbnailUrl = this["youtubeThumbnailUrl"] as? String
     )
 }

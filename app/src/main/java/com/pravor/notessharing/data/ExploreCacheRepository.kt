@@ -68,6 +68,9 @@ class ExploreCacheRepository(context: Context) {
                     put("youtubeVideoId", it.youtubeVideoId)
                     put("upvotes", it.upvotes)
                     put("bookmarks", it.bookmarks)
+                    put("thumbnailUrl", it.thumbnailUrl ?: "")
+                    put("youtubeThumbnailUrl", it.youtubeThumbnailUrl ?: "")
+                    put("documentType", it.documentType)
                 })
             }
             json.put("videoRecommendations", videosArray)
@@ -196,7 +199,10 @@ class ExploreCacheRepository(context: Context) {
                         subject = obj.getString("subject"),
                         youtubeVideoId = obj.getString("youtubeVideoId"),
                         upvotes = obj.optInt("upvotes", 0),
-                        bookmarks = obj.optInt("bookmarks", 0)
+                        bookmarks = obj.optInt("bookmarks", 0),
+                        thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
+                        youtubeThumbnailUrl = obj.optString("youtubeThumbnailUrl").ifBlank { null },
+                        documentType = obj.optString("documentType", "")
                     ))
                 }
             }
@@ -310,6 +316,7 @@ class ExploreCacheRepository(context: Context) {
             put("youtubeVideoId", item.youtubeVideoId ?: "")
             put("youtubeUrl", item.youtubeUrl ?: "")
             put("thumbnailUrl", item.thumbnailUrl ?: "")
+            put("youtubeThumbnailUrl", item.youtubeThumbnailUrl ?: "")
             put("thumbnailGenerated", item.thumbnailGenerated ?: false)
             put("thumbnailType", item.thumbnailType ?: "")
             val thumbnailUrlsArray = JSONArray()
@@ -374,7 +381,8 @@ class ExploreCacheRepository(context: Context) {
             subject = obj.optString("subject").ifBlank { null },
             examYear = obj.optString("examYear").ifBlank { null },
             section = obj.optString("section").ifBlank { null },
-            sectionDisplay = obj.optString("sectionDisplay").ifBlank { null }
+            sectionDisplay = obj.optString("sectionDisplay").ifBlank { null },
+            youtubeThumbnailUrl = obj.optString("youtubeThumbnailUrl").ifBlank { null }
         )
     }
 

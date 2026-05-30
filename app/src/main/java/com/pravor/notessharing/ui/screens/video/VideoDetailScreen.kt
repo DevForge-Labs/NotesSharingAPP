@@ -189,7 +189,11 @@ private fun VideoDetailContent(
                 youtubeVideoId = video.youtubeVideoId,
                 youtubeUrl = video.youtubeUrl,
                 title = video.title,
-                context = context
+                context = context,
+                thumbnailUrl = video.thumbnailUrl,
+                youtubeThumbnailUrl = video.youtubeThumbnailUrl,
+                youtubeResourceType = video.youtubeResourceType,
+                youtubePlaylistId = video.youtubePlaylistId
             )
         }
 
@@ -258,12 +262,24 @@ fun YouTubeThumbnailPlayer(
     youtubeVideoId: String,
     youtubeUrl: String,
     title: String,
-    context: Context
+    context: Context,
+    thumbnailUrl: String? = null,
+    youtubeThumbnailUrl: String? = null,
+    youtubeResourceType: String = "video",
+    youtubePlaylistId: String = ""
 ) {
-    var hasError by remember { mutableStateOf(false) }
+    val finalImageUrl = if (!thumbnailUrl.isNullOrBlank()) {
+        thumbnailUrl
+    } else if (!youtubeThumbnailUrl.isNullOrBlank()) {
+        youtubeThumbnailUrl
+    } else {
+        null
+    }
 
-    LaunchedEffect(youtubeVideoId) {
-        hasError = youtubeVideoId.isBlank()
+    var hasError by remember { mutableStateOf(finalImageUrl.isNullOrBlank()) }
+
+    LaunchedEffect(finalImageUrl) {
+        hasError = finalImageUrl.isNullOrBlank()
     }
 
     if (hasError) {
@@ -277,12 +293,18 @@ fun YouTubeThumbnailPlayer(
                 .clip(RoundedCornerShape(22.dp))
                 .background(Color.Black)
                 .clickable {
-                    launchYouTubeIntent(youtubeVideoId, youtubeUrl, context)
+                    launchYouTubeIntent(
+                        resourceType = youtubeResourceType,
+                        videoId = youtubeVideoId,
+                        playlistId = youtubePlaylistId,
+                        youtubeUrl = youtubeUrl,
+                        context = context
+                    )
                 },
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = "https://img.youtube.com/vi/$youtubeVideoId/hqdefault.jpg",
+                model = finalImageUrl,
                 contentDescription = title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -349,19 +371,53 @@ fun VideoFallbackUI(title: String) {
     }
 }
 
-private fun launchYouTubeIntent(videoId: String, youtubeUrl: String, context: Context) {
-    val appUri = "vnd.youtube:$videoId".toUri()
-    val webUri = (if (youtubeUrl.isNotBlank()) youtubeUrl else "https://www.youtube.com/watch?v=$videoId").toUri()
-    val appIntent = Intent(Intent.ACTION_VIEW, appUri)
-    val webIntent = Intent(Intent.ACTION_VIEW, webUri)
+private fun launchYouTubeIntent(
+    resourceType: String,
+    videoId: String,
+    playlistId: String,
+    youtubeUrl: String,
+    context: Context
+) {
+    val finalLaunchUrl = if (resourceType == "playlist") {
+        if (playlistId.isNotBlank()) "https://www.youtube.com/playlist?list=$playlistId" else youtubeUrl
+    } else {
+        if (youtubeUrl.isNotBlank()) youtubeUrl else "https://www.youtube.com/watch?v=$videoId"
+    }
 
-    try {
-        context.startActivity(appIntent)
-    } catch (e: Exception) {
+    android.util.Log.d(
+        "YouTubeLaunch",
+        "Resource Type: $resourceType\nPlaylist Id: $playlistId\nVideo Id: $videoId\nFinal Launch URL: $finalLaunchUrl"
+    )
+
+    if (resourceType == "playlist") {
+        val appIntent = Intent(Intent.ACTION_VIEW, finalLaunchUrl.toUri()).apply {
+            setPackage("com.google.android.youtube")
+        }
+        val webIntent = Intent(Intent.ACTION_VIEW, finalLaunchUrl.toUri())
+
         try {
-            context.startActivity(webIntent)
-        } catch (ex: Exception) {
-            Toast.makeText(context, "No app available to open this video link", Toast.LENGTH_SHORT).show()
+            context.startActivity(appIntent)
+        } catch (e: Exception) {
+            try {
+                context.startActivity(webIntent)
+            } catch (ex: Exception) {
+                Toast.makeText(context, "No app available to open this playlist link", Toast.LENGTH_SHORT).show()
+            }
+        }
+    } else {
+        val appUri = "vnd.youtube:$videoId".toUri()
+        val webUri = finalLaunchUrl.toUri()
+        val appIntent = Intent(Intent.ACTION_VIEW, appUri)
+        val webIntent = Intent(Intent.ACTION_VIEW, webUri)
+
+        try {
+            context.startActivity(appIntent)
+        } catch (e: Exception) {
+            try {
+                context.startActivity(webIntent)
+            } catch (ex: Exception) {
+                Toast.makeText(context, "No app available to open this video link", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
@@ -491,9 +547,16 @@ fun RelatedVideoCard(video: VideoDetail, onClick: () -> Unit) {
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                if (video.youtubeVideoId.isNotBlank()) {
+                val finalImageUrl = if (!video.thumbnailUrl.isNullOrBlank()) {
+                    video.thumbnailUrl
+                } else if (!video.youtubeThumbnailUrl.isNullOrBlank()) {
+                    video.youtubeThumbnailUrl
+                } else {
+                    null
+                }
+                if (!finalImageUrl.isNullOrBlank()) {
                     AsyncImage(
-                        model = "https://img.youtube.com/vi/${video.youtubeVideoId}/hqdefault.jpg",
+                        model = finalImageUrl,
                         contentDescription = video.title,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

@@ -1,8 +1,5 @@
 import { createCanvas, Image, ImageData } from "@napi-rs/canvas";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-import * as path from "path";
-import * as os from "os";
-import * as fs from "fs";
 
 // Polyfill Image and ImageData globals for the Node.js environment
 if (typeof global !== "undefined") {
@@ -16,21 +13,21 @@ if (typeof global !== "undefined") {
  * @param docId Unique identifier to avoid temporary file name collisions.
  */
 export async function convertPdfPageToImage(pdfBuffer: Buffer, docId: string): Promise<Buffer> {
-  const tempPdfPath = path.join(os.tmpdir(), `pdf_${docId}_${Date.now()}.pdf`);
-  await fs.promises.writeFile(tempPdfPath, pdfBuffer);
+  // Directly load the PDF from memory using a zero-copy Uint8Array view of the Buffer
+  const uint8Array = new Uint8Array(pdfBuffer.buffer, pdfBuffer.byteOffset, pdfBuffer.byteLength);
 
+  const loadingTask = pdfjsLib.getDocument({
+    data: uint8Array,
+  });
+
+  const pdfDocument = await loadingTask.promise;
   try {
-    const fileData = await fs.promises.readFile(tempPdfPath);
-    const uint8Array = new Uint8Array(fileData);
-
-    const loadingTask = pdfjsLib.getDocument({
-      data: uint8Array,
-    });
-
-    const pdfDocument = await loadingTask.promise;
     const page = await pdfDocument.getPage(1);
 
-    const scale = 1.5;
+    // Calculate dynamic scale so rendered width is approximately 500px
+    const baseViewport = page.getViewport({ scale: 1 });
+    const desiredWidth = 500;
+    const scale = baseViewport.width > 0 ? desiredWidth / baseViewport.width : 1.0;
     const viewport = page.getViewport({ scale });
 
     const canvas = createCanvas(viewport.width, viewport.height);
@@ -41,9 +38,12 @@ export async function convertPdfPageToImage(pdfBuffer: Buffer, docId: string): P
       viewport: viewport,
     }).promise;
 
+    // Explicitly release page-specific resources if supported
+    page.cleanup?.();
+
     return canvas.toBuffer("image/png");
   } finally {
-    // Cleanup temporary PDF file
-    await fs.promises.unlink(tempPdfPath).catch(() => {});
+    // Explicitly release PDF document resources
+    await pdfDocument.destroy().catch(() => {});
   }
 }

@@ -245,6 +245,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val youtubeVideoId = doc["youtubeVideoId"] as? String
         
         val thumbnailUrl = doc["thumbnailUrl"] as? String
+        val youtubeThumbnailUrl = doc["youtubeThumbnailUrl"] as? String
         val thumbnailGenerated = doc["thumbnailGenerated"] as? Boolean
         val thumbnailType = doc["thumbnailType"] as? String
 
@@ -280,7 +281,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             subject = subjectField,
             examYear = examYearField,
             section = sectionField,
-            sectionDisplay = sectionDisplayField
+            sectionDisplay = sectionDisplayField,
+            youtubeThumbnailUrl = youtubeThumbnailUrl
         )
     }
 
