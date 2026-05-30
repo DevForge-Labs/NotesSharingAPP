@@ -35,7 +35,7 @@ class MyFilesViewModel : ViewModel() {
                 MyFilesUiState.Success(
                     MyFilesContent(
                         savedFiles = DummyData.savedFiles,
-                        uploadedFiles = DummyData.uploadedFiles
+                        uploadedFiles = emptyList()
                     )
                 )
             }
@@ -71,7 +71,7 @@ class MyFilesViewModel : ViewModel() {
                     MyFilesUiState.Success(
                         MyFilesContent(
                             savedFiles = DummyData.savedFiles,
-                            uploadedFiles = (realUploaded + DummyData.uploadedFiles).distinctBy { it.id }
+                            uploadedFiles = realUploaded
                         )
                     )
                 }
@@ -80,7 +80,7 @@ class MyFilesViewModel : ViewModel() {
                     MyFilesUiState.Success(
                         MyFilesContent(
                             savedFiles = DummyData.savedFiles,
-                            uploadedFiles = DummyData.uploadedFiles
+                            uploadedFiles = emptyList()
                         )
                     )
                 }
