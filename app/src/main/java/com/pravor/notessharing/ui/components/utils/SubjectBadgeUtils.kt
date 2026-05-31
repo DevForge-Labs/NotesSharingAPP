@@ -58,7 +58,7 @@ fun normalizeSubject(subject: String): String {
         "android development", "android dev" -> "android development"
         "cloud computing", "cloud" -> "cloud computing"
         "cyber security", "cybersecurity", "security" -> "cyber security"
-        "STW", "stw" -> "STW"
+        "STW", "stw" ,"Stw"-> "STW"
         else -> normalized
     }
 }
