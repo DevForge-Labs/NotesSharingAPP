@@ -37,6 +37,7 @@ import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.utils.getSubjectColor
 import com.pravor.notessharing.ui.components.utils.normalizeSubject
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.viewmodel.DocumentDetailUiState
 import com.pravor.notessharing.viewmodel.DocumentDetailViewModel
 
@@ -103,6 +104,7 @@ fun DocumentDetailScreen(
                             val doc = uiState.document
                             doc.title.ifBlank { doc.subject.ifBlank { "Untitled Document" } }
                         }
+
                         else -> "Document Details"
                     }
                     Text(
@@ -121,7 +123,11 @@ fun DocumentDetailScreen(
                 actions = {
                     IconButton(onClick = {
                         // TODO: Implement document bookmarking/saving state toggle flow in Firestore
-                        Toast.makeText(context, "Bookmark functionality coming soon", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "Bookmark functionality coming soon",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }) {
                         Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark Document")
                     }
@@ -146,6 +152,7 @@ fun DocumentDetailScreen(
                 DocumentDetailUiState.Loading -> {
                     DocumentDetailSkeleton()
                 }
+
                 is DocumentDetailUiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -157,6 +164,7 @@ fun DocumentDetailScreen(
                         )
                     }
                 }
+
                 is DocumentDetailUiState.Success -> {
                     DocumentDetailSuccessContent(
                         doc = state.document,
@@ -165,11 +173,19 @@ fun DocumentDetailScreen(
                         onNavigateToDetail = onNavigateToDetail,
                         onDownloadClick = { fileUrl ->
                             // TODO: Implement file download flow
-                            Toast.makeText(context, "Download functionality coming soon", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Download functionality coming soon",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         },
                         onShareClick = { fileUrl ->
                             // TODO: Implement file sharing flow
-                            Toast.makeText(context, "Share functionality coming soon", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Share functionality coming soon",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     )
                 }
@@ -187,9 +203,10 @@ fun DocumentDetailSuccessContent(
     onDownloadClick: (String) -> Unit,
     onShareClick: (String) -> Unit
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp + bottomPadding),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 1. SUBJECT SECTION (Pill/Chip visual with Upvotes on the far right)

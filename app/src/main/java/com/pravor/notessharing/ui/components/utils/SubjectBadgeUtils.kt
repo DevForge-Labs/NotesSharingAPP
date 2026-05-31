@@ -58,6 +58,7 @@ fun normalizeSubject(subject: String): String {
         "android development", "android dev" -> "android development"
         "cloud computing", "cloud" -> "cloud computing"
         "cyber security", "cybersecurity", "security" -> "cyber security"
+        "STW", "stw" ,"Stw"-> "STW"
         else -> normalized
     }
 }
@@ -86,6 +87,7 @@ fun getSubjectColor(normalizedSubject: String): Color {
         "android development" -> Color(0xFF558B2F) // Light Green
         "cloud computing" -> Color(0xFF1565C0) // Dark Blue
         "cyber security" -> Color(0xFFC62828) // Red
+        "STW" -> Color(0xFFFFF334)
         else -> Color(0xFF5EB5DC)           //  (Fallback)
     }
 }
@@ -106,21 +108,22 @@ fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String): S
         "se" -> " Software Engineering"
         "ai" -> " AI"
         "ml" -> " ML"
-        "dl" -> "Deep Learning"
+        "dl" -> "DL"
         "physics" -> "Physics"
         "chemistry" -> "Chemistry"
-        "mathematics" -> "Mathematics"
+        "mathematics" -> "Maths"
         "statistics" -> "Statistics"
         "evs" -> " EVS"
         "scls" -> " SCLS"
         "java" -> " Java"
         "python" -> "Python"
-        "c programming" -> "C Programming"
+        "c programming" -> "C Prog"
         "c++" -> " C++"
-        "web development" -> "Web Development"
-        "android development" -> "Android Development"
+        "web development" -> "Web Dev"
+        "android development" -> "Android Dev"
         "cloud computing" -> "Cloud Computing"
         "cyber security" -> "Cyber Security"
+        "STW" -> "STW"
         else -> originalSubject
     }
 }
@@ -129,16 +132,39 @@ fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String): S
  * A pill-styled Composable displaying the resource subject.
  * Tapping it reveals a popup with the full name of the subject.
  */
+fun formatSemesterForSubject(semesterStr: String): String {
+    val digits = semesterStr.filter { it.isDigit() }
+    val semNumber = digits.toIntOrNull()
+    return if (semNumber != null) {
+        "Sem-$semNumber"
+    } else {
+        if (semesterStr.isNotBlank() && semesterStr != "Not Set") {
+            semesterStr.replace("Sem ", "Sem-")
+        } else {
+            "Sem-1"
+        }
+    }
+}
+
 @Composable
 fun SubjectBadge(
     subject: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLarge: Boolean = false,
+    semester: String? = null
 ) {
     if (subject.isBlank()) return
 
     val normalized = remember(subject) { normalizeSubject(subject) }
     val color = remember(normalized) { getSubjectColor(normalized) }
     val displayName = remember(subject, normalized) { getSubjectDisplayName(subject, normalized) }
+    val displayWithSem = remember(displayName, semester) {
+        if (!semester.isNullOrBlank()) {
+            "$displayName  |  ${formatSemesterForSubject(semester)}"
+        } else {
+            displayName
+        }
+    }
 
     var showTooltip by remember { mutableStateOf(false) }
 
@@ -153,24 +179,27 @@ fun SubjectBadge(
                 .clickable { showTooltip = true }
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(
+                    horizontal = if (isLarge) 10.dp else 8.dp,
+                    vertical = if (isLarge) 6.dp else 4.dp
+                ),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(if (isLarge) 6.dp else 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.School,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(if (isLarge) 16.dp else 14.dp)
                 )
                 Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    text = displayWithSem,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = if (isLarge) 11.sp else 10.sp),
                     color = color,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 120.dp)
+                    modifier = Modifier.widthIn(max = if (isLarge) 200.dp else 120.dp)
                 )
             }
         }

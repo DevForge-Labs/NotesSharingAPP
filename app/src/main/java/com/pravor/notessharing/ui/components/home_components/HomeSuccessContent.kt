@@ -42,6 +42,7 @@ import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.CompactStudyFileRow
 import com.pravor.notessharing.ui.components.NotesSearchBar
 import com.pravor.notessharing.ui.components.SectionHeader
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloat
@@ -65,6 +66,7 @@ fun HomeSuccessContent(
     onDocumentClick: (String) -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     val infiniteTransition = rememberInfiniteTransition(label = "feed-shimmer")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.25f,
@@ -87,7 +89,7 @@ fun HomeSuccessContent(
                 .fillMaxSize()
                 .statusBarsPadding(),
             state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "home-title", contentType = "header") {

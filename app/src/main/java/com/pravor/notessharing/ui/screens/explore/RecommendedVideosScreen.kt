@@ -21,6 +21,8 @@ import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.explore_components.VideoRecommendationCard
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+
 @Composable
 fun RecommendedVideosRoute(
     onBackClick: () -> Unit,
@@ -38,6 +40,7 @@ fun RecommendedVideosScreen(
     onBackClick: () -> Unit,
     onVideoClick: (String) -> Unit
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -86,7 +89,7 @@ fun RecommendedVideosScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+                            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             itemsIndexed(videos, key = { index, video -> video.id.ifBlank { "video_$index" } }, contentType = { _, _ -> "video" }) { _, video ->

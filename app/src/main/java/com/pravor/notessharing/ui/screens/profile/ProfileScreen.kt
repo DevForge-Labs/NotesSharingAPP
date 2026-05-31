@@ -85,6 +85,7 @@ import com.pravor.notessharing.ui.components.LiquidContributorCard
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.profile.ProfileViewModel
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 
@@ -161,6 +162,7 @@ private fun ProfileContent(
     onMyUploadsClick: () -> Unit,
     listState: LazyListState
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -170,7 +172,7 @@ private fun ProfileContent(
                 .fillMaxSize()
                 .statusBarsPadding(),
             state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item(key = "profile-header", contentType = "profile-header") {

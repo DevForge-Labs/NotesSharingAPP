@@ -21,7 +21,8 @@ data class TrendingNote(
     val documentType: String = "",
     val type: String? = null,
     val bookmarks: Int = 0,
-    val examYear: String? = null
+    val examYear: String? = null,
+    val semester: String = ""
 )
 
 @Immutable

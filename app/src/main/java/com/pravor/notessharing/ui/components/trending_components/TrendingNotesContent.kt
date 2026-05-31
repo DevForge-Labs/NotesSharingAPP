@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.data.DocumentDetailRepository
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.StatePanel
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.screens.trending.TrendingNotesUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +43,7 @@ fun TrendingNotesContent(
     modifier: Modifier = Modifier,
     detailRepository: DocumentDetailRepository = remember { DocumentDetailRepository() }
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     Scaffold(
         topBar = {
             TrendingNotesHeader(onBackClick = onBackClick)
@@ -89,7 +91,7 @@ fun TrendingNotesContent(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             state = listState,
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp + bottomPadding),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             itemsIndexed(
