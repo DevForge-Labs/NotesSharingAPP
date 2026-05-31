@@ -64,9 +64,11 @@ fun VideoDetailRoute(
                 subject = video.subject,
                 youtubeVideoId = video.youtubeVideoId,
                 uploaderName = video.uploaderName,
-                thumbnailUrl = null,
+                thumbnailUrl = video.thumbnailUrl,
                 thumbnailGenerated = null,
-                thumbnailType = null
+                thumbnailType = null,
+                documentType = "YouTube Resource",
+                youtubeThumbnailUrl = video.youtubeThumbnailUrl
             )
         }
     }

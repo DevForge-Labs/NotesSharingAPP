@@ -1,8 +1,15 @@
 package com.pravor.notessharing.ui.navigation
 
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -57,6 +64,7 @@ fun NotesSharingApp(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (!isAuthScreen) {
                 BottomNavBar(
@@ -90,10 +98,22 @@ fun NotesSharingApp(
             }
         }
     ) { innerPadding ->
+        val navigationBarsPaddingValues = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
+        val bottomPadding = remember(innerPadding, navigationBarsPaddingValues) {
+            val totalBottom = innerPadding.calculateBottomPadding()
+            val systemBottom = navigationBarsPaddingValues.calculateBottomPadding()
+            (totalBottom - systemBottom).coerceAtLeast(0.dp)
+        }
+
         NavHost(
             navController = navController,
             startDestination = AppDestination.Splash.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(
+                top = innerPadding.calculateTopPadding(),
+                bottom = bottomPadding,
+                start = innerPadding.calculateStartPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+                end = innerPadding.calculateEndPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
+            )
         ) {
             composable(AppDestination.Splash.route) {
                 SplashScreen(

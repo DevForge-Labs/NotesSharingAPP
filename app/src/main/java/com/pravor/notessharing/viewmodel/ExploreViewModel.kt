@@ -162,6 +162,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
                     val thumbnailUrlVal = data["thumbnailUrl"] as? String
                     val youtubeThumbnailUrlVal = data["youtubeThumbnailUrl"] as? String
+                    val semesterVal = data["semester"] as? String ?: "Semester 4"
 
                     com.pravor.notessharing.model.VideoRecommendation(
                         id = id,
@@ -174,7 +175,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         bookmarks = bookmarks,
                         thumbnailUrl = thumbnailUrlVal,
                         youtubeThumbnailUrl = youtubeThumbnailUrlVal,
-                        documentType = docType
+                        documentType = docType,
+                        semester = semesterVal,
+                        youtubeUrl = youtubeUrl
                     )
                 }
 
