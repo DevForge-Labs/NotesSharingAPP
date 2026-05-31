@@ -34,7 +34,7 @@ class MyFilesViewModel : ViewModel() {
             _uiState.update {
                 MyFilesUiState.Success(
                     MyFilesContent(
-                        savedFiles = DummyData.savedFiles,
+                        savedFiles = emptyList(),
                         uploadedFiles = emptyList()
                     )
                 )
@@ -70,7 +70,7 @@ class MyFilesViewModel : ViewModel() {
                 _uiState.update {
                     MyFilesUiState.Success(
                         MyFilesContent(
-                            savedFiles = DummyData.savedFiles,
+                            savedFiles = emptyList(),
                             uploadedFiles = realUploaded
                         )
                     )
@@ -79,7 +79,7 @@ class MyFilesViewModel : ViewModel() {
                 _uiState.update {
                     MyFilesUiState.Success(
                         MyFilesContent(
-                            savedFiles = DummyData.savedFiles,
+                            savedFiles = emptyList(),
                             uploadedFiles = emptyList()
                         )
                     )

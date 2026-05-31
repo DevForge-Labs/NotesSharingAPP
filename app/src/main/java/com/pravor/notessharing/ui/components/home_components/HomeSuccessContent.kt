@@ -209,7 +209,7 @@ fun HomeSuccessContent(
                     is MyFilesUiState.Success -> myFilesUiState.content.uploadedFiles.size
                     else -> 0
                 }
-                val uploadsText = if (uploadsCount > 0) "$uploadsCount study materials" else "124 study materials"
+                val uploadsText = "$uploadsCount study materials"
                 StudyHubCard(
                     title = "Uploads",
                     metadata = uploadsText,
@@ -226,7 +226,7 @@ fun HomeSuccessContent(
                     is MyFilesUiState.Success -> myFilesUiState.content.savedFiles.size
                     else -> 0
                 }
-                val bookmarksText = if (bookmarksCount > 0) "$bookmarksCount saved resources" else "14 saved resources"
+                val bookmarksText = "$bookmarksCount saved resources"
                 StudyHubCard(
                     title = "Bookmarks",
                     metadata = bookmarksText,
@@ -241,7 +241,7 @@ fun HomeSuccessContent(
             item(key = "study-hub-downloads", contentType = "study-hub-card") {
                 StudyHubCard(
                     title = "Downloads",
-                    metadata = "32 downloaded files",
+                    metadata = "0 downloaded files",
                     contextHint = "Your downloaded study collection",
                     icon = Icons.Default.Download,
                     accentColor = Color(0xFFCFD8DC), // Muted slate/academic tint
