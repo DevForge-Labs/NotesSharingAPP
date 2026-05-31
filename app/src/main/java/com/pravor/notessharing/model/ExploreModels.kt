@@ -36,7 +36,9 @@ data class VideoRecommendation(
     val bookmarks: Int = 0,
     val thumbnailUrl: String? = null,
     val youtubeThumbnailUrl: String? = null,
-    val documentType: String = ""
+    val documentType: String = "",
+    val semester: String = "Semester 4",
+    val youtubeUrl: String = ""
 )
 
 @Immutable

@@ -165,7 +165,7 @@ fun ContinueReadingCard(
                 } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
                     item.youtubeThumbnailUrl
                 } else {
-                    if (isYouTubeVideo) {
+                    if (isVideo) {
                         val videoDoc = videoRepository.getVideo(item.id)
                         if (videoDoc != null && !videoDoc.thumbnailUrl.isNullOrBlank()) {
                             videoDoc.thumbnailUrl
@@ -312,7 +312,13 @@ fun ContinueReadingCard(
         else -> Color(0xFFCFD8DC) // Soft platinum/slate metallic neutral tone
     }
 
+    val isYouTubePlaylist = isVideo && (
+        item.youtubeVideoId.isNullOrBlank() ||
+        (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
+    )
+
     val badgeText = when {
+        isYouTubePlaylist -> "YouTube Playlist"
         isVideo -> "YouTube Video"
         isNotes -> "Notes"
         isPyq -> "PYQ"

@@ -66,7 +66,7 @@ fun BottomNavBar(
                     color = itemBackground
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 11.dp),
+                        modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 15.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {

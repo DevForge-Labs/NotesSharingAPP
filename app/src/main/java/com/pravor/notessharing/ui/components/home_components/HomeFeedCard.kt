@@ -186,8 +186,10 @@ fun HomeFeedCard(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
-                        Spacer(Modifier.width(8.dp))
-                        FileTypeBadge(item.fileType)
+                        val isYouTubePlaylist = item.youtubeVideoId.isNullOrBlank() ||
+                            (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
+                        val fileTypeLabel = if (isYouTubePlaylist) "YouTube Playlist" else "YouTube Video"
+                        FileTypeBadge(fileTypeLabel)
                     }
 
                     Spacer(Modifier.height(4.dp))
@@ -260,7 +262,7 @@ fun HomeFeedCard(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    FileTypeBadge(item.fileType)
+                    FileTypeBadge(item.fileType.label)
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -352,13 +354,13 @@ private fun ActionIconButton(
 }
 
 @Composable
-private fun FileTypeBadge(fileType: FileType) {
+private fun FileTypeBadge(label: String) {
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.tertiaryContainer
     ) {
         Text(
-            text = fileType.label,
+            text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -418,8 +420,14 @@ fun ForYouGridCard(
                 item.description.contains("lecture", ignoreCase = true)
     }
 
+    val isYouTubePlaylist = isVideo && (
+        item.youtubeVideoId.isNullOrBlank() ||
+        (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
+    )
+
     val docTypeStr = when {
-        isVideo -> "YouTube"
+        isYouTubePlaylist -> "YouTube Playlist"
+        isVideo -> "YouTube Video"
         isPyq -> "PYQ"
         isAssignment -> "Assignment"
         isCheatSheet -> "Cheat Sheet"

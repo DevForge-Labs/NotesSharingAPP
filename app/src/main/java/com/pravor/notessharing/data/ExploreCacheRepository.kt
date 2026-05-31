@@ -71,6 +71,8 @@ class ExploreCacheRepository(context: Context) {
                     put("thumbnailUrl", it.thumbnailUrl ?: "")
                     put("youtubeThumbnailUrl", it.youtubeThumbnailUrl ?: "")
                     put("documentType", it.documentType)
+                    put("semester", it.semester)
+                    put("youtubeUrl", it.youtubeUrl)
                 })
             }
             json.put("videoRecommendations", videosArray)
@@ -202,7 +204,9 @@ class ExploreCacheRepository(context: Context) {
                         bookmarks = obj.optInt("bookmarks", 0),
                         thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
                         youtubeThumbnailUrl = obj.optString("youtubeThumbnailUrl").ifBlank { null },
-                        documentType = obj.optString("documentType", "")
+                        documentType = obj.optString("documentType", ""),
+                        semester = obj.optString("semester", "Semester 4"),
+                        youtubeUrl = obj.optString("youtubeUrl", "")
                     ))
                 }
             }
