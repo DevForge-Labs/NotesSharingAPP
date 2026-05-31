@@ -304,6 +304,7 @@ fun NotesSharingApp(
                 }
                 composable(AppDestination.MyFiles.route) {
                     MyFilesRoute(
+                        onBackClick = { navController.popBackStack() },
                         onDocumentClick = { docId ->
                             navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                         },
