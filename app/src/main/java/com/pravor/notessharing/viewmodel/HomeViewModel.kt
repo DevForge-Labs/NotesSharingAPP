@@ -40,6 +40,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     private val userService = com.pravor.notessharing.firebase.FirestoreUserService()
     private var profileJob: kotlinx.coroutines.Job? = null
+    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
 
     private val authListener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
         val uid = firebaseAuth.currentUser?.uid
@@ -135,6 +136,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     deferreds.awaitAll().flatten()
                 }
                 
+                val currentUid = auth.currentUser?.uid
+                val bookmarkedIds = if (currentUid != null) {
+                    try {
+                        firestore.collection("bookmarks")
+                            .whereEqualTo("userId", currentUid)
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { it.getString("documentId") }
+                            .toSet()
+                    } catch (e: Exception) {
+                        emptySet()
+                    }
+                } else {
+                    emptySet()
+                }
+                
                 val realItems = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     val item = documentToFeedItem(data)
@@ -151,11 +169,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     (realItems + DummyData.feedItems).distinctBy { it.id }
                 }
                 
+                val finalFeedItems = mergedFeedItems.map { item ->
+                    item.copy(isSaved = bookmarkedIds.contains(item.id))
+                }
+                
                 _uiState.update { current ->
                     val lastOpened = recentlyOpenedRepository.getLastOpened()
                     if (current is HomeUiState.Success) {
                         current.copy(content = current.content.copy(
-                            feedItems = mergedFeedItems,
+                            feedItems = finalFeedItems,
                             recentlyOpened = lastOpened,
                             isLoadingFeed = false
                         ))
@@ -164,7 +186,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             HomeContent(
                                 selectedCategory = Category.Notes,
                                 categories = DummyData.categories,
-                                feedItems = mergedFeedItems,
+                                feedItems = finalFeedItems,
                                 recentlyOpened = lastOpened,
                                 isLoadingFeed = false
                             )
@@ -182,9 +204,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
                 
+                val currentUid = auth.currentUser?.uid
+                val bookmarkedIds = if (currentUid != null) {
+                    try {
+                        firestore.collection("bookmarks")
+                            .whereEqualTo("userId", currentUid)
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { it.getString("documentId") }
+                            .toSet()
+                    } catch (e: Exception) {
+                        emptySet()
+                    }
+                } else {
+                    emptySet()
+                }
+                
                 _uiState.update { current ->
                     val lastOpened = recentlyOpenedRepository.getLastOpened()
-                    val fallbackItems = if (hasSemester) emptyList() else DummyData.feedItems
+                    val fallbackItems = if (hasSemester) emptyList() else DummyData.feedItems.map { item ->
+                        item.copy(isSaved = bookmarkedIds.contains(item.id))
+                    }
                     if (current is HomeUiState.Success) {
                         current.copy(content = current.content.copy(
                             feedItems = fallbackItems,
@@ -307,7 +348,36 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleSaved(itemId: String) {
-        updateFeed(itemId) { item -> item.copy(isSaved = !item.isSaved) }
+        var feedItemToPersist: FeedItem? = null
+        _uiState.update { current ->
+            if (current is HomeUiState.Success) {
+                current.copy(
+                    content = current.content.copy(
+                        feedItems = current.content.feedItems.map { item ->
+                            if (item.id == itemId) {
+                                val updated = item.copy(isSaved = !item.isSaved)
+                                feedItemToPersist = updated
+                                updated
+                            } else item
+                        }
+                    )
+                )
+            } else {
+                current
+            }
+        }
+
+        val currentUid = auth.currentUser?.uid
+        val item = feedItemToPersist
+        if (currentUid != null && item != null) {
+            viewModelScope.launch {
+                if (item.isSaved) {
+                    bookmarkRepository.addBookmark(item, currentUid)
+                } else {
+                    bookmarkRepository.removeBookmark(itemId, currentUid)
+                }
+            }
+        }
     }
 
     private fun updateFeed(

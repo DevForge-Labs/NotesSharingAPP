@@ -56,6 +56,7 @@ import androidx.compose.runtime.getValue
 fun HomeSuccessContent(
     content: HomeContent,
     myFilesUiState: MyFilesUiState,
+    bookmarksCount: Int,
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -222,10 +223,6 @@ fun HomeSuccessContent(
             }
 
             item(key = "study-hub-bookmarks", contentType = "study-hub-card") {
-                val bookmarksCount = when (myFilesUiState) {
-                    is MyFilesUiState.Success -> myFilesUiState.content.savedFiles.size
-                    else -> 0
-                }
                 val bookmarksText = "$bookmarksCount saved resources"
                 StudyHubCard(
                     title = "Bookmarks",

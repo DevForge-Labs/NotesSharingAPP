@@ -1,20 +1,43 @@
 package com.pravor.notessharing.ui.screens.home
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.state.HomeContent
@@ -37,18 +60,28 @@ fun HomeRoute(
     onDocumentClick: (String) -> Unit = {},
     onVideoClick: (String) -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
-    myFilesViewModel: MyFilesViewModel = viewModel()
+    myFilesViewModel: MyFilesViewModel = viewModel(),
+    bookmarkViewModel: com.pravor.notessharing.bookmarks.BookmarkViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
+    val bookmarkUiState by bookmarkViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.refreshRecentlyOpened()
+        // Refresh bookmarks count cleanly from bookmark layer
+        bookmarkViewModel.loadBookmarksForCurrentUser()
+    }
+
+    val bookmarksCount = when (val state = bookmarkUiState) {
+        is com.pravor.notessharing.bookmarks.BookmarkUiState.Success -> state.bookmarks.size
+        else -> 0
     }
 
     HomeScreen(
         uiState = uiState,
         myFilesUiState = myFilesUiState,
+        bookmarksCount = bookmarksCount,
         onUpvoteClick = viewModel::toggleUpvote,
         onBookmarkClick = viewModel::toggleSaved,
         onMyUploadsClick = onMyUploadsClick,
@@ -66,6 +99,7 @@ fun HomeRoute(
 fun HomeScreen(
     uiState: HomeUiState,
     myFilesUiState: MyFilesUiState,
+    bookmarksCount: Int,
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -90,6 +124,21 @@ fun HomeScreen(
         is HomeUiState.Success -> "success"
     }
 
+    // Floating pill toast snackbar states
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+    var toastVisible by remember { mutableStateOf(false) }
+    var toastIcon by remember { mutableStateOf<androidx.compose.ui.graphics.vector.ImageVector?>(null) }
+
+    LaunchedEffect(toastMessage) {
+        if (toastMessage != null) {
+            toastVisible = true
+            kotlinx.coroutines.delay(1800) // premium short non-intrusive duration
+            toastVisible = false
+            kotlinx.coroutines.delay(250) // wait for exit animation
+            toastMessage = null
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
             when (val state = uiState) {
@@ -99,8 +148,19 @@ fun HomeScreen(
                 is HomeUiState.Success -> HomeSuccessContent(
                     content = state.content,
                     myFilesUiState = myFilesUiState,
+                    bookmarksCount = bookmarksCount,
                     onUpvoteClick = onUpvoteClick,
-                    onBookmarkClick = onBookmarkClick,
+                    onBookmarkClick = { itemId ->
+                        val isCurrentlySaved = state.content.feedItems.find { it.id == itemId }?.isSaved == true
+                        if (isCurrentlySaved) {
+                            toastMessage = "Removed from bookmarks"
+                            toastIcon = Icons.Default.BookmarkBorder
+                        } else {
+                            toastMessage = "Saved to bookmarks"
+                            toastIcon = Icons.Default.Bookmark
+                        }
+                        onBookmarkClick(itemId)
+                    },
                     onMyUploadsClick = onMyUploadsClick,
                     onMyBookmarksClick = onMyBookmarksClick,
                     onMyDownloadsClick = onMyDownloadsClick,
@@ -138,9 +198,64 @@ fun HomeScreen(
                 }
             )
         }
+
+        // Custom Premium Pill Capsule Snackbar Toast feedback
+        if (toastMessage != null) {
+            androidx.compose.ui.window.Popup(
+                alignment = Alignment.BottomCenter,
+                properties = androidx.compose.ui.window.PopupProperties(
+                    focusable = false,
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                AnimatedVisibility(
+                    visible = toastVisible,
+                    enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) +
+                            slideInVertically(initialOffsetY = { it / 2 }, animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.LinearOutSlowInEasing)),
+                    exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                            slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = androidx.compose.animation.core.tween(200)),
+                    modifier = Modifier
+                        .padding(bottom = 110.dp) // Float height perfectly above the bottom bar with breathing room
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFF0F172A).copy(alpha = 0.98f), // premium dark slate surface
+                        border = BorderStroke(1.dp, Color(0xFF334155).copy(alpha = 0.85f)), // subtle high-contrast outline
+                        shadowElevation = 10.dp,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp), // premium refined proportions
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            toastIcon?.let { icon ->
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFB45C), // subtle warm bookmark accent
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                            }
+                            Text(
+                                text = toastMessage ?: "",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    letterSpacing = 0.15.sp
+                                ),
+                                color = Color(0xFFE2E8F0)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
-
 
 @Preview
 @Composable
@@ -151,8 +266,9 @@ private fun HomePreview() {
                 HomeContent(DummyData.categories.first(), DummyData.categories, DummyData.feedItems)
             ),
             myFilesUiState = MyFilesUiState.Success(
-                com.pravor.notessharing.state.MyFilesContent(DummyData.savedFiles, DummyData.uploadedFiles)
+                com.pravor.notessharing.state.MyFilesContent(emptyList(), DummyData.uploadedFiles)
             ),
+            bookmarksCount = 5,
             onUpvoteClick = {},
             onBookmarkClick = {},
             onMyUploadsClick = {},
