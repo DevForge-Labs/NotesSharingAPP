@@ -94,6 +94,7 @@ import com.pravor.notessharing.state.YoutubePreview
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.LiquidTransferProgressBar
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.viewmodel.UploadViewModel
 
 @Composable
@@ -165,6 +166,7 @@ fun UploadScreen(
     onUpload: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
     val clearFocusOnScroll = remember(focusManager) {
@@ -201,7 +203,7 @@ fun UploadScreen(
                 .statusBarsPadding()
                 .nestedScroll(clearFocusOnScroll),
             state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "upload-header", contentType = "header") {

@@ -34,6 +34,7 @@ import com.pravor.notessharing.model.DiscoverFeedItem
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 
 @Composable
 fun ExploreSuccessContent(
@@ -45,6 +46,7 @@ fun ExploreSuccessContent(
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     val visibleTrendingNotes = content.trendingNotes.take(7)
     val visibleRecommendedVideos = content.videoRecommendations.take(4)
     val visibleDiscoverItems = content.discoverItems.take(4)
@@ -55,7 +57,7 @@ fun ExploreSuccessContent(
                 .fillMaxSize()
                 .statusBarsPadding(),
             state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "explore-header", contentType = "header") {

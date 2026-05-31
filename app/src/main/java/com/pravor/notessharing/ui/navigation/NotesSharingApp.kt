@@ -1,5 +1,6 @@
 package com.pravor.notessharing.ui.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -40,6 +41,9 @@ import com.pravor.notessharing.ui.screens.auth.SignUpScreen
 import com.pravor.notessharing.auth.AuthViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+val LocalBottomBarPadding = androidx.compose.runtime.compositionLocalOf { 0.dp }
+
+@SuppressLint("RestrictedApi")
 @Composable
 fun NotesSharingApp(
     appSettings: AppSettingsUiState,
@@ -98,286 +102,305 @@ fun NotesSharingApp(
             }
         }
     ) { innerPadding ->
-        val navigationBarsPaddingValues = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
-        val bottomPadding = remember(innerPadding, navigationBarsPaddingValues) {
-            val totalBottom = innerPadding.calculateBottomPadding()
-            val systemBottom = navigationBarsPaddingValues.calculateBottomPadding()
-            (totalBottom - systemBottom).coerceAtLeast(0.dp)
+        val navigationBarsPaddingValues =
+            androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
+        val bottomPadding = remember(
+            innerPadding.calculateBottomPadding(),
+            navigationBarsPaddingValues.calculateBottomPadding(),
+            isAuthScreen
+        ) {
+            if (isAuthScreen) {
+                0.dp
+            } else {
+                val totalBottom = innerPadding.calculateBottomPadding()
+                val systemBottom = navigationBarsPaddingValues.calculateBottomPadding()
+                (totalBottom - systemBottom).coerceAtLeast(0.dp)
+            }
         }
 
-        NavHost(
-            navController = navController,
-            startDestination = AppDestination.Splash.route,
-            modifier = Modifier.padding(
-                top = innerPadding.calculateTopPadding(),
-                bottom = bottomPadding,
-                start = innerPadding.calculateStartPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-                end = innerPadding.calculateEndPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
-            )
+        androidx.compose.runtime.CompositionLocalProvider(
+            LocalBottomBarPadding provides innerPadding.calculateBottomPadding()
         ) {
-            composable(AppDestination.Splash.route) {
-                SplashScreen(
-                    viewModel = authViewModel,
-                    onNavigateToHome = {
-                        navController.navigate(AppDestination.Home.route) {
-                            popUpTo(AppDestination.Splash.route) { inclusive = true }
-                        }
-                    },
-                    onNavigateToAuth = {
-                        navController.navigate(AppDestination.Welcome.route) {
-                            popUpTo(AppDestination.Splash.route) { inclusive = true }
-                        }
-                    }
+            NavHost(
+                navController = navController,
+                startDestination = AppDestination.Splash.route,
+                modifier = Modifier.padding(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = 0.dp,
+                    start = innerPadding.calculateStartPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+                    end = innerPadding.calculateEndPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
                 )
-            }
-            composable(AppDestination.Welcome.route) {
-                WelcomeScreen(
-                    viewModel = authViewModel,
-                    onNavigateToLogin = { navController.navigate(AppDestination.Login.route) },
-                    onNavigateToSignUp = { navController.navigate(AppDestination.SignUp.route) },
-                    onNavigateToHome = {
-                        navController.navigate(AppDestination.Home.route) {
-                            popUpTo(AppDestination.Welcome.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-            composable(AppDestination.Login.route) {
-                LoginScreen(
-                    viewModel = authViewModel,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSignUp = {
-                        navController.navigate(AppDestination.SignUp.route) {
-                            popUpTo(AppDestination.Welcome.route)
-                        }
-                    },
-                    onNavigateToHome = {
-                        navController.navigate(AppDestination.Home.route) {
-                            popUpTo(AppDestination.Welcome.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-            composable(AppDestination.SignUp.route) {
-                SignUpScreen(
-                    viewModel = authViewModel,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToLogin = {
-                        navController.navigate(AppDestination.Login.route) {
-                            popUpTo(AppDestination.Welcome.route)
-                        }
-                    },
-                    onNavigateToHome = {
-                        navController.navigate(AppDestination.Home.route) {
-                            popUpTo(AppDestination.Welcome.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-            composable(AppDestination.Home.route) {
-                HomeRoute(
-                    onMyUploadsClick = {
-                        navController.navigate(AppDestination.MyUploads.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onMyBookmarksClick = {
-                        navController.navigate(AppDestination.MyBookmarks.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onMyDownloadsClick = {
-                        navController.navigate(AppDestination.MyFiles.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onSeeMoreClick = {
-                        navController.navigate(AppDestination.Explore.route) {
-                            popUpTo(AppDestination.Home.route) {
-                                saveState = true
+            ) {
+                composable(AppDestination.Splash.route) {
+                    SplashScreen(
+                        viewModel = authViewModel,
+                        onNavigateToHome = {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(AppDestination.Splash.route) { inclusive = true }
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(AppDestination.Explore.route) {
-                ExploreRoute(
-                    onTrendingSeeMoreClick = {
-                        navController.navigate(AppDestination.TrendingNotes.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onRecommendedVideosSeeMoreClick = {
-                        navController.navigate(AppDestination.RecommendedVideos.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onDiscoverSeeMoreClick = {
-                        navController.navigate(AppDestination.Discover.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(AppDestination.TrendingNotes.route) {
-                TrendingNotesRoute(
-                    onBackClick = { navController.popBackStack() },
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    }
-                )
-            }
-            composable(AppDestination.RecommendedVideos.route) {
-                RecommendedVideosRoute(
-                    onBackClick = { navController.popBackStack() },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(AppDestination.Discover.route) {
-                DiscoverRoute(
-                    onBackClick = { navController.popBackStack() },
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(AppDestination.Upload.route) {
-                UploadRoute(
-                    onUploadSuccess = {
-                        navController.navigate(AppDestination.UploadSuccess.route)
-                    }
-                )
-            }
-            composable(AppDestination.UploadSuccess.route) {
-                UploadSuccessRoute(
-                    onUploadAgain = {
-                        navController.popBackStack(AppDestination.Upload.route, inclusive = false)
-                    },
-                    onBackClick = {
-                        navController.navigate(AppDestination.Profile.route) {
-                            popUpTo(AppDestination.Upload.route) {
-                                inclusive = true
+                        },
+                        onNavigateToAuth = {
+                            navController.navigate(AppDestination.Welcome.route) {
+                                popUpTo(AppDestination.Splash.route) { inclusive = true }
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
-                    }
-                )
-            }
-            composable(AppDestination.MyFiles.route) {
-                MyFilesRoute(
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(AppDestination.MyUploads.route) {
-                MyUploadsScreen(
-                    onBackClick = { navController.popBackStack() },
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(AppDestination.MyBookmarks.route) {
-                MyBookmarksScreen(
-                    onBackClick = { navController.popBackStack() },
-                    onDocumentClick = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    },
-                    onVideoClick = { videoId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                    }
-                )
-            }
-            composable(
-                route = AppDestination.DocumentDetail.route,
-                arguments = listOf(
-                    androidx.navigation.navArgument("documentId") {
-                        type = androidx.navigation.NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
-                DocumentDetailRoute(
-                    documentId = documentId,
-                    onBackClick = { navController.popBackStack() },
-                    onNavigateToDetail = { docId ->
-                        navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                    }
-                )
-            }
-            composable(
-                route = AppDestination.VideoDetail.route,
-                arguments = listOf(
-                    androidx.navigation.navArgument("videoId") {
-                        type = androidx.navigation.NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
-                com.pravor.notessharing.ui.screens.video.VideoDetailRoute(
-                    videoId = videoId,
-                    onBackClick = { navController.popBackStack() },
-                    onNavigateToVideoDetail = { vidId ->
-                        navController.navigate(AppDestination.VideoDetail.createRoute(vidId))
-                    }
-                )
-            }
-            composable(AppDestination.Profile.route) {
-                ProfileRoute(
-                    appSettings = appSettings,
-                    onDarkModeChange = onDarkModeChange,
-                    onThemePreferenceChange = onThemePreferenceChange,
-                    onNotificationsChange = onNotificationsChange,
-                    onLogoutClick = {
-                        authViewModel.logout()
-                        navController.navigate(AppDestination.Splash.route) {
-                            popUpTo(0) { inclusive = true }
+                    )
+                }
+                composable(AppDestination.Welcome.route) {
+                    WelcomeScreen(
+                        viewModel = authViewModel,
+                        onNavigateToLogin = { navController.navigate(AppDestination.Login.route) },
+                        onNavigateToSignUp = { navController.navigate(AppDestination.SignUp.route) },
+                        onNavigateToHome = {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                            }
                         }
-                    },
-                    onEditProfileClick = {
-                        navController.navigate(AppDestination.EditProfile.route)
-                    },
-                    onMyUploadsClick = {
-                        navController.navigate(AppDestination.MyFiles.route) {
-                            launchSingleTop = true
+                    )
+                }
+                composable(AppDestination.Login.route) {
+                    LoginScreen(
+                        viewModel = authViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToSignUp = {
+                            navController.navigate(AppDestination.SignUp.route) {
+                                popUpTo(AppDestination.Welcome.route)
+                            }
+                        },
+                        onNavigateToHome = {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                            }
                         }
-                    }
-                )
-            }
-            composable(AppDestination.EditProfile.route) {
-                EditProfileRoute(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToProfile = {
-                        navController.popBackStack(AppDestination.Profile.route, inclusive = false)
-                    }
-                )
+                    )
+                }
+                composable(AppDestination.SignUp.route) {
+                    SignUpScreen(
+                        viewModel = authViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToLogin = {
+                            navController.navigate(AppDestination.Login.route) {
+                                popUpTo(AppDestination.Welcome.route)
+                            }
+                        },
+                        onNavigateToHome = {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                composable(AppDestination.Home.route) {
+                    HomeRoute(
+                        onMyUploadsClick = {
+                            navController.navigate(AppDestination.MyUploads.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onMyBookmarksClick = {
+                            navController.navigate(AppDestination.MyBookmarks.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onMyDownloadsClick = {
+                            navController.navigate(AppDestination.MyFiles.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onSeeMoreClick = {
+                            navController.navigate(AppDestination.Explore.route) {
+                                popUpTo(AppDestination.Home.route) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.Explore.route) {
+                    ExploreRoute(
+                        onTrendingSeeMoreClick = {
+                            navController.navigate(AppDestination.TrendingNotes.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onRecommendedVideosSeeMoreClick = {
+                            navController.navigate(AppDestination.RecommendedVideos.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onDiscoverSeeMoreClick = {
+                            navController.navigate(AppDestination.Discover.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.TrendingNotes.route) {
+                    TrendingNotesRoute(
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        }
+                    )
+                }
+                composable(AppDestination.RecommendedVideos.route) {
+                    RecommendedVideosRoute(
+                        onBackClick = { navController.popBackStack() },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.Discover.route) {
+                    DiscoverRoute(
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.Upload.route) {
+                    UploadRoute(
+                        onUploadSuccess = {
+                            navController.navigate(AppDestination.UploadSuccess.route)
+                        }
+                    )
+                }
+                composable(AppDestination.UploadSuccess.route) {
+                    UploadSuccessRoute(
+                        onUploadAgain = {
+                            navController.popBackStack(
+                                AppDestination.Upload.route,
+                                inclusive = false
+                            )
+                        },
+                        onBackClick = {
+                            navController.navigate(AppDestination.Profile.route) {
+                                popUpTo(AppDestination.Upload.route) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+                composable(AppDestination.MyFiles.route) {
+                    MyFilesRoute(
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.MyUploads.route) {
+                    MyUploadsScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.MyBookmarks.route) {
+                    MyBookmarksScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(
+                    route = AppDestination.DocumentDetail.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("documentId") {
+                            type = androidx.navigation.NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
+                    DocumentDetailRoute(
+                        documentId = documentId,
+                        onBackClick = { navController.popBackStack() },
+                        onNavigateToDetail = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        }
+                    )
+                }
+                composable(
+                    route = AppDestination.VideoDetail.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("videoId") {
+                            type = androidx.navigation.NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+                    com.pravor.notessharing.ui.screens.video.VideoDetailRoute(
+                        videoId = videoId,
+                        onBackClick = { navController.popBackStack() },
+                        onNavigateToVideoDetail = { vidId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(vidId))
+                        }
+                    )
+                }
+                composable(AppDestination.Profile.route) {
+                    ProfileRoute(
+                        appSettings = appSettings,
+                        onDarkModeChange = onDarkModeChange,
+                        onThemePreferenceChange = onThemePreferenceChange,
+                        onNotificationsChange = onNotificationsChange,
+                        onLogoutClick = {
+                            authViewModel.logout()
+                            navController.navigate(AppDestination.Splash.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
+                        onEditProfileClick = {
+                            navController.navigate(AppDestination.EditProfile.route)
+                        },
+                        onMyUploadsClick = {
+                            navController.navigate(AppDestination.MyFiles.route) {
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+                composable(AppDestination.EditProfile.route) {
+                    EditProfileRoute(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToProfile = {
+                            navController.popBackStack(
+                                AppDestination.Profile.route,
+                                inclusive = false
+                            )
+                        }
+                    )
+                }
             }
         }
     }

@@ -44,6 +44,8 @@ import com.pravor.notessharing.ui.theme.ElectricBlue
 import com.pravor.notessharing.viewmodel.ContributorStatsUiState
 import com.pravor.notessharing.viewmodel.ContributorStatsViewModel
 
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+
 @Composable
 fun UploadSuccessRoute(
     onUploadAgain: () -> Unit,
@@ -72,6 +74,7 @@ fun UploadSuccessScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val bottomPadding = LocalBottomBarPadding.current
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -81,8 +84,9 @@ fun UploadSuccessScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(horizontal = 18.dp)
-                .verticalScroll(scrollState),
+                .padding(start = 18.dp, end = 18.dp)
+                .verticalScroll(scrollState)
+                .padding(bottom = bottomPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

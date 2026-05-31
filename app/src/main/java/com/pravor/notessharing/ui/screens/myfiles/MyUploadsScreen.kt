@@ -45,6 +45,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyUploadsScreen(
@@ -55,6 +57,7 @@ fun MyUploadsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val bottomPadding = LocalBottomBarPadding.current
 
     Scaffold(
         topBar = {
@@ -114,7 +117,7 @@ fun MyUploadsScreen(
                         Box(Modifier.fillMaxSize()) {
                             LazyColumn(
                                 state = listState,
-                                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+                                contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {

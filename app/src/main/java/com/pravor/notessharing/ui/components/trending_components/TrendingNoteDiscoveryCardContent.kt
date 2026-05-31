@@ -96,7 +96,7 @@ fun TrendingNoteDiscoveryCardContent(
                 Column {
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 23.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
@@ -105,7 +105,7 @@ fun TrendingNoteDiscoveryCardContent(
 
                     if (isTitleValid && doc.subject.isNotBlank()) {
                         Spacer(Modifier.height(6.dp))
-                        SubjectBadge(subject = doc.subject)
+                        SubjectBadge(subject = doc.subject, isLarge = true, semester = doc.semester)
                     }
 
                     // Display branch under the title if it is not default and different from subject
@@ -151,55 +151,7 @@ fun TrendingNoteDiscoveryCardContent(
                     Spacer(modifier = Modifier.height(1.dp))
                 }
 
-                // Uploader Section (Compact Avatar + Name, Sitting directly above document type badge)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val initials = if (doc.uploaderName.isNotBlank()) {
-                        doc.uploaderName.split(" ")
-                            .filter { it.isNotBlank() }
-                            .take(2)
-                            .map { it.first().uppercase() }
-                            .joinToString("")
-                            .ifBlank { "PN" }
-                    } else {
-                        "PN"
-                    }
-
-                    if (doc.uploaderPhotoUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(doc.uploaderPhotoUrl)
-                                .memoryCachePolicy(CachePolicy.ENABLED)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .networkCachePolicy(CachePolicy.ENABLED)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = doc.uploaderName,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Avatar(
-                            text = initials,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Text(
-                        text = doc.uploaderName,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = getContributorColor(contributorLevel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // Semester Information shifted to SubjectBadge
 
                 // Bottom Row (Badge aligned left, Stats aligned right)
                 Row(
@@ -207,7 +159,7 @@ fun TrendingNoteDiscoveryCardContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DocumentTypeBadge(type = doc.documentType)
+                    DocumentTypeBadge(type = doc.documentType, year = doc.examYear)
 
                     TrendingNoteStats(
                         downloads = doc.downloads,
@@ -283,7 +235,7 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                 Column {
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 23.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
@@ -291,7 +243,7 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                     )
                     if (isTitleValid && note.subject.isNotBlank()) {
                         Spacer(Modifier.height(6.dp))
-                        SubjectBadge(subject = note.subject)
+                        SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
                     }
                 }
 
@@ -308,55 +260,7 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                     Spacer(modifier = Modifier.height(1.dp))
                 }
 
-                // Uploader Section (Compact Avatar + Name, Sitting directly above document type badge)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val initials = if (note.uploaderName.isNotBlank()) {
-                        note.uploaderName.split(" ")
-                            .filter { it.isNotBlank() }
-                            .take(2)
-                            .map { it.first().uppercase() }
-                            .joinToString("")
-                            .ifBlank { "PN" }
-                    } else {
-                        "PN"
-                    }
-
-                    if (note.uploaderPhotoUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(note.uploaderPhotoUrl)
-                                .memoryCachePolicy(CachePolicy.ENABLED)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .networkCachePolicy(CachePolicy.ENABLED)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = note.uploaderName,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Avatar(
-                            text = initials,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Text(
-                        text = note.uploaderName,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = getContributorColor(note.contributorLevel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // Semester Information shifted to SubjectBadge
 
                 // Bottom Row (Type Badge and Stats)
                 Row(
@@ -364,7 +268,7 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DocumentTypeBadge(type = note.documentType)
+                    DocumentTypeBadge(type = note.documentType, year = note.examYear)
 
                     TrendingNoteStats(
                         downloads = note.downloads,
@@ -420,7 +324,7 @@ fun TrendingNoteDiscoveryCardContentFallback(
                 Column {
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 23.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
@@ -428,7 +332,7 @@ fun TrendingNoteDiscoveryCardContentFallback(
                     )
                     if (isTitleValid && note.subject.isNotBlank()) {
                         Spacer(Modifier.height(6.dp))
-                        SubjectBadge(subject = note.subject)
+                        SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
                     }
                 }
 
@@ -445,44 +349,14 @@ fun TrendingNoteDiscoveryCardContentFallback(
                     Spacer(modifier = Modifier.height(1.dp))
                 }
 
-                // Uploader Section (Compact Avatar + Name, Sitting directly above document type badge)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val initials = if (note.uploaderName.isNotBlank()) {
-                        note.uploaderName.split(" ")
-                            .filter { it.isNotBlank() }
-                            .take(2)
-                            .map { it.first().uppercase() }
-                            .joinToString("")
-                            .ifBlank { "PN" }
-                    } else {
-                        "PN"
-                    }
-
-                    Avatar(
-                        text = initials,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Text(
-                        text = note.uploaderName.ifBlank { "Anonymous" },
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = getContributorColor(note.contributorLevel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // Semester Information shifted to SubjectBadge
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DocumentTypeBadge(type = note.documentType)
+                    DocumentTypeBadge(type = note.documentType, year = note.examYear)
 
                     TrendingNoteStats(
                         downloads = note.downloads,

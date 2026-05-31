@@ -115,6 +115,8 @@ class TrendingFeedRepository(private val context: Context) {
             put("documentType", note.documentType)
             put("type", note.type ?: "")
             put("bookmarks", note.bookmarks)
+            put("semester", note.semester)
+            put("examYear", note.examYear ?: "")
         }
     }
 
@@ -136,7 +138,9 @@ class TrendingFeedRepository(private val context: Context) {
             contributorLevel = obj.optString("contributorLevel"),
             documentType = obj.optString("documentType", ""),
             type = obj.optString("type").ifBlank { null },
-            bookmarks = obj.optInt("bookmarks", 0)
+            bookmarks = obj.optInt("bookmarks", 0),
+            semester = obj.optString("semester", ""),
+            examYear = obj.optString("examYear").ifBlank { null }
         )
     }
 
@@ -292,6 +296,8 @@ class TrendingFeedRepository(private val context: Context) {
             val documentTypeField = data["documentType"] as? String
             val typeField = data["type"] as? String
             val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
+            val semester = data["semester"] as? String ?: ""
+            val examYear = (data["examYear"] ?: data["year"])?.toString()
 
             val contributorLevel = if (uploaderId.isNotEmpty()) {
                 detailRepository.getUploaderContributorLevel(uploaderId) ?: "Bronze Contributor"
@@ -316,7 +322,9 @@ class TrendingFeedRepository(private val context: Context) {
                 contributorLevel = contributorLevel,
                 documentType = documentTypeField ?: "",
                 type = typeField,
-                bookmarks = bookmarks
+                bookmarks = bookmarks,
+                semester = semester,
+                examYear = examYear
             )
         }
 

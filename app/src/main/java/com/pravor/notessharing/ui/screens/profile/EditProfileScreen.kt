@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.screens.profile
 
 import android.net.Uri
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -171,6 +172,8 @@ fun EditProfileScreen(
         }
     }
 
+    val bottomPadding = LocalBottomBarPadding.current
+
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -217,7 +220,7 @@ fun EditProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp, vertical = 12.dp),
+                .padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 12.dp + bottomPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

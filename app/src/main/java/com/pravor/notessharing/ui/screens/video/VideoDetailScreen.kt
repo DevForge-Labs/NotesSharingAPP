@@ -35,6 +35,7 @@ import com.pravor.notessharing.data.RecentlyOpenedRepository
 import com.pravor.notessharing.model.VideoDetail
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatePanel
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.VideoDetailUiState
 import com.pravor.notessharing.viewmodel.VideoDetailViewModel
@@ -180,9 +181,10 @@ private fun VideoDetailContent(
     onNavigateToVideoDetail: (String) -> Unit,
     context: Context
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + bottomPadding),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 1. YouTube Player / Thumbnail section

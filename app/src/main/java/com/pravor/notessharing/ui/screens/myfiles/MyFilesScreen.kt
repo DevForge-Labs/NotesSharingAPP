@@ -29,6 +29,7 @@ import com.pravor.notessharing.state.MyFilesUiState
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.StudyHubShelfCard
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.viewmodel.MyFilesViewModel
 
 @Composable
@@ -77,6 +78,7 @@ private fun MyFilesSuccessContent(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onDocumentClick: (String) -> Unit
 ) {
+    val bottomPadding = LocalBottomBarPadding.current
     // Beautiful offline downloads mockup representing a premium downloadable study collection
     val downloadedFiles = remember {
         listOf(
@@ -93,7 +95,7 @@ private fun MyFilesSuccessContent(
                 .fillMaxSize()
                 .statusBarsPadding(),
             state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "my-files-title", contentType = "header") {

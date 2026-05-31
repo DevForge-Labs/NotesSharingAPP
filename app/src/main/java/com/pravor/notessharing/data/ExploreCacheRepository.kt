@@ -182,7 +182,8 @@ class ExploreCacheRepository(context: Context) {
                         thumbnailType = obj.optString("thumbnailType").ifBlank { null },
                         documentType = obj.optString("documentType", ""),
                         type = obj.optString("type").ifBlank { null },
-                        examYear = obj.optString("examYear").ifBlank { null }
+                        examYear = obj.optString("examYear").ifBlank { null },
+                        semester = obj.optString("semester", "")
                     ))
                 }
             }
