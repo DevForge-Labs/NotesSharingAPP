@@ -48,6 +48,9 @@ import com.pravor.notessharing.ui.components.utils.getDocumentTypeFromTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.*
+
 // Singleton memory cache to prevent redundant database hits on scroll recompositions
 object TrendingPreviewCache {
     private val cache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Boolean>>()
@@ -60,7 +63,11 @@ object TrendingPreviewCache {
 }
 
 @Composable
-fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
+fun TrendingNoteCard(
+    note: TrendingNote,
+    onBookmarkClick: () -> Unit = {},
+    onClick: () -> Unit = {}
+) {
     var firstAttachmentUrl by remember { mutableStateOf<String?>(null) }
     var isImage by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -317,7 +324,9 @@ fun TrendingNoteCard(note: TrendingNote, onClick: () -> Unit = {}) {
                     imageVector = if (note.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                     contentDescription = "Bookmark",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onBookmarkClick() }
                 )
             }
 

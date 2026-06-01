@@ -55,6 +55,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     init {
         observeUserProfileState()
         refreshRecentlyOpened()
+
+        viewModelScope.launch {
+            com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
+                val bookmarkedIds = bookmarks.map { it.id }.toSet()
+                _uiState.update { current ->
+                    if (current is HomeUiState.Success) {
+                        val updatedFeed = current.content.feedItems.map { item ->
+                            item.copy(isSaved = bookmarkedIds.contains(item.id))
+                        }
+                        current.copy(content = current.content.copy(feedItems = updatedFeed))
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
     }
 
     private fun observeUserProfileState() {
@@ -137,21 +153,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 
                 val currentUid = auth.currentUser?.uid
-                val bookmarkedIds = if (currentUid != null) {
-                    try {
-                        firestore.collection("bookmarks")
-                            .whereEqualTo("userId", currentUid)
-                            .get()
-                            .await()
-                            .documents
-                            .mapNotNull { it.getString("documentId") }
-                            .toSet()
-                    } catch (e: Exception) {
-                        emptySet()
-                    }
-                } else {
-                    emptySet()
+                if (currentUid != null) {
+                    bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
                 }
+                val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                 
                 val realItems = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
@@ -205,21 +210,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
                 
                 val currentUid = auth.currentUser?.uid
-                val bookmarkedIds = if (currentUid != null) {
-                    try {
-                        firestore.collection("bookmarks")
-                            .whereEqualTo("userId", currentUid)
-                            .get()
-                            .await()
-                            .documents
-                            .mapNotNull { it.getString("documentId") }
-                            .toSet()
-                    } catch (e: Exception) {
-                        emptySet()
-                    }
-                } else {
-                    emptySet()
+                if (currentUid != null) {
+                    bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
                 }
+                val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                 
                 _uiState.update { current ->
                     val lastOpened = recentlyOpenedRepository.getLastOpened()

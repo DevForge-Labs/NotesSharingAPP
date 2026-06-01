@@ -22,6 +22,7 @@ fun TrendingNotesRoute(
         onBackClick = onBackClick,
         onDocumentClick = onDocumentClick,
         onRefresh = { viewModel.refresh() },
-        onLoadMore = { viewModel.loadMore() }
+        onLoadMore = { viewModel.loadMore() },
+        onBookmarkClick = { viewModel.toggleBookmark(it) }
     )
 }

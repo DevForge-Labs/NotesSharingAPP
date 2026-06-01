@@ -29,6 +29,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
 
     private val firestore = FirebaseFirestore.getInstance()
+    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
 
     private var fetchJob: kotlinx.coroutines.Job? = null
     private val isRefreshingState = MutableStateFlow(false)
@@ -37,6 +38,29 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     init {
         val cached = cacheRepository.getCache()
         loadRealDocuments(silent = cached != null)
+
+        viewModelScope.launch {
+            val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            if (currentUid != null) {
+                bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+            }
+        }
+
+        viewModelScope.launch {
+            com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
+                val bookmarkedIds = bookmarks.map { it.id }.toSet()
+                _uiState.update { current ->
+                    if (current is ExploreUiState.Success) {
+                        val updatedTrending = current.content.trendingNotes.map { note ->
+                            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                        }
+                        ExploreUiState.Success(current.content.copy(trendingNotes = updatedTrending))
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
     }
 
     fun loadRealDocuments(silent: Boolean = false, isPullToRefresh: Boolean = false) {
@@ -71,6 +95,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val data = doc.data ?: return@mapNotNull null
                     documentToFeedItem(data)
                 }
+
+                val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
 
                 val realTrending = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
@@ -120,7 +146,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         downloads = downloads,
                         rating = 4.5,
                         upvotes = upvotes,
-                        isBookmarked = false,
+                        isBookmarked = bookmarkedIds.contains(id),
                         thumbnailUrl = thumbnailUrl,
                         thumbnailGenerated = thumbnailGenerated,
                         thumbnailType = thumbnailType,
@@ -309,5 +335,36 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             section = sectionField,
             sectionDisplay = sectionDisplayField
         )
+    }
+    fun toggleBookmark(note: com.pravor.notessharing.model.TrendingNote) {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
+
+        viewModelScope.launch {
+            if (wasBookmarked) {
+                bookmarkRepository.removeBookmark(note.id, currentUid)
+            } else {
+                val docType = note.documentType.ifBlank { note.type ?: "Notes" }
+                val fileType = when (docType.lowercase(java.util.Locale.US)) {
+                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
+                    "cheat sheet" -> com.pravor.notessharing.model.FileType.CheatSheet
+                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
+                    "video" -> com.pravor.notessharing.model.FileType.Video
+                    else -> com.pravor.notessharing.model.FileType.Pdf
+                }
+                val studyFile = com.pravor.notessharing.model.StudyFile(
+                    id = note.id,
+                    title = note.title,
+                    uploadDate = "Saved",
+                    fileType = fileType,
+                    downloads = note.downloads,
+                    upvotes = note.upvotes,
+                    thumbnailUrl = note.thumbnailUrl,
+                    subject = note.subject,
+                    documentType = docType
+                )
+                bookmarkRepository.addBookmark(studyFile, currentUid)
+            }
+        }
     }
 }

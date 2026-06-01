@@ -28,6 +28,7 @@ import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.explore_components.ExploreSuccessContent
 import com.pravor.notessharing.viewmodel.ExploreViewModel
+import com.pravor.notessharing.model.TrendingNote
 
 @Composable
 fun ExploreRoute(
@@ -48,7 +49,8 @@ fun ExploreRoute(
         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
         onDocumentClick = onDocumentClick,
-        onVideoClick = onVideoClick
+        onVideoClick = onVideoClick,
+        onBookmarkClick = { viewModel.toggleBookmark(it) }
     )
 }
 
@@ -63,6 +65,7 @@ fun ExploreScreen(
     onDiscoverSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
+    onBookmarkClick: (TrendingNote) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -92,7 +95,8 @@ fun ExploreScreen(
                         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
                         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
                         onDocumentClick = onDocumentClick,
-                        onVideoClick = onVideoClick
+                        onVideoClick = onVideoClick,
+                        onBookmarkClick = onBookmarkClick
                     )
                 }
             }

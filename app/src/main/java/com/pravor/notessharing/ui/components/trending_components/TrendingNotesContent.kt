@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.data.DocumentDetailRepository
+import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
@@ -40,6 +41,7 @@ fun TrendingNotesContent(
     onDocumentClick: (String) -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onBookmarkClick: (TrendingNote) -> Unit,
     modifier: Modifier = Modifier,
     detailRepository: DocumentDetailRepository = remember { DocumentDetailRepository() }
 ) {
@@ -102,7 +104,8 @@ fun TrendingNotesContent(
                                 TrendingNoteDiscoveryCard(
                                     note = note,
                                     detailRepository = detailRepository,
-                                    onClick = { onDocumentClick(note.id) }
+                                    onClick = { onDocumentClick(note.id) },
+                                    onBookmarkClick = { onBookmarkClick(note) }
                                 )
                             }
 

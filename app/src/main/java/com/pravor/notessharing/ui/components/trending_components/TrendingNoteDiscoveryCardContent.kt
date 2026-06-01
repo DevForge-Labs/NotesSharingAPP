@@ -53,6 +53,8 @@ import com.pravor.notessharing.ui.components.utils.SubjectBadge
 fun TrendingNoteDiscoveryCardContent(
     doc: DocumentDetail,
     contributorLevel: String,
+    isBookmarked: Boolean,
+    onBookmarkClick: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -108,6 +110,9 @@ fun TrendingNoteDiscoveryCardContent(
                         SubjectBadge(subject = doc.subject, isLarge = true, semester = doc.semester)
                     }
 
+                    Spacer(Modifier.height(6.dp))
+                    DocumentTypeBadge(type = doc.documentType, year = doc.examYear)
+
                     // Display branch under the title if it is not default and different from subject
                     if (isTitleValid && doc.branch.isNotBlank() && doc.branch != "Computer Science" && doc.branch != doc.subject) {
                         Spacer(Modifier.height(6.dp))
@@ -138,33 +143,17 @@ fun TrendingNoteDiscoveryCardContent(
                     }
                 }
 
-                // Description (max 2 lines, ellipsis, hidden if blank)
-                if (doc.description.isNotBlank()) {
-                    Text(
-                        text = doc.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                } else {
-                    Spacer(modifier = Modifier.height(1.dp))
-                }
-
-                // Semester Information shifted to SubjectBadge
-
-                // Bottom Row (Badge aligned left, Stats aligned right)
+                // Bottom Row (Stats aligned right)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DocumentTypeBadge(type = doc.documentType, year = doc.examYear)
-
                     TrendingNoteStats(
-                        downloads = doc.downloads,
                         upvotes = doc.upvotes,
-                        bookmarks = doc.bookmarks
+                        bookmarks = doc.bookmarks,
+                        isBookmarked = isBookmarked,
+                        onBookmarkClick = onBookmarkClick
                     )
                 }
             }
@@ -175,6 +164,8 @@ fun TrendingNoteDiscoveryCardContent(
 @Composable
 fun TrendingNoteDiscoveryCardContentFromNote(
     note: TrendingNote,
+    isBookmarked: Boolean,
+    onBookmarkClick: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -245,35 +236,22 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                         Spacer(Modifier.height(6.dp))
                         SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
                     }
-                }
 
-                // Description (max 2 lines)
-                if (note.description.isNotBlank()) {
-                    Text(
-                        text = note.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                } else {
-                    Spacer(modifier = Modifier.height(1.dp))
+                    Spacer(Modifier.height(6.dp))
+                    DocumentTypeBadge(type = note.documentType, year = note.examYear)
                 }
-
-                // Semester Information shifted to SubjectBadge
 
                 // Bottom Row (Type Badge and Stats)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DocumentTypeBadge(type = note.documentType, year = note.examYear)
-
                     TrendingNoteStats(
-                        downloads = note.downloads,
                         upvotes = note.upvotes,
-                        bookmarks = note.bookmarks
+                        bookmarks = note.bookmarks,
+                        isBookmarked = isBookmarked,
+                        onBookmarkClick = onBookmarkClick
                     )
                 }
             }
@@ -284,6 +262,8 @@ fun TrendingNoteDiscoveryCardContentFromNote(
 @Composable
 fun TrendingNoteDiscoveryCardContentFallback(
     note: TrendingNote,
+    isBookmarked: Boolean,
+    onBookmarkClick: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -334,34 +314,21 @@ fun TrendingNoteDiscoveryCardContentFallback(
                         Spacer(Modifier.height(6.dp))
                         SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
                     }
-                }
 
-                // Description (max 2 lines)
-                if (note.description.isNotBlank()) {
-                    Text(
-                        text = note.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                } else {
-                    Spacer(modifier = Modifier.height(1.dp))
+                    Spacer(Modifier.height(6.dp))
+                    DocumentTypeBadge(type = note.documentType, year = note.examYear)
                 }
-
-                // Semester Information shifted to SubjectBadge
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DocumentTypeBadge(type = note.documentType, year = note.examYear)
-
                     TrendingNoteStats(
-                        downloads = note.downloads,
                         upvotes = note.upvotes,
-                        bookmarks = note.bookmarks
+                        bookmarks = note.bookmarks,
+                        isBookmarked = isBookmarked,
+                        onBookmarkClick = onBookmarkClick
                     )
                 }
             }

@@ -17,53 +17,69 @@ class BookmarkRepository {
     companion object {
         private val _bookmarksFlow = MutableStateFlow<List<StudyFile>>(emptyList())
         val bookmarksFlow: StateFlow<List<StudyFile>> = _bookmarksFlow.asStateFlow()
-        private var hasLoadedInitial = false
+        var hasLoadedInitial = false
+        private var listenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
+        private var activeUserId: String? = null
+    }
+
+    suspend fun loadInitialBookmarksIfNeeded(userId: String): List<StudyFile> {
+        if (!hasLoadedInitial) {
+            return getBookmarks(userId)
+        }
+        return bookmarksFlow.value
     }
 
     suspend fun getBookmarks(userId: String): List<StudyFile> {
-        return try {
-            val querySnapshot = bookmarksCollection
-                .whereEqualTo("userId", userId)
-                .get()
-                .await()
-            val list = querySnapshot.documents.mapNotNull { doc ->
-                val data = doc.data ?: return@mapNotNull null
-                val docId = data["documentId"] as? String ?: ""
-                val title = data["title"] as? String ?: ""
-                val docTypeStr = data["documentType"] as? String ?: "Notes"
-                val fileType = when (docTypeStr.lowercase(Locale.US)) {
-                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                    "cheat sheet" -> com.pravor.notessharing.model.FileType.CheatSheet
-                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
-                    "video" -> com.pravor.notessharing.model.FileType.Video
-                    else -> com.pravor.notessharing.model.FileType.Pdf
-                }
-                val subject = data["subject"] as? String ?: ""
-                val thumbnailUrl = data["thumbnailUrl"] as? String
-                val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
-                val bookmarkedAt = data["bookmarkedAt"] as? Long ?: System.currentTimeMillis()
-                
-                val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-                val dateStr = "Saved " + sdf.format(java.util.Date(bookmarkedAt))
-                
-                StudyFile(
-                    id = docId,
-                    title = title,
-                    uploadDate = dateStr,
-                    fileType = fileType,
-                    downloads = 0,
-                    upvotes = 0,
-                    thumbnailUrl = thumbnailUrl,
-                    subject = subject,
-                    documentType = docTypeStr
-                )
+        try {
+            if (listenerRegistration == null || activeUserId != userId) {
+                listenerRegistration?.remove()
+                activeUserId = userId
+                listenerRegistration = bookmarksCollection
+                    .whereEqualTo("userId", userId)
+                    .addSnapshotListener { querySnapshot, error ->
+                        if (error != null) return@addSnapshotListener
+                        if (querySnapshot != null) {
+                            val list = querySnapshot.documents.mapNotNull { doc ->
+                                val data = doc.data ?: return@mapNotNull null
+                                val docId = data["documentId"] as? String ?: ""
+                                val title = data["title"] as? String ?: ""
+                                val docTypeStr = data["documentType"] as? String ?: "Notes"
+                                val fileType = when (docTypeStr.lowercase(Locale.US)) {
+                                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
+                                    "cheat sheet" -> com.pravor.notessharing.model.FileType.CheatSheet
+                                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
+                                    "video" -> com.pravor.notessharing.model.FileType.Video
+                                    else -> com.pravor.notessharing.model.FileType.Pdf
+                                }
+                                val subject = data["subject"] as? String ?: ""
+                                val thumbnailUrl = data["thumbnailUrl"] as? String
+                                val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
+                                val bookmarkedAt = data["bookmarkedAt"] as? Long ?: System.currentTimeMillis()
+                                
+                                val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+                                val dateStr = "Saved " + sdf.format(java.util.Date(bookmarkedAt))
+                                
+                                StudyFile(
+                                    id = docId,
+                                    title = title,
+                                    uploadDate = dateStr,
+                                    fileType = fileType,
+                                    downloads = 0,
+                                    upvotes = 0,
+                                    thumbnailUrl = thumbnailUrl,
+                                    subject = subject,
+                                    documentType = docTypeStr
+                                )
+                            }
+                            _bookmarksFlow.value = list
+                            hasLoadedInitial = true
+                        }
+                    }
             }
-            _bookmarksFlow.value = list
-            hasLoadedInitial = true
-            list
         } catch (e: Exception) {
-            emptyList()
+            // Ignore
         }
+        return bookmarksFlow.value
     }
 
     suspend fun addBookmark(feedItem: FeedItem, userId: String) {
