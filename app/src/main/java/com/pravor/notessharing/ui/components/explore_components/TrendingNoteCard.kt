@@ -68,27 +68,22 @@ fun TrendingNoteCard(
     onBookmarkClick: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
-    var firstAttachmentUrl by remember { mutableStateOf<String?>(null) }
-    var isImage by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
+    val cached = remember(note.id, note.thumbnailUrl) {
+        if (!note.thumbnailUrl.isNullOrBlank()) {
+            Pair(note.thumbnailUrl, true)
+        } else {
+            TrendingPreviewCache.get(note.id)
+        }
+    }
+
+    var firstAttachmentUrl by remember(note.id) { mutableStateOf(cached?.first) }
+    var isImage by remember(note.id) { mutableStateOf(cached?.second ?: false) }
+    var isLoading by remember(note.id) { mutableStateOf(cached == null) }
 
     val repository = remember { DocumentDetailRepository() }
 
     LaunchedEffect(note.id) {
-        if (!note.thumbnailUrl.isNullOrBlank()) {
-            firstAttachmentUrl = note.thumbnailUrl
-            isImage = true
-            isLoading = false
-            return@LaunchedEffect
-        }
-
-        val cached = TrendingPreviewCache.get(note.id)
-        if (cached != null) {
-            firstAttachmentUrl = cached.first
-            isImage = cached.second
-            isLoading = false
-            return@LaunchedEffect
-        }
+        if (cached != null) return@LaunchedEffect
 
         withContext(Dispatchers.IO) {
             try {
@@ -192,14 +187,18 @@ fun TrendingNoteCard(
                     if (isImage && !firstAttachmentUrl.isNullOrBlank()) {
                         var imageLoadError by remember { mutableStateOf(false) }
                         if (!imageLoadError) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
+                            val context = LocalContext.current
+                            val imageRequest = remember(firstAttachmentUrl) {
+                                ImageRequest.Builder(context)
                                     .data(firstAttachmentUrl)
                                     .crossfade(true)
                                     .size(300, 200) // Downsample thumbnail size to preserve GPU memory
                                     .memoryCachePolicy(CachePolicy.ENABLED)
                                     .diskCachePolicy(CachePolicy.ENABLED)
-                                    .build(),
+                                    .build()
+                            }
+                            AsyncImage(
+                                model = imageRequest,
                                 contentDescription = note.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,

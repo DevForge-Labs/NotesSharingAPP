@@ -23,7 +23,8 @@ fun TrendingNoteStats(
     bookmarks: Int,
     isBookmarked: Boolean,
     onBookmarkClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDownloadClick: () -> Unit = {}
 ) {
     var isUpvoted by remember { mutableStateOf(false) }
 
@@ -47,6 +48,26 @@ fun TrendingNoteStats(
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Downloads
+        Row(
+            modifier = Modifier.clickable { onDownloadClick() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = "Downloads",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = "0",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
         // Upvotes
         Row(
             modifier = Modifier.clickable { isUpvoted = !isUpvoted },
@@ -70,20 +91,13 @@ fun TrendingNoteStats(
         // Bookmarks
         Row(
             modifier = Modifier.clickable { onBookmarkClick() },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Bookmark,
                 contentDescription = "Bookmarks",
                 tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = "$bookmarkCount",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold
             )
         }
     }
