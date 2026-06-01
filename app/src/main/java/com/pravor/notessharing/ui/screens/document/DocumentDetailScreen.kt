@@ -97,7 +97,8 @@ fun DocumentDetailRoute(
         onNavigateToDetail = onNavigateToDetail,
         onUpvoteClick = viewModel::toggleUpvote,
         onNavigateToPdfViewer = onNavigateToPdfViewer,
-        onNavigateToImageViewer = onNavigateToImageViewer
+        onNavigateToImageViewer = onNavigateToImageViewer,
+        onRetry = { viewModel.loadDocumentDetail(documentId) }
     )
 }
 
@@ -109,7 +110,8 @@ fun DocumentDetailScreen(
     onNavigateToDetail: (String) -> Unit,
     onUpvoteClick: (String) -> Unit,
     onNavigateToPdfViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
-    onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit
+    onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
+    onRetry: () -> Unit
 ) {
     android.util.Log.d("DETAILS_DEBUG", "DetailsScreen Composed")
     val context = LocalContext.current
@@ -220,15 +222,9 @@ fun DocumentDetailScreen(
                 }
 
                 is DocumentDetailUiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        StatePanel(
-                            title = "Unable to load document",
-                            message = state.message
-                        )
-                    }
+                    com.pravor.notessharing.ui.components.states.DocumentErrorState(
+                        onRetry = onRetry
+                    )
                 }
 
                 is DocumentDetailUiState.Success -> {
