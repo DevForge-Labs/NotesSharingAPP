@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.model.DiscoverFeedItem
+import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
@@ -44,7 +45,8 @@ fun ExploreSuccessContent(
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
-    onVideoClick: (String) -> Unit
+    onVideoClick: (String) -> Unit,
+    onBookmarkClick: (TrendingNote) -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     val visibleTrendingNotes = content.trendingNotes.take(7)
@@ -83,7 +85,11 @@ fun ExploreSuccessContent(
                         key = { index, note -> note.id.ifBlank { "trending_note_$index" } },
                         contentType = { _, _ -> "trending-note" }
                     ) { _, note ->
-                        TrendingNoteCard(note, onClick = { onDocumentClick(note.id) })
+                        TrendingNoteCard(
+                            note = note,
+                            onBookmarkClick = { onBookmarkClick(note) },
+                            onClick = { onDocumentClick(note.id) }
+                        )
                     }
                 }
             }

@@ -26,11 +26,20 @@ fun BottomNavBar(
     onDestinationClick: (AppDestination) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val mandatoryGestureInset = WindowInsets.mandatorySystemGestures.asPaddingValues().calculateBottomPadding()
+    val isGestureMode = mandatoryGestureInset > 0.dp
+    val bottomPadding = if (isGestureMode) 0.dp else 20.dp
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 10.dp),
+            .padding(
+                start = 18.dp,
+                top = 10.dp,
+                end = 18.dp,
+                bottom = bottomPadding
+            ),
         shape = RoundedCornerShape(30.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
         border = BorderStroke(

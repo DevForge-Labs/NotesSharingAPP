@@ -16,6 +16,7 @@ fun TrendingNoteDiscoveryCard(
     note: TrendingNote,
     detailRepository: DocumentDetailRepository,
     onClick: () -> Unit,
+    onBookmarkClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // If metadata fields are already pre-loaded/cached, we can display the content instantly!
@@ -43,6 +44,8 @@ fun TrendingNoteDiscoveryCard(
         if (hasCache) {
             TrendingNoteDiscoveryCardContentFromNote(
                 note = note,
+                isBookmarked = note.isBookmarked,
+                onBookmarkClick = onBookmarkClick,
                 onClick = onClick,
                 modifier = modifier
             )
@@ -52,12 +55,16 @@ fun TrendingNoteDiscoveryCard(
                 TrendingNoteDiscoveryCardContent(
                     doc = doc,
                     contributorLevel = contributorLevel ?: "Bronze Contributor",
+                    isBookmarked = note.isBookmarked,
+                    onBookmarkClick = onBookmarkClick,
                     onClick = onClick,
                     modifier = modifier
                 )
             } else {
                 TrendingNoteDiscoveryCardContentFallback(
                     note = note,
+                    isBookmarked = note.isBookmarked,
+                    onBookmarkClick = onBookmarkClick,
                     onClick = onClick,
                     modifier = modifier
                 )

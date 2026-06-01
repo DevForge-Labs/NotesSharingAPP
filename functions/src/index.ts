@@ -13,6 +13,7 @@ setGlobalOptions({
 
 // 3. Export Firestore triggers
 export * from "./firestoreTriggers.js";
+export * from "./bookmark.js";
 
 // 4. Preserve existing test function
 export const helloWorld = onRequest((request, response) => {
