@@ -272,7 +272,7 @@ fun DocumentDetailSuccessContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val indicatorColor = if (isUpvoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        val indicatorColor = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
                         Icon(
                             imageVector = Icons.Default.ThumbUp,
                             contentDescription = "Upvotes",

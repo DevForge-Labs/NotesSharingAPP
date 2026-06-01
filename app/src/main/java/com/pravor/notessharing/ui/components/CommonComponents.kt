@@ -476,6 +476,13 @@ fun Avatar(text: String, modifier: Modifier = Modifier.size(48.dp)) {
 
 @Composable
 fun StatItem(icon: ImageVector, value: String, modifier: Modifier = Modifier) {
+    val resolvedTint = when (icon) {
+        androidx.compose.material.icons.Icons.Default.ThumbUp,
+        androidx.compose.material.icons.Icons.Filled.ThumbUp -> Color(0xFFFFB74D)
+        androidx.compose.material.icons.Icons.Default.Download,
+        androidx.compose.material.icons.Icons.Filled.Download -> Color(0xFF64B5F6)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -485,12 +492,12 @@ fun StatItem(icon: ImageVector, value: String, modifier: Modifier = Modifier) {
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(17.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = resolvedTint
         )
         Text(
             text = value,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = resolvedTint.copy(alpha = 0.9f),
             fontWeight = FontWeight.SemiBold
         )
     }

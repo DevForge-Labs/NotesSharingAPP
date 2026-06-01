@@ -46,6 +46,7 @@ fun ExploreRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
+    var pendingRemoveUpvoteData by remember { mutableStateOf<Triple<String, String?, Int>?>(null) }
 
     val onBookmarkClickRemembered = remember(viewModel) {
         { note: TrendingNote ->
@@ -53,6 +54,17 @@ fun ExploreRoute(
                 pendingRemoveBookmarkNote = note
             } else {
                 viewModel.toggleBookmark(note)
+            }
+        }
+    }
+
+    val onUpvoteClickRemembered = remember(viewModel) {
+        { id: String, docType: String?, currentUpvotes: Int ->
+            val wasUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
+            if (wasUpvoted) {
+                pendingRemoveUpvoteData = Triple(id, docType, currentUpvotes)
+            } else {
+                viewModel.toggleUpvote(id, docType, currentUpvotes)
             }
         }
     }
@@ -70,35 +82,63 @@ fun ExploreRoute(
         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick,
-        onBookmarkClick = onBookmarkClickRemembered
+        onBookmarkClick = onBookmarkClickRemembered,
+        onUpvoteClick = onUpvoteClickRemembered
     )
 
-    if (pendingRemoveBookmarkNote != null) {
-        AlertDialog(
-            onDismissRequest = { pendingRemoveBookmarkNote = null },
-            title = { Text(text = "Remove this bookmark?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val note = pendingRemoveBookmarkNote
-                        if (note != null) {
-                            viewModel.toggleBookmark(note)
+        if (pendingRemoveBookmarkNote != null) {
+            AlertDialog(
+                onDismissRequest = { pendingRemoveBookmarkNote = null },
+                title = { Text(text = "Remove this bookmark?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val note = pendingRemoveBookmarkNote
+                            if (note != null) {
+                                viewModel.toggleBookmark(note)
+                            }
+                            pendingRemoveBookmarkNote = null
                         }
-                        pendingRemoveBookmarkNote = null
+                    ) {
+                        Text("Remove")
                     }
-                ) {
-                    Text("Remove")
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { pendingRemoveBookmarkNote = null }
+                    ) {
+                        Text("Cancel")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingRemoveBookmarkNote = null }
-                ) {
-                    Text("Cancel")
+            )
+        }
+
+        if (pendingRemoveUpvoteData != null) {
+            AlertDialog(
+                onDismissRequest = { pendingRemoveUpvoteData = null },
+                title = { Text(text = "Remove this upvote?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val data = pendingRemoveUpvoteData
+                            if (data != null) {
+                                viewModel.toggleUpvote(data.first, data.second, data.third)
+                            }
+                            pendingRemoveUpvoteData = null
+                        }
+                    ) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { pendingRemoveUpvoteData = null }
+                    ) {
+                        Text("Cancel")
+                    }
                 }
-            }
-        )
-    }
+            )
+        }
 }
 
 
@@ -114,6 +154,7 @@ fun ExploreScreen(
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
+    onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -156,7 +197,8 @@ fun ExploreScreen(
                                 onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
                                 onDocumentClick = onDocumentClick,
                                 onVideoClick = onVideoClick,
-                                onBookmarkClick = onBookmarkClick
+                                onBookmarkClick = onBookmarkClick,
+                                onUpvoteClick = onUpvoteClick
                             )
                         }
                     }

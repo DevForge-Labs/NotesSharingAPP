@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,13 +25,11 @@ fun TrendingNoteStats(
     isBookmarked: Boolean,
     onBookmarkClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onDownloadClick: () -> Unit = {}
+    onDownloadClick: () -> Unit = {},
+    isUpvoted: Boolean = false,
+    onUpvoteClick: () -> Unit = {}
 ) {
-    var isUpvoted by remember { mutableStateOf(false) }
-
-    val upvoteCount = remember(upvotes, isUpvoted) {
-        if (isUpvoted) upvotes + 1 else upvotes
-    }
+    val upvoteCount = upvotes
     
     val initialIsBookmarked = remember(bookmarks) { isBookmarked }
     val bookmarkCount = remember(bookmarks, isBookmarked) {
@@ -57,33 +56,33 @@ fun TrendingNoteStats(
             Icon(
                 imageVector = Icons.Default.Download,
                 contentDescription = "Downloads",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                tint = Color(0xFF64B5F6),
                 modifier = Modifier.size(16.dp)
             )
             Text(
                 text = "0",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color(0xFF64B5F6).copy(alpha = 0.9f),
                 fontWeight = FontWeight.SemiBold
             )
         }
 
         // Upvotes
         Row(
-            modifier = Modifier.clickable { isUpvoted = !isUpvoted },
+            modifier = Modifier.clickable { onUpvoteClick() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.ThumbUp,
                 contentDescription = "Upvotes",
-                tint = if (isUpvoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                tint = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 modifier = Modifier.size(16.dp)
             )
             Text(
                 text = "$upvoteCount",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isUpvoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold
             )
         }

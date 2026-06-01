@@ -24,6 +24,7 @@ fun TrendingNotesRoute(
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
 
     var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
+    var pendingRemoveUpvoteNote by remember { mutableStateOf<TrendingNote?>(null) }
 
     TrendingNotesScreen(
         uiState = uiState,
@@ -38,6 +39,13 @@ fun TrendingNotesRoute(
                 pendingRemoveBookmarkNote = note
             } else {
                 viewModel.toggleBookmark(note)
+            }
+        },
+        onUpvoteClick = { note ->
+            if (note.isUpvoted) {
+                pendingRemoveUpvoteNote = note
+            } else {
+                viewModel.toggleUpvote(note)
             }
         }
     )
@@ -62,6 +70,33 @@ fun TrendingNotesRoute(
             dismissButton = {
                 TextButton(
                     onClick = { pendingRemoveBookmarkNote = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (pendingRemoveUpvoteNote != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemoveUpvoteNote = null },
+            title = { Text(text = "Remove this upvote?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val note = pendingRemoveUpvoteNote
+                        if (note != null) {
+                            viewModel.toggleUpvote(note)
+                        }
+                        pendingRemoveUpvoteNote = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingRemoveUpvoteNote = null }
                 ) {
                     Text("Cancel")
                 }

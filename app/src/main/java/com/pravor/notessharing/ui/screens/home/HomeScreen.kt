@@ -117,6 +117,7 @@ fun HomeScreen(
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
 
     var pendingRemoveBookmarkId by remember { mutableStateOf<String?>(null) }
+    var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
 
     val feedListState = rememberLazyListState()
     val stateKey = when (uiState) {
@@ -151,7 +152,14 @@ fun HomeScreen(
                     content = state.content,
                     myFilesUiState = myFilesUiState,
                     bookmarksCount = bookmarksCount,
-                    onUpvoteClick = onUpvoteClick,
+                    onUpvoteClick = { itemId ->
+                        val isCurrentlyUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] == true
+                        if (isCurrentlyUpvoted) {
+                            pendingRemoveUpvoteId = itemId
+                        } else {
+                            onUpvoteClick(itemId)
+                        }
+                    },
                     onBookmarkClick = { itemId ->
                         val isCurrentlySaved = state.content.feedItems.find { it.id == itemId }?.isSaved == true
                         if (isCurrentlySaved) {
@@ -278,6 +286,33 @@ fun HomeScreen(
                 dismissButton = {
                     androidx.compose.material3.TextButton(
                         onClick = { pendingRemoveBookmarkId = null }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (pendingRemoveUpvoteId != null) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { pendingRemoveUpvoteId = null },
+                title = { Text(text = "Remove this upvote?") },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            val itemId = pendingRemoveUpvoteId
+                            if (itemId != null) {
+                                onUpvoteClick(itemId)
+                            }
+                            pendingRemoveUpvoteId = null
+                        }
+                    ) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { pendingRemoveUpvoteId = null }
                     ) {
                         Text("Cancel")
                     }

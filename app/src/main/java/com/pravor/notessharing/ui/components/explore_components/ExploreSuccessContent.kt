@@ -47,7 +47,8 @@ fun ExploreSuccessContent(
     onDiscoverSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
-    onBookmarkClick: (TrendingNote) -> Unit
+    onBookmarkClick: (TrendingNote) -> Unit,
+    onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> }
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     val visibleTrendingNotes = content.trendingNotes.take(7)
@@ -92,10 +93,14 @@ fun ExploreSuccessContent(
                         val onClickRemembered = remember(note.id) {
                             { onDocumentClick(note.id) }
                         }
+                        val onUpvoteClickRemembered = remember(note.id, note.documentType, note.upvotes) {
+                            { onUpvoteClick(note.id, note.documentType, note.upvotes) }
+                        }
                         TrendingNoteCard(
                             note = note,
                             onBookmarkClick = onBookmarkClickRemembered,
-                            onClick = onClickRemembered
+                            onClick = onClickRemembered,
+                            onUpvoteClick = onUpvoteClickRemembered
                         )
                     }
                 }
@@ -142,9 +147,14 @@ fun ExploreSuccessContent(
                     val onClickRemembered = remember(video.id) {
                         { onVideoClick(video.id) }
                     }
+                    val onUpvoteClickRemembered = remember(video.id, video.documentType, video.upvotes) {
+                        { onUpvoteClick(video.id, video.documentType, video.upvotes) }
+                    }
                     VideoRecommendationCard(
                         video = video,
-                        onClick = onClickRemembered
+                        isUpvoted = video.isUpvoted,
+                        onClick = onClickRemembered,
+                        onUpvoteClick = onUpvoteClickRemembered
                     )
                 }
                 if (content.videoRecommendations.size > visibleRecommendedVideos.size) {

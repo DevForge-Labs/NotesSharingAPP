@@ -30,6 +30,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
     private val firestore = FirebaseFirestore.getInstance()
     private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
 
     private var fetchJob: kotlinx.coroutines.Job? = null
     private val isRefreshingState = MutableStateFlow(false)
@@ -43,6 +44,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
             if (currentUid != null) {
                 bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
             }
         }
 
@@ -58,6 +60,66 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     } else {
                         current
                     }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
+                com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+            ) { upvotesMap, upvoteCountsMap ->
+                Pair(upvotesMap, upvoteCountsMap)
+            }.collect { (upvotesMap, upvoteCountsMap) ->
+                _uiState.update { current ->
+                    if (current is ExploreUiState.Success) {
+                        val updatedPopular = current.content.popularUploads.map { item ->
+                            val isUpvoted = upvotesMap[item.id] ?: false
+                            val count = upvoteCountsMap[item.id] ?: item.upvotes
+                            item.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        val updatedTrending = current.content.trendingNotes.map { note ->
+                            val isUpvoted = upvotesMap[note.id] ?: false
+                            val count = upvoteCountsMap[note.id] ?: note.upvotes
+                            note.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        val updatedVideos = current.content.videoRecommendations.map { video ->
+                            val isUpvoted = upvotesMap[video.id] ?: false
+                            val count = upvoteCountsMap[video.id] ?: video.upvotes
+                            video.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        ExploreUiState.Success(current.content.copy(
+                            popularUploads = updatedPopular,
+                            trendingNotes = updatedTrending,
+                            videoRecommendations = updatedVideos
+                        ))
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            _uiState.collect { state ->
+                if (state is ExploreUiState.Success) {
+                    val content = state.content
+                    val paths = mutableListOf<Pair<String, String>>()
+                    
+                    for (note in content.trendingNotes) {
+                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
+                        paths.add(note.id to col)
+                    }
+                    for (video in content.videoRecommendations) {
+                        val col = upvoteRepository.getCollectionForDocType(video.documentType ?: "video")
+                        paths.add(video.id to col)
+                    }
+                    for (item in content.popularUploads) {
+                        val col = upvoteRepository.getCollectionForDocType(item.documentType ?: item.fileType.label)
+                        paths.add(item.id to col)
+                    }
+                    
+                    upvoteRepository.observeVisibleDocuments("Explore", paths)
                 }
             }
         }
@@ -139,20 +201,24 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val typeField = data["type"] as? String
                     val examYearVal = data["examYear"] as? String
 
+                    val resolvedIsUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
+                    val resolvedUpvotes = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value[id] ?: upvotes
+
                     com.pravor.notessharing.model.TrendingNote(
                         id = id,
                         title = title,
                         subject = subject,
                         downloads = downloads,
                         rating = 4.5,
-                        upvotes = upvotes,
+                        upvotes = resolvedUpvotes,
                         isBookmarked = bookmarkedIds.contains(id),
                         thumbnailUrl = thumbnailUrl,
                         thumbnailGenerated = thumbnailGenerated,
                         thumbnailType = thumbnailType,
                         documentType = documentTypeField ?: "",
                         type = typeField,
-                        examYear = examYearVal
+                        examYear = examYearVal,
+                        isUpvoted = resolvedIsUpvoted
                     )
                 }
 
@@ -190,6 +256,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val youtubeThumbnailUrlVal = data["youtubeThumbnailUrl"] as? String
                     val semesterVal = data["semester"] as? String ?: "Semester 4"
 
+                    val resolvedIsUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
+                    val resolvedUpvotes = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value[id] ?: upvotes
+
                     com.pravor.notessharing.model.VideoRecommendation(
                         id = id,
                         title = title,
@@ -197,13 +266,14 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         duration = "",
                         subject = subject,
                         youtubeVideoId = youtubeVideoId,
-                        upvotes = upvotes,
+                        upvotes = resolvedUpvotes,
                         bookmarks = bookmarks,
                         thumbnailUrl = thumbnailUrlVal,
                         youtubeThumbnailUrl = youtubeThumbnailUrlVal,
                         documentType = docType,
                         semester = semesterVal,
-                        youtubeUrl = youtubeUrl
+                        youtubeUrl = youtubeUrl,
+                        isUpvoted = resolvedIsUpvoted
                     )
                 }
 
@@ -308,6 +378,11 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         val sectionField = doc["section"] as? String
         val sectionDisplayField = doc["sectionDisplay"] as? String
 
+        val upvotedMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+        val resolvedIsUpvoted = upvotedMap[id] ?: false
+        val resolvedUpvotes = upvoteCountsMap[id] ?: upvotes
+
         return FeedItem(
             id = id,
             uploaderName = uploaderName,
@@ -317,10 +392,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             description = description,
             tags = tags,
             fileType = fileType,
-            upvotes = upvotes,
+            upvotes = resolvedUpvotes,
             comments = 0,
             downloads = downloads,
-            isUpvoted = false,
+            isUpvoted = resolvedIsUpvoted,
             isSaved = false,
             bookmarksCount = bookmarks,
             youtubeVideoId = youtubeVideoId,
@@ -366,5 +441,33 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 bookmarkRepository.addBookmark(studyFile, currentUid)
             }
         }
+    }
+
+    fun toggleUpvote(itemId: String, documentType: String?, currentUpvotes: Int) {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val rawType = documentType?.lowercase(java.util.Locale.US) ?: "notes"
+        val collection = when (rawType) {
+            "notes", "note" -> "notes"
+            "pyq", "pyqs" -> "pyqs"
+            "assignment", "assignments" -> "assignments"
+            "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
+            "video", "videos", "youtube resource" -> "videos"
+            else -> "documents"
+        }
+
+        viewModelScope.launch {
+            upvoteRepository.toggleUpvote(
+                documentId = itemId,
+                collectionName = collection,
+                currentUpvotes = currentUpvotes,
+                userId = currentUid
+            )
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        fetchJob?.cancel()
+        upvoteRepository.observeVisibleDocuments("Explore", emptyList())
     }
 }
