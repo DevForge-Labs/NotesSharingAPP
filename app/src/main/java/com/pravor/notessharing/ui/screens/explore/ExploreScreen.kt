@@ -29,6 +29,7 @@ import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.explore_components.ExploreSuccessContent
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.model.VideoRecommendation
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
@@ -46,6 +47,7 @@ fun ExploreRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
+    var pendingRemoveBookmarkVideo by remember { mutableStateOf<VideoRecommendation?>(null) }
     var pendingRemoveUpvoteData by remember { mutableStateOf<Triple<String, String?, Int>?>(null) }
 
     val onBookmarkClickRemembered = remember(viewModel) {
@@ -54,6 +56,16 @@ fun ExploreRoute(
                 pendingRemoveBookmarkNote = note
             } else {
                 viewModel.toggleBookmark(note)
+            }
+        }
+    }
+
+    val onVideoBookmarkClickRemembered = remember(viewModel) {
+        { video: VideoRecommendation ->
+            if (video.isBookmarked) {
+                pendingRemoveBookmarkVideo = video
+            } else {
+                viewModel.toggleVideoBookmark(video)
             }
         }
     }
@@ -83,6 +95,7 @@ fun ExploreRoute(
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick,
         onBookmarkClick = onBookmarkClickRemembered,
+        onVideoBookmarkClick = onVideoBookmarkClickRemembered,
         onUpvoteClick = onUpvoteClickRemembered
     )
 
@@ -106,6 +119,33 @@ fun ExploreRoute(
                 dismissButton = {
                     TextButton(
                         onClick = { pendingRemoveBookmarkNote = null }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (pendingRemoveBookmarkVideo != null) {
+            AlertDialog(
+                onDismissRequest = { pendingRemoveBookmarkVideo = null },
+                title = { Text(text = "Remove this bookmark?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val video = pendingRemoveBookmarkVideo
+                            if (video != null) {
+                                viewModel.toggleVideoBookmark(video)
+                            }
+                            pendingRemoveBookmarkVideo = null
+                        }
+                    ) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { pendingRemoveBookmarkVideo = null }
                     ) {
                         Text("Cancel")
                     }
@@ -154,6 +194,7 @@ fun ExploreScreen(
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
+    onVideoBookmarkClick: (VideoRecommendation) -> Unit = {},
     onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
@@ -198,6 +239,7 @@ fun ExploreScreen(
                                 onDocumentClick = onDocumentClick,
                                 onVideoClick = onVideoClick,
                                 onBookmarkClick = onBookmarkClick,
+                                onVideoBookmarkClick = onVideoBookmarkClick,
                                 onUpvoteClick = onUpvoteClick
                             )
                         }

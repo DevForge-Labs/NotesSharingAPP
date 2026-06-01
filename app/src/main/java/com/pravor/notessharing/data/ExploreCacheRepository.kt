@@ -52,6 +52,7 @@ class ExploreCacheRepository(context: Context) {
                     put("documentType", it.documentType)
                     put("type", it.type ?: "")
                     put("examYear", it.examYear ?: "")
+                    put("examType", it.examType ?: "")
                 })
             }
             json.put("trendingNotes", trendingArray)
@@ -183,6 +184,7 @@ class ExploreCacheRepository(context: Context) {
                         documentType = obj.optString("documentType", ""),
                         type = obj.optString("type").ifBlank { null },
                         examYear = obj.optString("examYear").ifBlank { null },
+                        examType = obj.optString("examType").ifBlank { null },
                         semester = obj.optString("semester", "")
                     ))
                 }
@@ -331,6 +333,7 @@ class ExploreCacheRepository(context: Context) {
             put("type", item.type ?: "")
             put("subject", item.subject ?: "")
             put("examYear", item.examYear ?: "")
+            put("examType", item.examType ?: "")
             put("section", item.section ?: "")
             put("sectionDisplay", item.sectionDisplay ?: "")
         }
@@ -385,6 +388,7 @@ class ExploreCacheRepository(context: Context) {
             type = obj.optString("type").ifBlank { null },
             subject = obj.optString("subject").ifBlank { null },
             examYear = obj.optString("examYear").ifBlank { null },
+            examType = obj.optString("examType").ifBlank { null },
             section = obj.optString("section").ifBlank { null },
             sectionDisplay = obj.optString("sectionDisplay").ifBlank { null },
             youtubeThumbnailUrl = obj.optString("youtubeThumbnailUrl").ifBlank { null }

@@ -31,6 +31,7 @@ data class DocumentDetail(
     val thumbnailType: String? = null,
     val thumbnailUrls: List<String> = emptyList(),
     val examYear: String? = null,
+    val examType: String? = null,
     val section: String? = null,
     val sectionDisplay: String? = null,
     val youtubeThumbnailUrl: String? = null
@@ -84,6 +85,7 @@ data class DocumentDetail(
             type = documentType,
             subject = subject,
             examYear = examYear,
+            examType = examType,
             section = section,
             sectionDisplay = sectionDisplay,
             youtubeThumbnailUrl = youtubeThumbnailUrl
@@ -121,6 +123,7 @@ fun Map<String, Any>.toDocumentDetail(id: String): DocumentDetail {
         thumbnailUrls = (this["thumbnailUrls"] as? List<*>)?.mapNotNull { it as? String }
             ?: listOfNotNull(this["thumbnailUrl"] as? String),
         examYear = (this["examYear"] ?: this["year"])?.toString(),
+        examType = this["examType"]?.toString(),
         section = this["section"] as? String,
         sectionDisplay = this["sectionDisplay"] as? String,
         youtubeThumbnailUrl = this["youtubeThumbnailUrl"] as? String

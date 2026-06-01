@@ -22,6 +22,7 @@ data class TrendingNote(
     val type: String? = null,
     val bookmarks: Int = 0,
     val examYear: String? = null,
+    val examType: String? = null,
     val semester: String = "",
     val isUpvoted: Boolean = false
 )
@@ -41,7 +42,8 @@ data class VideoRecommendation(
     val documentType: String = "",
     val semester: String = "Semester 4",
     val youtubeUrl: String = "",
-    val isUpvoted: Boolean = false
+    val isUpvoted: Boolean = false,
+    val isBookmarked: Boolean = false
 )
 
 @Immutable

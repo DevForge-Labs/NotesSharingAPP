@@ -58,6 +58,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.IconButton
 import com.pravor.notessharing.model.Category
 import com.pravor.notessharing.model.FeedItem
@@ -683,15 +685,19 @@ fun getFileNameFromUrl(url: String): String {
     }
 }
 
-@Composable
-fun StudyHubShelfCard(
-    file: StudyFile,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+data class StudyResourceTheme(
+    val docTypeStr: String,
+    val accentColor: Color,
+    val gradientColors: List<Color>
 ) {
-    val isVideo = file.fileType == FileType.Video
-    val docType = file.documentType ?: file.fileType.label
-    val rawDocType = docType.lowercase(java.util.Locale.ROOT).trim()
+    val cardBrush: Brush get() = Brush.verticalGradient(gradientColors)
+}
+
+fun getStudyResourceTheme(documentType: String?): StudyResourceTheme {
+    val rawDocType = (documentType ?: "").lowercase(java.util.Locale.ROOT).trim()
+    val isPlaylist = rawDocType.contains("playlist")
+    val isVideo = rawDocType.contains("video") || rawDocType.contains("youtube")
+    val isVideoOnly = isVideo && !isPlaylist
 
     val isPyq = rawDocType.contains("pyq")
     val isCheatSheet = rawDocType.contains("cheat") || rawDocType.contains("formula")
@@ -699,7 +705,8 @@ fun StudyHubShelfCard(
     val isNotes = rawDocType.contains("notes")
 
     val docTypeStr = when {
-        isVideo -> "YouTube"
+        isPlaylist -> "Playlist"
+        isVideoOnly -> "Video"
         isPyq -> "PYQ"
         isAssignment -> "Assignment"
         isCheatSheet -> "Cheat Sheet"
@@ -708,7 +715,8 @@ fun StudyHubShelfCard(
     }
 
     val accentColor = when {
-        isVideo -> Color(0xFFFF6B6B)
+        isVideoOnly -> Color(0xFFFF6B6B)
+        isPlaylist -> Color(0xFFFF6B6B)
         isNotes -> Color(0xFF58D6D1)
         isPyq -> Color(0xFFFFB45C)
         isAssignment -> Color(0xFF7AD7FF)
@@ -716,14 +724,31 @@ fun StudyHubShelfCard(
         else -> Color(0xFFCFD8DC)
     }
 
-    val cardBrush = when {
-        isVideo -> Brush.verticalGradient(listOf(Color(0xFF231A1B), Color(0xFF130E0F)))
-        isNotes -> Brush.verticalGradient(listOf(Color(0xFF13201F), Color(0xFF0C1312)))
-        isPyq -> Brush.verticalGradient(listOf(Color(0xFF241C15), Color(0xFF16110D)))
-        isCheatSheet -> Brush.verticalGradient(listOf(Color(0xFF1E1724), Color(0xFF120E16)))
-        isAssignment -> Brush.verticalGradient(listOf(Color(0xFF141F23), Color(0xFF0C1316)))
-        else -> Brush.verticalGradient(listOf(Color(0xFF1D2124), Color(0xFF111315)))
+    val gradientColors = when {
+        isVideoOnly -> listOf(Color(0x9F2D191B), Color(0xFF1A0E10))
+        isPlaylist -> listOf(Color(0x9F2D191B), Color(0xFF1A0E10))
+        isNotes -> listOf(Color(0xFF13201F), Color(0xFF0C1312))
+        isPyq -> listOf(Color(0xFF241C15), Color(0xFF16110D))
+        isCheatSheet -> listOf(Color(0xFF1E1724), Color(0xFF120E16))
+        isAssignment -> listOf(Color(0xFF141F23), Color(0xFF0C1316))
+        else -> listOf(Color(0xFF1D2124), Color(0xFF111315))
     }
+
+    return StudyResourceTheme(docTypeStr, accentColor, gradientColors)
+}
+
+@Composable
+fun StudyHubShelfCard(
+    file: StudyFile,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val theme = getStudyResourceTheme(file.documentType ?: file.fileType.label)
+    val docTypeStr = theme.docTypeStr
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
+    val isVideoOnly = docTypeStr == "Video"
+    val isPlaylist = docTypeStr == "Playlist"
 
     Card(
         modifier = modifier
@@ -750,8 +775,16 @@ fun StudyHubShelfCard(
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
-                var hasImageLoaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-                var imageLoadError by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                var hasImageLoaded by androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf(
+                        false
+                    )
+                }
+                var imageLoadError by androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf(
+                        false
+                    )
+                }
 
                 if (!file.thumbnailUrl.isNullOrBlank()) {
                     AsyncImage(
@@ -764,9 +797,37 @@ fun StudyHubShelfCard(
                     )
                 }
 
-                val showFallback = (file.thumbnailUrl.isNullOrBlank() || imageLoadError) && !hasImageLoaded
+                val showFallback =
+                    (file.thumbnailUrl.isNullOrBlank() || imageLoadError) && !hasImageLoaded
                 if (showFallback) {
-                    DocumentPlaceholder(documentType = docTypeStr, modifier = Modifier.fillMaxSize())
+                    DocumentPlaceholder(
+                        documentType = docTypeStr,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (isVideoOnly || isPlaylist) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.4f),
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (isVideoOnly) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.List,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -883,3 +944,4 @@ fun StudyHubShelfCard(
         }
     }
 }
+

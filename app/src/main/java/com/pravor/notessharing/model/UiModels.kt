@@ -29,6 +29,7 @@ data class FeedItem(
     val type: String? = null,
     val subject: String? = null,
     val examYear: String? = null,
+    val examType: String? = null,
     val section: String? = null,
     val sectionDisplay: String? = null,
     val youtubeThumbnailUrl: String? = null
@@ -46,6 +47,7 @@ data class StudyFile(
     val subject: String? = null,
     val documentType: String? = null,
     val examYear: String? = null,
+    val examType: String? = null,
     val sectionDisplay: String? = null
 )
 

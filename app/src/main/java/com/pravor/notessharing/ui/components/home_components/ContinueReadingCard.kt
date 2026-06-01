@@ -303,15 +303,6 @@ fun ContinueReadingCard(
         else -> Icons.Default.FilePresent
     }
 
-    val accentColor = when {
-        isVideo -> Color(0xFFFF6B6B)
-        isNotes -> Color(0xFF58D6D1)
-        isPyq -> Color(0xFFFFB45C)
-        isAssignment -> Color(0xFF7AD7FF)
-        isCheatSheet -> Color(0xFFC7A6FF)
-        else -> Color(0xFFCFD8DC) // Soft platinum/slate metallic neutral tone
-    }
-
     val isYouTubePlaylist = isVideo && (
         item.youtubeVideoId.isNullOrBlank() ||
         (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
@@ -326,6 +317,9 @@ fun ContinueReadingCard(
         isCheatSheet -> "Cheat Sheet"
         else -> "PDF"
     }
+
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(badgeText)
+    val accentColor = theme.accentColor
 
     val actionText = if (isVideo) "Continue Watching" else "Continue Reading"
     val lastOpenedText = formatRelativeTime(item.uploadDate, isVideo = isVideo)
@@ -346,53 +340,13 @@ fun ContinueReadingCard(
         }
     }
     
-    val cardBrush = if (isVideo) {
-        Brush.linearGradient(
-            colors = listOf(
-                Color(0xFF261D1E),
-                Color(0xFF171213),
-                accentColor.copy(alpha = 0.18f)
-            )
+    val cardBrush = Brush.linearGradient(
+        colors = listOf(
+            theme.gradientColors[0],
+            theme.gradientColors[1],
+            accentColor.copy(alpha = if (badgeText == "PDF") 0.22f else 0.18f)
         )
-    } else {
-        when {
-            isNotes -> Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF182625),
-                    Color(0xFF101717),
-                    accentColor.copy(alpha = 0.18f)
-                )
-            )
-            isPyq -> Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF28211A),
-                    Color(0xFF191410),
-                    accentColor.copy(alpha = 0.18f)
-                )
-            )
-            isCheatSheet -> Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF211B28),
-                    Color(0xFF151119),
-                    accentColor.copy(alpha = 0.18f)
-                )
-            )
-            isAssignment -> Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF172328),
-                    Color(0xFF0F161A),
-                    accentColor.copy(alpha = 0.18f)
-                )
-            )
-            else -> Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF23272A),
-                    Color(0xFF141618),
-                    accentColor.copy(alpha = 0.22f)
-                )
-            )
-        }
-    }
+    )
     
     val cardHeight = 148.dp
     val cardPadding = 12.dp

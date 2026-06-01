@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.model.DiscoverFeedItem
 import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.model.VideoRecommendation
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
@@ -48,6 +49,7 @@ fun ExploreSuccessContent(
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
+    onVideoBookmarkClick: (VideoRecommendation) -> Unit = {},
     onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> }
 ) {
     val bottomPadding = LocalBottomBarPadding.current
@@ -150,11 +152,15 @@ fun ExploreSuccessContent(
                     val onUpvoteClickRemembered = remember(video.id, video.documentType, video.upvotes) {
                         { onUpvoteClick(video.id, video.documentType, video.upvotes) }
                     }
+                    val onBookmarkClickRemembered = remember(video.id) {
+                        { onVideoBookmarkClick(video) }
+                    }
                     VideoRecommendationCard(
                         video = video,
                         isUpvoted = video.isUpvoted,
                         onClick = onClickRemembered,
-                        onUpvoteClick = onUpvoteClickRemembered
+                        onUpvoteClick = onUpvoteClickRemembered,
+                        onBookmarkClick = onBookmarkClickRemembered
                     )
                 }
                 if (content.videoRecommendations.size > visibleRecommendedVideos.size) {

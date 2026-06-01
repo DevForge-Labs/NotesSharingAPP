@@ -22,6 +22,10 @@ import com.pravor.notessharing.ui.components.explore_components.VideoRecommendat
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.pravor.notessharing.model.VideoRecommendation
 
 @Composable
 fun RecommendedVideosRoute(
@@ -30,7 +34,52 @@ fun RecommendedVideosRoute(
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    RecommendedVideosScreen(uiState = uiState, onBackClick = onBackClick, onVideoClick = onVideoClick)
+
+    var pendingRemoveBookmarkVideo by remember { mutableStateOf<VideoRecommendation?>(null) }
+
+    val onBookmarkClickRemembered = remember(viewModel) {
+        { video: VideoRecommendation ->
+            if (video.isBookmarked) {
+                pendingRemoveBookmarkVideo = video
+            } else {
+                viewModel.toggleVideoBookmark(video)
+            }
+        }
+    }
+
+    RecommendedVideosScreen(
+        uiState = uiState,
+        onBackClick = onBackClick,
+        onVideoClick = onVideoClick,
+        onBookmarkClick = onBookmarkClickRemembered
+    )
+
+    if (pendingRemoveBookmarkVideo != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemoveBookmarkVideo = null },
+            title = { Text(text = "Remove this bookmark?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val video = pendingRemoveBookmarkVideo
+                        if (video != null) {
+                            viewModel.toggleVideoBookmark(video)
+                        }
+                        pendingRemoveBookmarkVideo = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingRemoveBookmarkVideo = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,7 +87,8 @@ fun RecommendedVideosRoute(
 fun RecommendedVideosScreen(
     uiState: ExploreUiState,
     onBackClick: () -> Unit,
-    onVideoClick: (String) -> Unit
+    onVideoClick: (String) -> Unit,
+    onBookmarkClick: (VideoRecommendation) -> Unit = {}
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     Scaffold(
@@ -93,8 +143,13 @@ fun RecommendedVideosScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             itemsIndexed(videos, key = { index, video -> video.id.ifBlank { "video_$index" } }, contentType = { _, _ -> "video" }) { _, video ->
+                                val onBookmarkClickRemembered = remember(video.id) {
+                                    { onBookmarkClick(video) }
+                                }
                                 VideoRecommendationCard(
                                     video = video,
+                                    isUpvoted = video.isUpvoted,
+                                    onBookmarkClick = onBookmarkClickRemembered,
                                     onClick = { onVideoClick(video.id) }
                                 )
                             }

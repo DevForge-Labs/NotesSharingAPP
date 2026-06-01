@@ -130,13 +130,6 @@ fun SingleImagePreviewCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // GlassIconButton is shared via same package and defined in AttachmentPreviewCard.kt
-                GlassIconButton(
-                    icon = Icons.Default.Download,
-                    contentDescription = "Download Attachment",
-                    onClick = onDownloadClick
-                )
-                Spacer(modifier = Modifier.width(10.dp))
                 GlassIconButton(
                     icon = Icons.Default.Share,
                     contentDescription = "Share Attachment",

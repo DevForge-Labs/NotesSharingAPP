@@ -38,11 +38,24 @@ fun AttachmentPreviewCard(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailUrl: String? = null,
-    documentType: String? = null
+    documentType: String? = null,
+    examYear: String? = null,
+    examType: String? = null,
+    isSingleAttachment: Boolean = false
 ) {
     val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
+    val isPyq = documentType?.lowercase(java.util.Locale.ROOT)?.contains("pyq") == true
     
-    val fileName = getFileName(url)
+    val fileName = if (isPyq && !examYear.isNullOrBlank() && !examType.isNullOrBlank()) {
+        val normalizedExamType = when {
+            examType.trim().lowercase(java.util.Locale.ROOT).contains("mid") -> "MidSem"
+            examType.trim().lowercase(java.util.Locale.ROOT).contains("end") -> "EndSem"
+            else -> examType.trim().replace(" ", "")
+        }
+        "${examYear.trim()}.$normalizedExamType.pdf"
+    } else {
+        getFileName(url)
+    }
     val fileType = if (isPdf) "PDF Document" else "Document File"
 
     Card(
@@ -51,100 +64,205 @@ fun AttachmentPreviewCard(
         border = BorderStroke(1.dp, Color(0xFFFFB74D).copy(alpha = 0.25f)), // Soft glowing amber border accent
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF161925), // Deep navy-indigo tinted dark surface
-                            Color(0xFF0E1017)
-                        )
-                    )
-                )
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 1. LEFT SIDE: Large Thumbnail Card
+        if (isSingleAttachment) {
             Box(
                 modifier = Modifier
-                    .size(110.dp)
-                    .clip(RoundedCornerShape(16.dp))
-            ) {
-                var isImageLoaded by remember { mutableStateOf(false) }
-                var hasError by remember { mutableStateOf(false) }
-
-                if (!thumbnailUrl.isNullOrBlank() && !hasError) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(thumbnailUrl)
-                            .crossfade(true)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = fileName,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        onSuccess = { isImageLoaded = true },
-                        onError = { hasError = true }
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF161925), // Deep navy-indigo tinted dark surface
+                                Color(0xFF0E1017)
+                            )
+                        )
                     )
-                    
-                    if (!isImageLoaded && !hasError) {
-                        ShimmerPlaceholder()
+                    .fillMaxWidth()
+                    .height(340.dp)
+            ) {
+                // 1. Full-bleed background thumbnail (using "cover" style fit with top alignment)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    var isImageLoaded by remember { mutableStateOf(false) }
+                    var hasError by remember { mutableStateOf(false) }
+
+                    if (!thumbnailUrl.isNullOrBlank() && !hasError) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(thumbnailUrl)
+                                .crossfade(true)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .build(),
+                            contentDescription = fileName,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop, // "cover" style fit
+                            alignment = Alignment.TopCenter, // bias crop to the top
+                            onSuccess = { isImageLoaded = true },
+                            onError = { hasError = true }
+                        )
+                        
+                        if (!isImageLoaded && !hasError) {
+                            ShimmerPlaceholder()
+                        }
+                    }
+
+                    if (thumbnailUrl.isNullOrBlank() || hasError) {
+                        DocumentPlaceholder(
+                            documentType = documentType ?: "Notes",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
 
-                if (thumbnailUrl.isNullOrBlank() || hasError) {
-                    DocumentPlaceholder(
-                        documentType = documentType ?: "Notes",
-                        modifier = Modifier.fillMaxSize()
+                // 2. Share button floating at the top-right
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    GlassIconButton(
+                        icon = Icons.Default.Share,
+                        contentDescription = "Share Attachment",
+                        onClick = onShareClick
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.width(16.dp))
+                // 3. Subtle dark gradient overlay at the bottom of the card
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.45f)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.5f),
+                                    Color.Black.copy(alpha = 0.9f)
+                                )
+                            )
+                        )
+                )
 
-            // 2. RIGHT SIDE: Info Column + Actions
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(110.dp), // Align height with the left thumbnail
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
+                // 4. Filename + info overlaid at the bottom
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text(
                         text = fileName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "$fileType • ${formatFileSize(fileSize)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Medium
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF161925), // Deep navy-indigo tinted dark surface
+                                Color(0xFF0E1017)
+                            )
+                        )
+                    )
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1. LEFT SIDE: Large Thumbnail Card
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(RoundedCornerShape(16.dp))
                 ) {
-                    GlassIconButton(
-                        icon = Icons.Default.Download,
-                        contentDescription = "Download Attachment",
-                        onClick = onDownloadClick
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    GlassIconButton(
-                        icon = Icons.Default.Share,
-                        contentDescription = "Share Attachment",
-                        onClick = onShareClick
-                    )
+                    var isImageLoaded by remember { mutableStateOf(false) }
+                    var hasError by remember { mutableStateOf(false) }
+
+                    if (!thumbnailUrl.isNullOrBlank() && !hasError) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(thumbnailUrl)
+                                .crossfade(true)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .build(),
+                            contentDescription = fileName,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            onSuccess = { isImageLoaded = true },
+                            onError = { hasError = true }
+                        )
+                        
+                        if (!isImageLoaded && !hasError) {
+                            ShimmerPlaceholder()
+                        }
+                    }
+
+                    if (thumbnailUrl.isNullOrBlank() || hasError) {
+                        DocumentPlaceholder(
+                            documentType = documentType ?: "Notes",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // 2. RIGHT SIDE: Info Column + Actions
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(110.dp), // Align height with the left thumbnail
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = fileName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "$fileType • ${formatFileSize(fileSize)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        GlassIconButton(
+                            icon = Icons.Default.Share,
+                            contentDescription = "Share Attachment",
+                            onClick = onShareClick
+                        )
+                    }
                 }
             }
         }

@@ -2,12 +2,14 @@ package com.pravor.notessharing.ui.components.explore_components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ThumbUp
@@ -38,11 +40,23 @@ fun VideoRecommendationCard(
     video: VideoRecommendation,
     isUpvoted: Boolean = false,
     onUpvoteClick: () -> Unit = {},
+    onBookmarkClick: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
+    val isYouTubePlaylist = video.youtubeVideoId.isBlank() || 
+        (video.youtubeUrl.isNotBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(video.youtubeUrl) != null)
+    val fileTypeLabel = if (isYouTubePlaylist) "Playlist" else "Video"
+
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(fileTypeLabel)
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
+
     PressScaleSurface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)), RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
+        brush = cardBrush,
         onClick = onClick
     ) {
         Row(
@@ -136,9 +150,6 @@ fun VideoRecommendationCard(
                 )
 
                 // Row 1: Resource Type & Semester
-                val isYouTubePlaylist = video.youtubeVideoId.isBlank() || 
-                    (video.youtubeUrl.isNotBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(video.youtubeUrl) != null)
-                val fileTypeLabel = if (isYouTubePlaylist) "Playlist" else "Video"
                 val semesterText = remember(video.semester) { video.semester.replace("Semester ", "Sem ") }
 
                 Row(
@@ -148,13 +159,14 @@ fun VideoRecommendationCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        color = accentColor.copy(alpha = 0.08f),
+                        border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f)),
                         modifier = Modifier.wrapContentWidth()
                     ) {
                         Text(
                             text = fileTypeLabel,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            color = accentColor,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
@@ -205,10 +217,18 @@ fun VideoRecommendationCard(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        StatItem(
-                            icon = Icons.Default.Bookmark,
-                            value = video.bookmarks.toString()
-                        )
+                        Row(
+                            modifier = Modifier.clickable { onBookmarkClick() },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (video.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                modifier = Modifier.size(17.dp),
+                                tint = if (video.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
