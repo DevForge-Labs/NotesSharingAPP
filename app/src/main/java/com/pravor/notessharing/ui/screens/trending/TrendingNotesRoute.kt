@@ -5,6 +5,14 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.pravor.notessharing.model.TrendingNote
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+
 @Composable
 fun TrendingNotesRoute(
     onBackClick: () -> Unit,
@@ -15,6 +23,8 @@ fun TrendingNotesRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
 
+    var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
+
     TrendingNotesScreen(
         uiState = uiState,
         isRefreshing = isRefreshing,
@@ -23,6 +33,40 @@ fun TrendingNotesRoute(
         onDocumentClick = onDocumentClick,
         onRefresh = { viewModel.refresh() },
         onLoadMore = { viewModel.loadMore() },
-        onBookmarkClick = { viewModel.toggleBookmark(it) }
+        onBookmarkClick = { note ->
+            if (note.isBookmarked) {
+                pendingRemoveBookmarkNote = note
+            } else {
+                viewModel.toggleBookmark(note)
+            }
+        }
     )
+
+    if (pendingRemoveBookmarkNote != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemoveBookmarkNote = null },
+            title = { Text(text = "Remove this bookmark?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val note = pendingRemoveBookmarkNote
+                        if (note != null) {
+                            viewModel.toggleBookmark(note)
+                        }
+                        pendingRemoveBookmarkNote = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingRemoveBookmarkNote = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
+

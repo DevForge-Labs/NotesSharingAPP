@@ -28,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.model.DiscoverFeedItem
@@ -85,10 +86,16 @@ fun ExploreSuccessContent(
                         key = { index, note -> note.id.ifBlank { "trending_note_$index" } },
                         contentType = { _, _ -> "trending-note" }
                     ) { _, note ->
+                        val onBookmarkClickRemembered = remember(note.id) {
+                            { onBookmarkClick(note) }
+                        }
+                        val onClickRemembered = remember(note.id) {
+                            { onDocumentClick(note.id) }
+                        }
                         TrendingNoteCard(
                             note = note,
-                            onBookmarkClick = { onBookmarkClick(note) },
-                            onClick = { onDocumentClick(note.id) }
+                            onBookmarkClick = onBookmarkClickRemembered,
+                            onClick = onClickRemembered
                         )
                     }
                 }
@@ -132,9 +139,12 @@ fun ExploreSuccessContent(
                     key = { index, video -> video.id.ifBlank { "video_$index" } },
                     contentType = { _, _ -> "video" }
                 ) { _, video ->
+                    val onClickRemembered = remember(video.id) {
+                        { onVideoClick(video.id) }
+                    }
                     VideoRecommendationCard(
                         video = video,
-                        onClick = { onVideoClick(video.id) }
+                        onClick = onClickRemembered
                     )
                 }
                 if (content.videoRecommendations.size > visibleRecommendedVideos.size) {
@@ -191,15 +201,18 @@ fun ExploreSuccessContent(
                     }
                 }
             ) { _, item ->
-                DiscoverFeedItem(
-                    item = item,
-                    onClick = {
+                val onClickRemembered = remember(item.id) {
+                    {
                         if (item is DiscoverFeedItem.Video) {
                             onVideoClick(item.id)
                         } else {
                             onDocumentClick(item.id)
                         }
                     }
+                }
+                DiscoverFeedItem(
+                    item = item,
+                    onClick = onClickRemembered
                 )
             }
             if (content.discoverItems.size > visibleDiscoverItems.size) {

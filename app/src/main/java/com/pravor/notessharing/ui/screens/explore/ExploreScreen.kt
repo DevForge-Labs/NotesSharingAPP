@@ -30,6 +30,9 @@ import com.pravor.notessharing.ui.components.explore_components.ExploreSuccessCo
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 import com.pravor.notessharing.model.TrendingNote
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+
 @Composable
 fun ExploreRoute(
     onTrendingSeeMoreClick: () -> Unit,
@@ -41,18 +44,63 @@ fun ExploreRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+
+    var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
+
+    val onBookmarkClickRemembered = remember(viewModel) {
+        { note: TrendingNote ->
+            if (note.isBookmarked) {
+                pendingRemoveBookmarkNote = note
+            } else {
+                viewModel.toggleBookmark(note)
+            }
+        }
+    }
+
+    val onRefreshRemembered = remember(viewModel) {
+        { viewModel.loadRealDocuments(isPullToRefresh = true) }
+    }
+
     ExploreScreen(
         uiState = uiState,
         isRefreshing = isRefreshing,
-        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
+        onRefresh = onRefreshRemembered,
         onTrendingSeeMoreClick = onTrendingSeeMoreClick,
         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick,
-        onBookmarkClick = { viewModel.toggleBookmark(it) }
+        onBookmarkClick = onBookmarkClickRemembered
     )
+
+    if (pendingRemoveBookmarkNote != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemoveBookmarkNote = null },
+            title = { Text(text = "Remove this bookmark?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val note = pendingRemoveBookmarkNote
+                        if (note != null) {
+                            viewModel.toggleBookmark(note)
+                        }
+                        pendingRemoveBookmarkNote = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingRemoveBookmarkNote = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,21 +131,35 @@ fun ExploreScreen(
             state = pullToRefreshState,
             modifier = Modifier.fillMaxSize()
         ) {
-            Crossfade(targetState = uiState, label = "explore-state", modifier = Modifier.fillMaxSize()) { state ->
-                when (state) {
-                    ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
-                    ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
-                    is ExploreUiState.Error -> StatePanel("Explore failed", state.message, modifier = Modifier.padding(top = 96.dp))
-                    is ExploreUiState.Success -> ExploreSuccessContent(
-                        content = state.content,
-                        listState = listState,
-                        onTrendingSeeMoreClick = onTrendingSeeMoreClick,
-                        onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
-                        onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
-                        onDocumentClick = onDocumentClick,
-                        onVideoClick = onVideoClick,
-                        onBookmarkClick = onBookmarkClick
-                    )
+            val stateType = when (uiState) {
+                ExploreUiState.Loading -> "loading"
+                ExploreUiState.Empty -> "empty"
+                is ExploreUiState.Error -> "error"
+                is ExploreUiState.Success -> "success"
+            }
+            Crossfade(targetState = stateType, label = "explore-state", modifier = Modifier.fillMaxSize()) { type ->
+                when (type) {
+                    "loading" -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
+                    "empty" -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
+                    "error" -> {
+                        val errorState = uiState as? ExploreUiState.Error
+                        StatePanel("Explore failed", errorState?.message ?: "", modifier = Modifier.padding(top = 96.dp))
+                    }
+                    "success" -> {
+                        val successState = uiState as? ExploreUiState.Success
+                        if (successState != null) {
+                            ExploreSuccessContent(
+                                content = successState.content,
+                                listState = listState,
+                                onTrendingSeeMoreClick = onTrendingSeeMoreClick,
+                                onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
+                                onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
+                                onDocumentClick = onDocumentClick,
+                                onVideoClick = onVideoClick,
+                                onBookmarkClick = onBookmarkClick
+                            )
+                        }
+                    }
                 }
             }
 

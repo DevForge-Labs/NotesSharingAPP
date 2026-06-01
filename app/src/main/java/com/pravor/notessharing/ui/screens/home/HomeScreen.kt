@@ -116,6 +116,8 @@ fun HomeScreen(
     val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
 
+    var pendingRemoveBookmarkId by remember { mutableStateOf<String?>(null) }
+
     val feedListState = rememberLazyListState()
     val stateKey = when (uiState) {
         HomeUiState.Loading -> "loading"
@@ -153,13 +155,12 @@ fun HomeScreen(
                     onBookmarkClick = { itemId ->
                         val isCurrentlySaved = state.content.feedItems.find { it.id == itemId }?.isSaved == true
                         if (isCurrentlySaved) {
-                            toastMessage = "Removed from bookmarks"
-                            toastIcon = Icons.Default.BookmarkBorder
+                            pendingRemoveBookmarkId = itemId
                         } else {
                             toastMessage = "Saved to bookmarks"
                             toastIcon = Icons.Default.Bookmark
+                            onBookmarkClick(itemId)
                         }
-                        onBookmarkClick(itemId)
                     },
                     onMyUploadsClick = onMyUploadsClick,
                     onMyBookmarksClick = onMyBookmarksClick,
@@ -253,6 +254,35 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        if (pendingRemoveBookmarkId != null) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { pendingRemoveBookmarkId = null },
+                title = { Text(text = "Remove this bookmark?") },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            val itemId = pendingRemoveBookmarkId
+                            if (itemId != null) {
+                                toastMessage = "Removed from bookmarks"
+                                toastIcon = Icons.Default.BookmarkBorder
+                                onBookmarkClick(itemId)
+                            }
+                            pendingRemoveBookmarkId = null
+                        }
+                    ) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { pendingRemoveBookmarkId = null }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
