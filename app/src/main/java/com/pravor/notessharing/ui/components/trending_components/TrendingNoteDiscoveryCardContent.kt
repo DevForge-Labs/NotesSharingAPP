@@ -56,6 +56,8 @@ fun TrendingNoteDiscoveryCardContent(
     isBookmarked: Boolean,
     onBookmarkClick: () -> Unit,
     onClick: () -> Unit,
+    isUpvoted: Boolean = false,
+    onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -153,7 +155,9 @@ fun TrendingNoteDiscoveryCardContent(
                         upvotes = doc.upvotes,
                         bookmarks = doc.bookmarks,
                         isBookmarked = isBookmarked,
-                        onBookmarkClick = onBookmarkClick
+                        onBookmarkClick = onBookmarkClick,
+                        isUpvoted = isUpvoted,
+                        onUpvoteClick = onUpvoteClick
                     )
                 }
             }
@@ -167,6 +171,8 @@ fun TrendingNoteDiscoveryCardContentFromNote(
     isBookmarked: Boolean,
     onBookmarkClick: () -> Unit,
     onClick: () -> Unit,
+    isUpvoted: Boolean = false,
+    onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -251,7 +257,9 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                         upvotes = note.upvotes,
                         bookmarks = note.bookmarks,
                         isBookmarked = isBookmarked,
-                        onBookmarkClick = onBookmarkClick
+                        onBookmarkClick = onBookmarkClick,
+                        isUpvoted = isUpvoted,
+                        onUpvoteClick = onUpvoteClick
                     )
                 }
             }
@@ -265,6 +273,8 @@ fun TrendingNoteDiscoveryCardContentFallback(
     isBookmarked: Boolean,
     onBookmarkClick: () -> Unit,
     onClick: () -> Unit,
+    isUpvoted: Boolean = false,
+    onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -328,7 +338,9 @@ fun TrendingNoteDiscoveryCardContentFallback(
                         upvotes = note.upvotes,
                         bookmarks = note.bookmarks,
                         isBookmarked = isBookmarked,
-                        onBookmarkClick = onBookmarkClick
+                        onBookmarkClick = onBookmarkClick,
+                        isUpvoted = isUpvoted,
+                        onUpvoteClick = onUpvoteClick
                     )
                 }
             }

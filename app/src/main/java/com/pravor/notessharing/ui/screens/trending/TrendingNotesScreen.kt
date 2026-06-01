@@ -15,6 +15,7 @@ fun TrendingNotesScreen(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
+    onUpvoteClick: (TrendingNote) -> Unit,
     modifier: Modifier = Modifier
 ) {
     TrendingNotesContent(
@@ -26,6 +27,7 @@ fun TrendingNotesScreen(
         onRefresh = onRefresh,
         onLoadMore = onLoadMore,
         onBookmarkClick = onBookmarkClick,
+        onUpvoteClick = onUpvoteClick,
         modifier = modifier
     )
 }

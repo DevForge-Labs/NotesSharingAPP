@@ -328,7 +328,15 @@ private fun ActionIconButton(
 ) {
     val scale by animateFloatAsState(if (selected) 1.06f else 1f, label = "home-feed-action-scale")
     val tint by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (selected) {
+            if (selectedIcon == Icons.Filled.ThumbUp || selectedIcon == Icons.Default.ThumbUp) {
+                Color(0xFFFFB74D)
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
         label = "home-feed-action-tint"
     )
 
@@ -374,6 +382,7 @@ fun ForYouGridCard(
     item: FeedItem,
     onClick: () -> Unit,
     onBookmarkClick: () -> Unit,
+    onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isVideo = item.fileType == FileType.Video
@@ -703,18 +712,20 @@ fun ForYouGridCard(
                      // upvotes metric
                      Row(
                          verticalAlignment = Alignment.CenterVertically,
-                         horizontalArrangement = Arrangement.spacedBy(4.dp)
+                         horizontalArrangement = Arrangement.spacedBy(4.dp),
+                         modifier = Modifier.clickable { onUpvoteClick() }
                      ) {
+                         val upvoteTint = if (item.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
                          Icon(
-                             imageVector = Icons.Default.ThumbUp,
-                             contentDescription = null,
-                             tint = Color(0xFFFFB74D),
+                             imageVector = if (item.isUpvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                             contentDescription = "Upvote",
+                             tint = upvoteTint,
                              modifier = Modifier.size(16.dp)
                          )
                          Text(
                              text = item.upvotes.toString(),
                              style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                             color = Color(0xFFFFB74D).copy(alpha = 0.9f),
+                             color = upvoteTint.copy(alpha = 0.9f),
                              fontWeight = FontWeight.Medium
                          )
                      }

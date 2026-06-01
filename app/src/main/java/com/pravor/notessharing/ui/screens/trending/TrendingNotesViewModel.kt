@@ -17,15 +17,24 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
     val isLoadingMore: StateFlow<Boolean> = repository.isLoadingMore
 
     private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
 
     val uiState: StateFlow<TrendingNotesUiState> = combine(
         repository.trendingNotes,
         com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow,
+        com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
+        com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow,
         repository.isRefreshing
-    ) { notes, bookmarks, refreshing ->
+    ) { notes, bookmarks, upvotesMap, upvoteCountsMap, refreshing ->
         val bookmarkedIds = bookmarks.map { it.id }.toSet()
         val updatedNotes = notes.map { note ->
-            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+            val isUpvoted = upvotesMap[note.id] ?: false
+            val count = upvoteCountsMap[note.id] ?: note.upvotes
+            note.copy(
+                isBookmarked = bookmarkedIds.contains(note.id),
+                isUpvoted = isUpvoted,
+                upvotes = count
+            )
         }
         if (updatedNotes.isEmpty() && refreshing) {
             TrendingNotesUiState.Loading
@@ -39,8 +48,16 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = if (repository.trendingNotes.value.isNotEmpty()) {
             val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+            val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
+            val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
             val updated = repository.trendingNotes.value.map { note ->
-                note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                val isUpvoted = upvotesMap[note.id] ?: false
+                val count = upvoteCountsMap[note.id] ?: note.upvotes
+                note.copy(
+                    isBookmarked = bookmarkedIds.contains(note.id),
+                    isUpvoted = isUpvoted,
+                    upvotes = count
+                )
             }
             TrendingNotesUiState.Success(updated)
         } else {
@@ -53,6 +70,18 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         if (currentUid != null) {
             viewModelScope.launch {
                 bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
+            }
+        }
+        viewModelScope.launch {
+            uiState.collect { state ->
+                if (state is TrendingNotesUiState.Success) {
+                    val paths = state.trendingNotes.map { note ->
+                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
+                        note.id to col
+                    }
+                    upvoteRepository.observeVisibleDocuments("TrendingNotes", paths)
+                }
             }
         }
         // Background refresh on start (Stale-While-Revalidate)
@@ -103,5 +132,32 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                 bookmarkRepository.addBookmark(studyFile, currentUid)
             }
         }
+    }
+
+    fun toggleUpvote(note: com.pravor.notessharing.model.TrendingNote) {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val docType = note.documentType.ifBlank { note.type ?: "Notes" }
+        val collection = when (docType.lowercase(java.util.Locale.US)) {
+            "notes", "note" -> "notes"
+            "pyq", "pyqs" -> "pyqs"
+            "assignment", "assignments" -> "assignments"
+            "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
+            "video", "videos", "youtube resource" -> "videos"
+            else -> "documents"
+        }
+
+        viewModelScope.launch {
+            upvoteRepository.toggleUpvote(
+                documentId = note.id,
+                collectionName = collection,
+                currentUpvotes = note.upvotes,
+                userId = currentUid
+            )
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        upvoteRepository.observeVisibleDocuments("TrendingNotes", emptyList())
     }
 }

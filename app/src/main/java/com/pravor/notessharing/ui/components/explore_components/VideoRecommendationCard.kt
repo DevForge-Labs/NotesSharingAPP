@@ -2,6 +2,7 @@ package com.pravor.notessharing.ui.components.explore_components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +36,8 @@ private const val THUMBNAIL_QUALITY_HQ = "hqdefault"
 @Composable
 fun VideoRecommendationCard(
     video: VideoRecommendation,
+    isUpvoted: Boolean = false,
+    onUpvoteClick: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
     PressScaleSurface(
@@ -184,10 +187,24 @@ fun VideoRecommendationCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        StatItem(
-                            icon = Icons.Default.ThumbUp,
-                            value = video.upvotes.toString()
-                        )
+                        Row(
+                            modifier = Modifier.clickable { onUpvoteClick() },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ThumbUp,
+                                contentDescription = "Upvotes",
+                                modifier = Modifier.size(17.dp),
+                                tint = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = video.upvotes.toString(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                         StatItem(
                             icon = Icons.Default.Bookmark,
                             value = video.bookmarks.toString()

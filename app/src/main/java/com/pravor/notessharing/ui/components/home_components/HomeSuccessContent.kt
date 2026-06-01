@@ -180,6 +180,7 @@ fun HomeSuccessContent(
                                     item = feedItem,
                                     onClick = { onDocumentClick(feedItem.id) },
                                     onBookmarkClick = { onBookmarkClick(feedItem.id) },
+                                    onUpvoteClick = { onUpvoteClick(feedItem.id) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }

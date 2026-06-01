@@ -42,6 +42,7 @@ fun TrendingNotesContent(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
+    onUpvoteClick: (TrendingNote) -> Unit,
     modifier: Modifier = Modifier,
     detailRepository: DocumentDetailRepository = remember { DocumentDetailRepository() }
 ) {
@@ -105,7 +106,8 @@ fun TrendingNotesContent(
                                     note = note,
                                     detailRepository = detailRepository,
                                     onClick = { onDocumentClick(note.id) },
-                                    onBookmarkClick = { onBookmarkClick(note) }
+                                    onBookmarkClick = { onBookmarkClick(note) },
+                                    onUpvoteClick = { onUpvoteClick(note) }
                                 )
                             }
 

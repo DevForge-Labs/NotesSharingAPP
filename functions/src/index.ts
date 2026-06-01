@@ -13,9 +13,10 @@ setGlobalOptions({
 
 // 3. Export Firestore triggers
 export * from "./firestoreTriggers.js";
+export * from "./upvote.js";
 
 // 4. Preserve existing test function
 export const helloWorld = onRequest((request, response) => {
   const name = request.query.name || "Student";
-  response.send(`Hello bhai ${name} 😭`);
+  response.send(`Hola Bhai ${name} 😭`);
 });

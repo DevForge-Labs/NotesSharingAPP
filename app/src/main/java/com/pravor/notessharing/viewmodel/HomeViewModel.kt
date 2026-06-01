@@ -41,6 +41,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val userService = com.pravor.notessharing.firebase.FirestoreUserService()
     private var profileJob: kotlinx.coroutines.Job? = null
     private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
 
     private val authListener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
         val uid = firebaseAuth.currentUser?.uid
@@ -68,6 +69,55 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         current
                     }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
+                com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+            ) { upvotesMap, upvoteCountsMap ->
+                Pair(upvotesMap, upvoteCountsMap)
+            }.collect { (upvotesMap, upvoteCountsMap) ->
+                _uiState.update { current ->
+                    if (current is HomeUiState.Success) {
+                        val updatedFeed = current.content.feedItems.map { item ->
+                            val isUpvoted = upvotesMap[item.id] ?: false
+                            val count = upvoteCountsMap[item.id] ?: item.upvotes
+                            item.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        val updatedRecentlyOpened = current.content.recentlyOpened?.let { item ->
+                            val isUpvoted = upvotesMap[item.id] ?: false
+                            val count = upvoteCountsMap[item.id] ?: item.upvotes
+                            item.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        current.copy(content = current.content.copy(
+                            feedItems = updatedFeed,
+                            recentlyOpened = updatedRecentlyOpened
+                        ))
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            _uiState.collect { state ->
+                if (state is HomeUiState.Success) {
+                    val feedItems = state.content.feedItems
+                    val recentlyOpened = state.content.recentlyOpened
+                    val paths = mutableListOf<Pair<String, String>>()
+                    for (item in feedItems) {
+                        val col = upvoteRepository.getCollectionForDocType(item.documentType ?: item.fileType.label)
+                        paths.add(item.id to col)
+                    }
+                    if (recentlyOpened != null) {
+                        val col = upvoteRepository.getCollectionForDocType(recentlyOpened.documentType ?: recentlyOpened.fileType.label)
+                        paths.add(recentlyOpened.id to col)
+                    }
+                    upvoteRepository.observeVisibleDocuments("Home", paths)
                 }
             }
         }
@@ -155,6 +205,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val currentUid = auth.currentUser?.uid
                 if (currentUid != null) {
                     bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                    upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
                 }
                 val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                 
@@ -212,6 +263,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val currentUid = auth.currentUser?.uid
                 if (currentUid != null) {
                     bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                    upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
                 }
                 val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                 
@@ -291,6 +343,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val sectionField = doc["section"] as? String
         val sectionDisplayField = doc["sectionDisplay"] as? String
 
+        val upvotedMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+        val resolvedIsUpvoted = upvotedMap[id] ?: false
+        val resolvedUpvotes = upvoteCountsMap[id] ?: upvotes
+
         return FeedItem(
             id = id,
             uploaderName = uploaderName,
@@ -300,10 +357,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             description = description,
             tags = tags,
             fileType = fileType,
-            upvotes = upvotes,
+            upvotes = resolvedUpvotes,
             comments = 0,
             downloads = downloads,
-            isUpvoted = false,
+            isUpvoted = resolvedIsUpvoted,
             isSaved = false,
             bookmarksCount = bookmarks,
             youtubeVideoId = youtubeVideoId,
@@ -332,11 +389,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleUpvote(itemId: String) {
-        updateFeed(itemId) { item ->
-            val nextUpvoted = !item.isUpvoted
-            item.copy(
-                isUpvoted = nextUpvoted,
-                upvotes = item.upvotes + if (nextUpvoted) 1 else -1
+        val currentUid = auth.currentUser?.uid ?: return
+        val feedItems = (_uiState.value as? HomeUiState.Success)?.content?.feedItems ?: emptyList()
+        val item = feedItems.find { it.id == itemId } ?: (_uiState.value as? HomeUiState.Success)?.content?.recentlyOpened?.takeIf { it.id == itemId } ?: return
+        
+        val collection = when (item.documentType?.lowercase(java.util.Locale.US) ?: item.fileType.label.lowercase(java.util.Locale.US)) {
+            "notes", "note" -> "notes"
+            "pyq", "pyqs" -> "pyqs"
+            "assignment", "assignments" -> "assignments"
+            "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
+            "video", "videos", "youtube resource" -> "videos"
+            else -> "documents"
+        }
+
+        viewModelScope.launch {
+            upvoteRepository.toggleUpvote(
+                documentId = itemId,
+                collectionName = collection,
+                currentUpvotes = item.upvotes,
+                userId = currentUid
             )
         }
     }
@@ -397,5 +468,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
         auth.removeAuthStateListener(authListener)
         profileJob?.cancel()
+        upvoteRepository.observeVisibleDocuments("Home", emptyList())
     }
 }

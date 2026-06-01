@@ -66,7 +66,8 @@ object TrendingPreviewCache {
 fun TrendingNoteCard(
     note: TrendingNote,
     onBookmarkClick: () -> Unit = {},
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onUpvoteClick: () -> Unit = {}
 ) {
     val cached = remember(note.id, note.thumbnailUrl) {
         if (!note.thumbnailUrl.isNullOrBlank()) {
@@ -332,10 +333,15 @@ fun TrendingNoteCard(
             Spacer(Modifier.height(10.dp))
 
             // 5. ACTION BUTTON ROW
+            val buttonColor = if (note.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.primaryContainer
+            val buttonContentColor = if (note.isUpvoted) Color(0xFF141A23) else MaterialTheme.colorScheme.onPrimaryContainer
             Button(
-                onClick = {},
+                onClick = onUpvoteClick,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = buttonColor,
+                    contentColor = buttonContentColor
+                ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(16.dp))
