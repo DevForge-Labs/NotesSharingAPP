@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -55,6 +56,8 @@ fun DocumentDetailRoute(
     documentId: String,
     onBackClick: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToPdfViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
+    onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
     viewModel: DocumentDetailViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -92,7 +95,9 @@ fun DocumentDetailRoute(
         uiState = uiState,
         onBackClick = onBackClick,
         onNavigateToDetail = onNavigateToDetail,
-        onUpvoteClick = viewModel::toggleUpvote
+        onUpvoteClick = viewModel::toggleUpvote,
+        onNavigateToPdfViewer = onNavigateToPdfViewer,
+        onNavigateToImageViewer = onNavigateToImageViewer
     )
 }
 
@@ -102,8 +107,11 @@ fun DocumentDetailScreen(
     uiState: DocumentDetailUiState,
     onBackClick: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
-    onUpvoteClick: (String) -> Unit
+    onUpvoteClick: (String) -> Unit,
+    onNavigateToPdfViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
+    onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit
 ) {
+    android.util.Log.d("DETAILS_DEBUG", "DetailsScreen Composed")
     val context = LocalContext.current
     val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
     val bookmarks by BookmarkRepository.bookmarksFlow.collectAsStateWithLifecycle()
@@ -248,6 +256,23 @@ fun DocumentDetailScreen(
                         onUpvoteClick = onUpvoteClick,
                         onShowRemoveUpvoteDialog = {
                             pendingRemoveUpvoteId = state.document.id
+                        },
+                        onAttachmentClick = { url ->
+                            val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
+                            val isImage = url.contains(".jpg", ignoreCase = true) || url.contains(".jpeg", ignoreCase = true) ||
+                                          url.contains(".png", ignoreCase = true) || url.contains(".webp", ignoreCase = true) ||
+                                          url.contains("unsplash.com", ignoreCase = true)
+
+                            if (isPdf) {
+                                android.util.Log.d("PDF_DEBUG", "Opening PDF")
+                                android.util.Log.d("PDF_DEBUG", "DocumentId=${state.document.id}")
+                                android.util.Log.d("PDF_DEBUG", "FileUrl=$url")
+                                onNavigateToPdfViewer(state.document.id, url, state.document.title)
+                            } else if (isImage) {
+                                onNavigateToImageViewer(state.document.id, url, state.document.title)
+                            } else {
+                                Toast.makeText(context, "Preview not supported yet", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     )
                 }
@@ -321,13 +346,16 @@ fun DocumentDetailSuccessContent(
     onDownloadClick: (String) -> Unit,
     onShareClick: (String) -> Unit,
     onUpvoteClick: (String) -> Unit,
-    onShowRemoveUpvoteDialog: () -> Unit
+    onShowRemoveUpvoteDialog: () -> Unit,
+    onAttachmentClick: (String) -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
     val context = LocalContext.current
+    val listState = rememberLazyListState()
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp + bottomPadding),
         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -338,6 +366,7 @@ fun DocumentDetailSuccessContent(
                 doc = doc,
                 onDownloadClick = onDownloadClick,
                 onShareClick = onShareClick,
+                onAttachmentClick = onAttachmentClick,
                 modifier = Modifier // No horizontal padding here so images scroll edge-to-edge
             )
         }

@@ -2,6 +2,7 @@ package com.pravor.notessharing.ui.screens.document
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,7 @@ fun AttachmentPreviewCard(
     fileSize: Long,
     onDownloadClick: () -> Unit,
     onShareClick: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailUrl: String? = null,
     documentType: String? = null,
@@ -57,9 +59,11 @@ fun AttachmentPreviewCard(
         getFileName(url)
     }
     val fileType = if (isPdf) "PDF Document" else "Document File"
-
+ 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, Color(0xFFFFB74D).copy(alpha = 0.25f)), // Soft glowing amber border accent
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)

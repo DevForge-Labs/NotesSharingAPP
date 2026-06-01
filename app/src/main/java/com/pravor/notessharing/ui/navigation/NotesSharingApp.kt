@@ -41,6 +41,10 @@ import com.pravor.notessharing.ui.screens.auth.SignUpScreen
 import com.pravor.notessharing.auth.AuthViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+object PdfDebugState {
+    var lastOriginalUrl: String = ""
+}
+
 val LocalBottomBarPadding = androidx.compose.runtime.compositionLocalOf { 0.dp }
 
 @SuppressLint("RestrictedApi")
@@ -66,11 +70,15 @@ fun NotesSharingApp(
             currentRoute == AppDestination.Login.route ||
             currentRoute == AppDestination.SignUp.route
 
+    val showBottomBar = !isAuthScreen &&
+            currentRoute?.startsWith("pdf_viewing") != true &&
+            currentRoute?.startsWith("image_viewing") != true
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (!isAuthScreen) {
+            if (showBottomBar) {
                 BottomNavBar(
                     destinations = bottomDestinations,
                     currentRoute = selectedBottomRoute,
@@ -107,9 +115,9 @@ fun NotesSharingApp(
         val bottomPadding = remember(
             innerPadding.calculateBottomPadding(),
             navigationBarsPaddingValues.calculateBottomPadding(),
-            isAuthScreen
+            showBottomBar
         ) {
-            if (isAuthScreen) {
+            if (!showBottomBar) {
                 0.dp
             } else {
                 val totalBottom = innerPadding.calculateBottomPadding()
@@ -344,12 +352,63 @@ fun NotesSharingApp(
                     )
                 ) { backStackEntry ->
                     val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
-                    DocumentDetailRoute(
+                     DocumentDetailRoute(
                         documentId = documentId,
                         onBackClick = { navController.popBackStack() },
                         onNavigateToDetail = { docId ->
                             navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onNavigateToPdfViewer = { docId, fileUrl, title ->
+                            PdfDebugState.lastOriginalUrl = fileUrl
+                            navController.navigate(AppDestination.PdfViewing.createRoute(docId, fileUrl, title))
+                        },
+                        onNavigateToImageViewer = { docId, fileUrl, title ->
+                            navController.navigate(AppDestination.ImageViewing.createRoute(docId, fileUrl, title))
                         }
+                    )
+                }
+                composable(
+                    route = AppDestination.PdfViewing.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("documentId") { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("fileUrl") { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("title") { type = androidx.navigation.NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
+                    val encodedFileUrl = backStackEntry.arguments?.getString("fileUrl") ?: ""
+                    val encodedTitle = backStackEntry.arguments?.getString("title") ?: ""
+                    val fileUrl = android.net.Uri.decode(encodedFileUrl)
+                    val title = android.net.Uri.decode(encodedTitle)
+                    
+                    android.util.Log.d("PDF_DEBUG", "URL_MATCH=${PdfDebugState.lastOriginalUrl == fileUrl}")
+                    
+                    com.pravor.notessharing.ui.screens.documentViewing.PdfViewingScreen(
+                        documentId = documentId,
+                        fileUrl = fileUrl,
+                        title = title,
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+                composable(
+                    route = AppDestination.ImageViewing.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("documentId") { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("fileUrl") { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("title") { type = androidx.navigation.NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
+                    val encodedFileUrl = backStackEntry.arguments?.getString("fileUrl") ?: ""
+                    val encodedTitle = backStackEntry.arguments?.getString("title") ?: ""
+                    val fileUrl = android.net.Uri.decode(encodedFileUrl)
+                    val title = android.net.Uri.decode(encodedTitle)
+
+                    com.pravor.notessharing.ui.screens.documentViewing.ImageViewingScreen(
+                        documentId = documentId,
+                        fileUrl = fileUrl,
+                        title = title,
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
                 composable(
