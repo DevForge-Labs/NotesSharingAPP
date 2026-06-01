@@ -2,6 +2,7 @@ package com.pravor.notessharing.ui.screens.document
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,12 +30,13 @@ fun ImagePreviewCard(
     fileSize: Long,
     onDownloadClick: () -> Unit,
     onShareClick: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val fileName = getFileName(url)
     
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)

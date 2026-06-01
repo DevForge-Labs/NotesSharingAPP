@@ -29,6 +29,10 @@ class DocumentDetailViewModel(
     private val _uiState = MutableStateFlow<DocumentDetailUiState>(DocumentDetailUiState.Loading)
     val uiState: StateFlow<DocumentDetailUiState> = _uiState.asStateFlow()
 
+    init {
+        android.util.Log.d("DETAILS_DEBUG", "DetailsViewModel Created")
+    }
+
     private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
     private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
 
@@ -63,6 +67,13 @@ class DocumentDetailViewModel(
     }
 
     fun loadDocumentDetail(documentId: String) {
+        val currentState = _uiState.value
+        if (currentState is DocumentDetailUiState.Success && currentState.document.id == documentId) {
+            android.util.Log.d("DETAILS_DEBUG", "loadDocumentDetail: Already loaded, skipping fetch")
+            return
+        }
+
+        android.util.Log.d("DETAILS_DEBUG", "Fetching document data")
         _uiState.value = DocumentDetailUiState.Loading
         viewModelScope.launch {
             try {

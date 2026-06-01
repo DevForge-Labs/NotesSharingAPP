@@ -38,6 +38,22 @@ sealed class AppDestination(
     data object VideoDetail : AppDestination("video_detail/{videoId}", "Video Detail", Icons.Filled.Explore) {
         fun createRoute(videoId: String) = "video_detail/$videoId"
     }
+
+    data object PdfViewing : AppDestination("pdf_viewing/{documentId}/{fileUrl}/{title}", "PDF Viewer", Icons.Filled.Explore) {
+        fun createRoute(documentId: String, fileUrl: String, title: String): String {
+            val encodedUrl = android.net.Uri.encode(android.net.Uri.encode(fileUrl))
+            val encodedTitle = android.net.Uri.encode(android.net.Uri.encode(title.ifBlank { "Document" }))
+            return "pdf_viewing/$documentId/$encodedUrl/$encodedTitle"
+        }
+    }
+
+    data object ImageViewing : AppDestination("image_viewing/{documentId}/{fileUrl}/{title}", "Image Viewer", Icons.Filled.Explore) {
+        fun createRoute(documentId: String, fileUrl: String, title: String): String {
+            val encodedUrl = android.net.Uri.encode(android.net.Uri.encode(fileUrl))
+            val encodedTitle = android.net.Uri.encode(android.net.Uri.encode(title.ifBlank { "Image" }))
+            return "image_viewing/$documentId/$encodedUrl/$encodedTitle"
+        }
+    }
 }
 
 val bottomDestinations = listOf(

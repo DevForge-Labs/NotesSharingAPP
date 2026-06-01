@@ -22,6 +22,7 @@ fun AttachmentPreviewSection(
     doc: DocumentDetail,
     onDownloadClick: (String) -> Unit,
     onShareClick: (String) -> Unit,
+    onAttachmentClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val urls = doc.fileUrls
@@ -77,6 +78,7 @@ fun AttachmentPreviewSection(
                         fileSize = doc.fileSize,
                         onDownloadClick = { onDownloadClick(url) },
                         onShareClick = { onShareClick(url) },
+                        onClick = { onAttachmentClick(url) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
@@ -97,6 +99,7 @@ fun AttachmentPreviewSection(
                                 fileSize = indSize,
                                 onDownloadClick = { onDownloadClick(url) },
                                 onShareClick = { onShareClick(url) },
+                                onClick = { onAttachmentClick(url) },
                                 modifier = Modifier
                                     .width(280.dp)
                                     .height(380.dp)
@@ -129,6 +132,7 @@ fun AttachmentPreviewSection(
                             examType = doc.examType,
                             onDownloadClick = { onDownloadClick(url) },
                             onShareClick = { onShareClick(url) },
+                            onClick = { onAttachmentClick(url) },
                             isSingleAttachment = urls.size == 1
                         )
                     }
