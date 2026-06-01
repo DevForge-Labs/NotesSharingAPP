@@ -55,7 +55,15 @@ import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.NotesSearchBar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.StudyHubShelfCard
+import com.pravor.notessharing.ui.components.SectionHeader
+import com.pravor.notessharing.ui.components.explore_components.VideoRecommendationCard
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+import com.pravor.notessharing.model.VideoRecommendation
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,9 +79,56 @@ fun MyBookmarksScreen(
     val scrollState = rememberScrollState()
     val bottomPadding = LocalBottomBarPadding.current
     var selectedFilter by remember { mutableStateOf("All") }
+    var pendingRemoveBookmarkVideo by remember { mutableStateOf<VideoRecommendation?>(null) }
+
+    val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
+    val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
+    val upvoteRepository = remember { com.pravor.notessharing.upvotes.UpvoteRepository() }
+    val scope = rememberCoroutineScope()
+    val currentUid = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid }
+
+    var videoDetailsMap by remember { mutableStateOf<Map<String, com.pravor.notessharing.model.VideoDetail>>(emptyMap()) }
+    val videoRepository = remember { com.pravor.notessharing.data.VideoDetailRepository() }
 
     LaunchedEffect(Unit) {
         viewModel.loadBookmarksForCurrentUser()
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is BookmarkUiState.Success) {
+            val bookmarks = (uiState as BookmarkUiState.Success).bookmarks
+            val paths = bookmarks.map { file ->
+                val col = when (file.documentType?.lowercase(java.util.Locale.ROOT)?.trim()) {
+                    "notes", "note" -> "notes"
+                    "pyq", "pyqs" -> "pyqs"
+                    "assignment", "assignments" -> "assignments"
+                    "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
+                    "video", "videos", "youtube resource" -> "videos"
+                    else -> "documents"
+                }
+                file.id to col
+            }
+            upvoteRepository.observeVisibleDocuments("Bookmarks", paths)
+
+            // Asynchronously fetch video details for all bookmarked videos/playlists
+            val videoBookmarks = bookmarks.filter { it.isVideo() }
+            videoBookmarks.forEach { file ->
+                if (!videoDetailsMap.containsKey(file.id)) {
+                    launch {
+                        val detail = videoRepository.getVideo(file.id)
+                        if (detail != null) {
+                            videoDetailsMap = videoDetailsMap + (file.id to detail)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            upvoteRepository.observeVisibleDocuments("Bookmarks", emptyList())
+        }
     }
 
     Scaffold(
@@ -280,25 +335,42 @@ fun MyBookmarksScreen(
                                     )
                                 } else {
                                     Box(Modifier.fillMaxSize()) {
-                                        LazyColumn(
-                                            state = listState,
-                                            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
-                                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            items(filteredFiles, key = { it.id }) { file ->
-                                                StudyHubShelfCard(
-                                                    file = file,
-                                                    onClick = {
-                                                        if (file.fileType == com.pravor.notessharing.model.FileType.Video) {
-                                                            onVideoClick(file.id)
-                                                        } else {
-                                                            onDocumentClick(file.id)
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
+                                         LazyColumn(
+                                             state = listState,
+                                             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
+                                             verticalArrangement = Arrangement.spacedBy(12.dp),
+                                             modifier = Modifier.fillMaxSize()
+                                         ) {
+                                             items(filteredFiles, key = { it.id }) { file ->
+                                                 val isVideo = file.isVideo()
+                                                 val detail = videoDetailsMap[file.id]
+                                                 val isPlaylist = if (detail != null) {
+                                                     detail.youtubeResourceType == "playlist"
+                                                 } else {
+                                                     (file.documentType ?: "").lowercase(java.util.Locale.ROOT).trim().contains("playlist")
+                                                 }
+                                                 
+                                                 val upvoteCount = upvoteCountsMap[file.id] ?: file.upvotes
+                                                 val fileWithLiveStats = file.copy(
+                                                     upvotes = upvoteCount,
+                                                     documentType = if (isVideo) {
+                                                         if (isPlaylist) "Playlist" else "Video"
+                                                     } else {
+                                                         file.documentType
+                                                     }
+                                                 )
+                                                 StudyHubShelfCard(
+                                                     file = fileWithLiveStats,
+                                                     onClick = {
+                                                         if (isVideo) {
+                                                             onVideoClick(file.id)
+                                                         } else {
+                                                             onDocumentClick(file.id)
+                                                         }
+                                                     }
+                                                 )
+                                             }
+                                         }
                                         AdaptiveScrollbar(listState = listState)
                                     }
                                 }
@@ -308,6 +380,33 @@ fun MyBookmarksScreen(
                 }
             }
         }
+    }
+
+    if (pendingRemoveBookmarkVideo != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemoveBookmarkVideo = null },
+            title = { Text(text = "Remove this bookmark?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val video = pendingRemoveBookmarkVideo
+                        if (video != null) {
+                            viewModel.removeBookmark(video.id)
+                        }
+                        pendingRemoveBookmarkVideo = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingRemoveBookmarkVideo = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -330,4 +429,10 @@ private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String
         "Videos" -> isVideo
         else -> false
     }
+}
+
+private fun com.pravor.notessharing.model.StudyFile.isVideo(): Boolean {
+    val docType = this.documentType ?: this.fileType.label
+    val rawDocType = docType.lowercase(java.util.Locale.ROOT).trim()
+    return this.fileType == com.pravor.notessharing.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
 }

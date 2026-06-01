@@ -1,9 +1,11 @@
 package com.pravor.notessharing.ui.components.explore_components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -12,6 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -19,6 +23,7 @@ fun PressScaleSurface(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape,
     onClick: () -> Unit = {},
+    brush: Brush? = null,
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -34,9 +39,13 @@ fun PressScaleSurface(
                 onClick = onClick
             ),
         shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = if (brush == null) MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,
         tonalElevation = 4.dp,
-        shadowElevation = 6.dp,
-        content = content
-    )
+        shadowElevation = 6.dp
+    ) {
+        val backgroundModifier = if (brush != null) Modifier.background(brush) else Modifier
+        Box(modifier = backgroundModifier) {
+            content()
+        }
+    }
 }

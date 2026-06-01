@@ -111,6 +111,7 @@ class MyFilesViewModel : ViewModel() {
         val thumbnailUrl = doc["thumbnailUrl"] as? String
         val subject = doc["subject"] as? String
         val examYear = doc["examYear"] as? String
+        val examType = doc["examType"] as? String
         val sectionDisplay = doc["sectionDisplay"] as? String ?: doc["section"] as? String
 
         return StudyFile(
@@ -124,6 +125,7 @@ class MyFilesViewModel : ViewModel() {
             subject = subject,
             documentType = docType,
             examYear = examYear,
+            examType = examType,
             sectionDisplay = sectionDisplay
         )
     }

@@ -290,6 +290,84 @@ fun VideoPlaceholder(modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun PlaylistPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFF34495E), Color(0xFF1A252F))
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // Left filmstrip
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(8) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 6.dp, height = 8.dp)
+                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
+                )
+            }
+        }
+        // Right filmstrip
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(8) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 6.dp, height = 8.dp)
+                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
+                )
+            }
+        }
+        // Center Playlist Button
+        Surface(
+            shape = CircleShape,
+            color = Color.White,
+            modifier = Modifier.size(54.dp),
+            shadowElevation = 4.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Box(Modifier.width(20.dp).height(3.dp).background(Color(0xFF1A252F), RoundedCornerShape(1.5.dp)))
+                    Spacer(Modifier.height(3.dp))
+                    Box(Modifier.width(20.dp).height(3.dp).background(Color(0xFF1A252F), RoundedCornerShape(1.5.dp)))
+                    Spacer(Modifier.height(3.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(Modifier.width(10.dp).height(3.dp).background(Color(0xFF1A252F), RoundedCornerShape(1.5.dp)))
+                        Spacer(Modifier.width(2.dp))
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color(0xFF1A252F),
+                            modifier = Modifier.size(10.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun DocumentPlaceholder(
     documentType: String,
     modifier: Modifier = Modifier
@@ -300,7 +378,8 @@ fun DocumentPlaceholder(
         normalized.contains("assignment") -> AssignmentPlaceholder(modifier)
         normalized.contains("pyq") -> PyqPlaceholder(modifier)
         normalized.contains("cheatsheet") -> CheatSheetPlaceholder(modifier)
-        normalized.contains("video") -> VideoPlaceholder(modifier)
+        normalized.contains("playlist") -> PlaylistPlaceholder(modifier)
+        normalized.contains("video") || normalized.contains("youtube") -> VideoPlaceholder(modifier)
         else -> NotesPlaceholder(modifier) // Fallback default
     }
 }

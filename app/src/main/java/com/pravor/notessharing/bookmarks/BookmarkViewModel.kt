@@ -57,4 +57,11 @@ class BookmarkViewModel(
             }
         }
     }
+
+    fun removeBookmark(documentId: String) {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        viewModelScope.launch {
+            repository.removeBookmark(documentId, currentUid)
+        }
+    }
 }

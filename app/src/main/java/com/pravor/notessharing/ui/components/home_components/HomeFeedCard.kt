@@ -444,23 +444,9 @@ fun ForYouGridCard(
         else -> "PDF"
     }
 
-    val accentColor = when {
-        isVideo -> Color(0xFFFF6B6B)
-        isNotes -> Color(0xFF58D6D1)
-        isPyq -> Color(0xFFFFB45C)
-        isAssignment -> Color(0xFF7AD7FF)
-        isCheatSheet -> Color(0xFFC7A6FF)
-        else -> Color(0xFFCFD8DC)
-    }
-
-    val cardBrush = when {
-        isVideo -> Brush.verticalGradient(listOf(Color(0xFF231A1B), Color(0xFF130E0F)))
-        isNotes -> Brush.verticalGradient(listOf(Color(0xFF13201F), Color(0xFF0C1312)))
-        isPyq -> Brush.verticalGradient(listOf(Color(0xFF241C15), Color(0xFF16110D)))
-        isCheatSheet -> Brush.verticalGradient(listOf(Color(0xFF1E1724), Color(0xFF120E16)))
-        isAssignment -> Brush.verticalGradient(listOf(Color(0xFF141F23), Color(0xFF0C1316)))
-        else -> Brush.verticalGradient(listOf(Color(0xFF1D2124), Color(0xFF111315)))
-    }
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(docTypeStr)
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
 
     Card(
         modifier = modifier

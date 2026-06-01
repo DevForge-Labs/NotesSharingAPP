@@ -28,46 +28,69 @@ class DocumentDetailViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<DocumentDetailUiState>(DocumentDetailUiState.Loading)
     val uiState: StateFlow<DocumentDetailUiState> = _uiState.asStateFlow()
-    private var docListener: com.google.firebase.firestore.ListenerRegistration? = null
+
+    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
+    private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+
+    fun toggleUpvote(itemId: String) {
+        val currentUid = auth.currentUser?.uid ?: return
+        val doc = (_uiState.value as? DocumentDetailUiState.Success)?.document ?: return
+        val col = upvoteRepository.getCollectionForDocType(doc.documentType)
+
+        viewModelScope.launch {
+            upvoteRepository.toggleUpvote(
+                documentId = itemId,
+                collectionName = col,
+                currentUpvotes = doc.upvotes,
+                userId = currentUid
+            )
+        }
+    }
+
+    fun observeUpvotes(docId: String, docType: String) {
+        val currentUid = auth.currentUser?.uid
+        viewModelScope.launch {
+            if (currentUid != null) {
+                upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
+            }
+            val col = upvoteRepository.getCollectionForDocType(docType)
+            upvoteRepository.observeVisibleDocuments("DetailsScreen", listOf(docId to col))
+        }
+    }
+
+    fun clearUpvotesObservation() {
+        upvoteRepository.observeVisibleDocuments("DetailsScreen", emptyList())
+    }
 
     fun loadDocumentDetail(documentId: String) {
-        docListener?.remove()
         _uiState.value = DocumentDetailUiState.Loading
         viewModelScope.launch {
             try {
                 val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
                 var targetCol: String? = null
                 val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                var snapshot: com.google.firebase.firestore.DocumentSnapshot? = null
                 for (col in collections) {
                     val snap = firestore.collection(col).document(documentId).get().await()
                     if (snap.exists()) {
                         targetCol = col
+                        snapshot = snap
                         break
                     }
                 }
 
-                if (targetCol != null) {
-                    val docRef = firestore.collection(targetCol).document(documentId)
-                    docListener = docRef.addSnapshotListener { snapshot, error ->
-                        if (error != null) {
-                            _uiState.value = DocumentDetailUiState.Error(error.localizedMessage ?: "Listener failed")
-                            return@addSnapshotListener
-                        }
-                        if (snapshot != null && snapshot.exists()) {
-                            val data = snapshot.data
-                            if (data != null) {
-                                viewModelScope.launch {
-                                    val docDetail = data.toDocumentDetail(documentId)
-                                    val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
-                                    val relatedDocs = repository.getRelatedDocuments(docDetail)
-                                    _uiState.value = DocumentDetailUiState.Success(
-                                        document = docDetail,
-                                        contributorLevel = contributorLevel,
-                                        relatedDocuments = relatedDocs
-                                    )
-                                }
-                            }
-                        }
+                if (targetCol != null && snapshot != null) {
+                    val data = snapshot.data
+                    if (data != null) {
+                        val docDetail = data.toDocumentDetail(documentId)
+                        val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
+                        val relatedDocs = repository.getRelatedDocuments(docDetail)
+                        observeUpvotes(docDetail.id, docDetail.documentType)
+                        _uiState.value = DocumentDetailUiState.Success(
+                            document = docDetail,
+                            contributorLevel = contributorLevel,
+                            relatedDocuments = relatedDocs
+                        )
                     }
                 } else {
                     _uiState.value = DocumentDetailUiState.Error("Document details not found.")
@@ -80,6 +103,6 @@ class DocumentDetailViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        docListener?.remove()
+        clearUpvotesObservation()
     }
 }

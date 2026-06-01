@@ -13,10 +13,19 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material3.*
+import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.bookmarks.BookmarkRepository
+import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,7 +91,8 @@ fun DocumentDetailRoute(
     DocumentDetailScreen(
         uiState = uiState,
         onBackClick = onBackClick,
-        onNavigateToDetail = onNavigateToDetail
+        onNavigateToDetail = onNavigateToDetail,
+        onUpvoteClick = viewModel::toggleUpvote
     )
 }
 
@@ -91,9 +101,26 @@ fun DocumentDetailRoute(
 fun DocumentDetailScreen(
     uiState: DocumentDetailUiState,
     onBackClick: () -> Unit,
-    onNavigateToDetail: (String) -> Unit
+    onNavigateToDetail: (String) -> Unit,
+    onUpvoteClick: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
+    val bookmarks by BookmarkRepository.bookmarksFlow.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var showRemoveBookmarkDialog by remember { mutableStateOf(false) }
+    var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(currentUid) {
+        if (currentUid.isNotEmpty()) {
+            BookmarkRepository().loadInitialBookmarksIfNeeded(currentUid)
+        }
+    }
+
+    val isBookmarked = remember(bookmarks, uiState) {
+        val docId = (uiState as? DocumentDetailUiState.Success)?.document?.id ?: ""
+        docId.isNotEmpty() && bookmarks.any { it.id == docId }
+    }
 
     Scaffold(
         topBar = {
@@ -122,14 +149,45 @@ fun DocumentDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        // TODO: Implement document bookmarking/saving state toggle flow in Firestore
-                        Toast.makeText(
-                            context,
-                            "Bookmark functionality coming soon",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        if (currentUid.isEmpty()) {
+                            Toast.makeText(context, "Please sign in to bookmark documents", Toast.LENGTH_SHORT).show()
+                            return@IconButton
+                        }
+                        val doc = (uiState as? DocumentDetailUiState.Success)?.document
+                        if (doc != null) {
+                            if (isBookmarked) {
+                                showRemoveBookmarkDialog = true
+                            } else {
+                                scope.launch {
+                                    val bookmarkRepository = BookmarkRepository()
+                                    val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.US).replace(" ", "")) {
+                                        "pyq" -> FileType.Pyq
+                                        "cheatsheet", "cheat sheet" -> FileType.CheatSheet
+                                        "assignment" -> FileType.Notes
+                                        "notes" -> FileType.Notes
+                                        else -> FileType.Pdf
+                                    }
+                                    val studyFile = StudyFile(
+                                        id = doc.id,
+                                        title = doc.title,
+                                        uploadDate = "Saved",
+                                        fileType = fileTypeEnum,
+                                        downloads = doc.downloads,
+                                        upvotes = doc.upvotes,
+                                        thumbnailUrl = doc.thumbnailUrl,
+                                        subject = doc.subject,
+                                        documentType = doc.documentType
+                                    )
+                                    bookmarkRepository.addBookmark(studyFile, currentUid)
+                                }
+                            }
+                        }
                     }) {
-                        Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark Document")
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Unbookmark Document" else "Bookmark Document",
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -186,11 +244,71 @@ fun DocumentDetailScreen(
                                 "Share functionality coming soon",
                                 Toast.LENGTH_SHORT
                             ).show()
+                        },
+                        onUpvoteClick = onUpvoteClick,
+                        onShowRemoveUpvoteDialog = {
+                            pendingRemoveUpvoteId = state.document.id
                         }
                     )
                 }
             }
         }
+    }
+
+    if (showRemoveBookmarkDialog) {
+        val doc = (uiState as? DocumentDetailUiState.Success)?.document
+        AlertDialog(
+            onDismissRequest = { showRemoveBookmarkDialog = false },
+            title = { Text(text = "Remove this bookmark?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (doc != null && currentUid.isNotEmpty()) {
+                            scope.launch {
+                                BookmarkRepository().removeBookmark(doc.id, currentUid)
+                            }
+                        }
+                        showRemoveBookmarkDialog = false
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showRemoveBookmarkDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (pendingRemoveUpvoteId != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRemoveUpvoteId = null },
+            title = { Text(text = "Remove this upvote?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val itemId = pendingRemoveUpvoteId
+                        if (itemId != null) {
+                            onUpvoteClick(itemId)
+                        }
+                        pendingRemoveUpvoteId = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingRemoveUpvoteId = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -201,105 +319,19 @@ fun DocumentDetailSuccessContent(
     relatedDocuments: List<DocumentDetail>,
     onNavigateToDetail: (String) -> Unit,
     onDownloadClick: (String) -> Unit,
-    onShareClick: (String) -> Unit
+    onShareClick: (String) -> Unit,
+    onUpvoteClick: (String) -> Unit,
+    onShowRemoveUpvoteDialog: () -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
+    val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
+    val context = LocalContext.current
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp + bottomPadding),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // 1. SUBJECT SECTION (Pill/Chip visual with Upvotes on the far right)
-        item(key = "subject-section") {
-            if (doc.subject.isNotBlank()) {
-                val normalized = remember(doc.subject) { normalizeSubject(doc.subject) }
-                val subjectColor = remember(normalized) { getSubjectColor(normalized) }
-                val displayColor = if (subjectColor == Color(0xFF78909C)) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    subjectColor
-                }
-                // Interactive Upvote State (Local UI Feedback keyed by document ID)
-                var isUpvoted by remember(doc.id) { mutableStateOf(false) }
-                val upvoteCount = if (isUpvoted) 1 else 0
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 8.dp), // Compensate for the clickable upvote Row's horizontal padding
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Subject Chip
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = displayColor.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, displayColor.copy(alpha = 0.5f)),
-                        modifier = Modifier.height(40.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.School,
-                                contentDescription = null,
-                                tint = displayColor,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = doc.subject,
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = displayColor
-                                )
-                            )
-                        }
-                    }
-
-                    // Interactive Upvote Indicator (Far Right)
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                isUpvoted = !isUpvoted
-                                // Future ready action integration:
-                                // onUpvoteClick(doc.id)
-                            }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val indicatorColor = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
-                        Icon(
-                            imageVector = Icons.Default.ThumbUp,
-                            contentDescription = "Upvotes",
-                            tint = indicatorColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text(
-                            text = "$upvoteCount",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = indicatorColor
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        // 2. DOCUMENT INFO SECTION (Redesigned metadata chips)
-        item(key = "metadata-section") {
-            DocumentMetadataSection(
-                doc = doc,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-        }
-
         // 3. DOCUMENT PREVIEW SECTION (Mixed adapters inside preview section handles horizontal/vertical margins)
         item(key = "preview-section") {
             AttachmentPreviewSection(
@@ -308,6 +340,145 @@ fun DocumentDetailSuccessContent(
                 onShareClick = onShareClick,
                 modifier = Modifier // No horizontal padding here so images scroll edge-to-edge
             )
+        }
+
+        // Redesigned Metadata Card
+        item(key = "redesigned-metadata-card") {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val rawDocType = doc.documentType.lowercase(java.util.Locale.ROOT).trim()
+                    val docTypeTag = when (rawDocType) {
+                        "pyq" -> if (!doc.examYear.isNullOrBlank()) "PYQ | ${doc.examYear}" else "PYQ"
+                        "assignment" -> {
+                            val sec = doc.sectionDisplay ?: doc.section
+                            if (!sec.isNullOrBlank()) "ASSIGNMENT | $sec" else "ASSIGNMENT"
+                        }
+                        "cheatsheet", "cheat sheet" -> "CHEAT SHEET"
+                        else -> doc.documentType.uppercase(java.util.Locale.ROOT)
+                    }
+
+                    val accentColor = when (rawDocType) {
+                        "pyq" -> Color(0xFFE57373) // Softer Red
+                        "assignment" -> Color(0xFF81C784) // Softer Green
+                        "cheatsheet", "cheat sheet" -> Color(0xFFFFD54F) // Softer Amber
+                        else -> Color(0xFF64B5F6) // Softer Blue
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = accentColor.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.5f)),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = docTypeTag,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    fontSize = 12.sp,
+                                    color = accentColor
+                                )
+                            )
+                        }
+                    }
+
+                    val subjectSemesterText = remember(doc.subject, doc.semester) {
+                        buildString {
+                            append(doc.subject)
+                            if (doc.semester.isNotBlank()) {
+                                append(" | ")
+                                append(doc.semester)
+                            }
+                        }
+                    }
+                    Text(
+                        text = subjectSemesterText,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+            }
+        }
+
+        // Redesigned Action Card
+        item(key = "redesigned-action-card") {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Download All Button
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                doc.fileUrls.forEach { url ->
+                                    onDownloadClick(url)
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Download All",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Download All",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    // Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .width(2.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    )
+
+                    // Interactive Upvote Button Section
+                    UpvoteButtonSection(
+                        docId = doc.id,
+                        initialUpvotes = doc.upvotes,
+                        currentUid = currentUid,
+                        onUpvoteClick = onUpvoteClick,
+                        onShowRemoveDialog = onShowRemoveUpvoteDialog
+                    )
+                }
+            }
         }
 
         // Description if present
@@ -370,6 +541,74 @@ fun DocumentDetailSuccessContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun UpvoteButtonSection(
+    docId: String,
+    initialUpvotes: Int,
+    currentUid: String,
+    onUpvoteClick: (String) -> Unit,
+    onShowRemoveDialog: () -> Unit
+) {
+    val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
+    val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
+
+    val isUpvoted = remember(upvotesMap, docId) {
+        upvotesMap[docId] == true
+    }
+    val upvoteCount = remember(upvoteCountsMap, docId) {
+        upvoteCountsMap[docId] ?: initialUpvotes
+    }
+
+    val context = LocalContext.current
+    val upvoteColor = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable {
+                if (currentUid.isEmpty()) {
+                    Toast.makeText(context, "Please sign in to upvote", Toast.LENGTH_SHORT).show()
+                    return@clickable
+                }
+                if (isUpvoted) {
+                    onShowRemoveDialog()
+                } else {
+                    onUpvoteClick(docId)
+                }
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ThumbUp,
+                contentDescription = "Upvote",
+                tint = upvoteColor,
+                modifier = Modifier.size(32.dp)
+            )
+            Text(
+                text = "$upvoteCount",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = upvoteColor
+                )
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (isUpvoted) "Upvoted" else "Upvote",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = upvoteColor
+            )
+        )
     }
 }
 

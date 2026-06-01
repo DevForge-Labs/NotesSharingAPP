@@ -278,8 +278,14 @@ class UploadRepository(private val context: Context) {
             for (file in selectedFiles) {
                 val documentId = UUID.randomUUID().toString()
                 val sanitizedSubject = sanitizeForStorage(subject)
-                val ext = getFileExtension(file.displayName, file.uri)
-                val storagePath = "pyqs/${semester.trim()}/$sanitizedSubject-pyq-$documentId.$ext"
+                val normalizedYear = (examYear ?: "").trim()
+                val normalizedExamType = when {
+                    (examType ?: "").trim().lowercase(java.util.Locale.ROOT).contains("mid") -> "MidSem"
+                    (examType ?: "").trim().lowercase(java.util.Locale.ROOT).contains("end") -> "EndSem"
+                    else -> (examType ?: "").trim().replace(" ", "")
+                }
+                val pyqFileName = "$normalizedYear.$normalizedExamType.pdf"
+                val storagePath = "pyqs/${semester.trim()}/$sanitizedSubject-pyq-$documentId/$pyqFileName"
 
                 val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
                     val fileUploadedBytes = (fileProgress * file.sizeBytes).toLong()
@@ -295,7 +301,7 @@ class UploadRepository(private val context: Context) {
 
                 val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,
-                    "title" to file.displayName,
+                    "title" to pyqFileName,
                     "description" to description,
                     "branch" to branch,
                     "semester" to semester,
@@ -320,14 +326,14 @@ class UploadRepository(private val context: Context) {
                     "storagePath" to uploadedPath,
                     "storagePaths" to listOf(uploadedPath),
                     "fileSize" to file.sizeBytes,
-                    "fileExtension" to ext,
+                    "fileExtension" to "pdf",
                     "isVerified" to false,
                     "tags" to emptyList<String>(),
                     "attachmentCount" to 1
                 )
 
-                doc["examYear"] = examYear ?: ""
-                doc["examType"] = examType ?: ""
+                doc["examYear"] = normalizedYear
+                doc["examType"] = normalizedExamType
                 firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             }
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, selectedFiles.size)

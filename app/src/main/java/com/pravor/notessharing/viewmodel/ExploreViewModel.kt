@@ -56,7 +56,22 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         val updatedTrending = current.content.trendingNotes.map { note ->
                             note.copy(isBookmarked = bookmarkedIds.contains(note.id))
                         }
-                        ExploreUiState.Success(current.content.copy(trendingNotes = updatedTrending))
+                        val updatedVideos = current.content.videoRecommendations.map { video ->
+                            val isBookmarkedNow = bookmarkedIds.contains(video.id)
+                            val originalIsBookmarked = video.isBookmarked
+                            val bookmarksCount = if (isBookmarkedNow && !originalIsBookmarked) {
+                                video.bookmarks + 1
+                            } else if (!isBookmarkedNow && originalIsBookmarked) {
+                                (video.bookmarks - 1).coerceAtLeast(0)
+                            } else {
+                                video.bookmarks
+                            }
+                            video.copy(isBookmarked = isBookmarkedNow, bookmarks = bookmarksCount)
+                        }
+                        ExploreUiState.Success(current.content.copy(
+                            trendingNotes = updatedTrending,
+                            videoRecommendations = updatedVideos
+                        ))
                     } else {
                         current
                     }
@@ -258,6 +273,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
                     val resolvedIsUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
                     val resolvedUpvotes = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value[id] ?: upvotes
+                    val resolvedIsBookmarked = bookmarkedIds.contains(id)
 
                     com.pravor.notessharing.model.VideoRecommendation(
                         id = id,
@@ -273,7 +289,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         documentType = docType,
                         semester = semesterVal,
                         youtubeUrl = youtubeUrl,
-                        isUpvoted = resolvedIsUpvoted
+                        isUpvoted = resolvedIsUpvoted,
+                        isBookmarked = resolvedIsBookmarked
                     )
                 }
 
@@ -375,6 +392,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         val typeField = doc["type"] as? String
         val subjectField = doc["subject"] as? String
         val examYearField = (doc["examYear"] ?: doc["year"])?.toString()
+        val examTypeField = doc["examType"] as? String
         val sectionField = doc["section"] as? String
         val sectionDisplayField = doc["sectionDisplay"] as? String
 
@@ -407,6 +425,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             type = typeField,
             subject = subjectField,
             examYear = examYearField,
+            examType = examTypeField,
             section = sectionField,
             sectionDisplay = sectionDisplayField
         )
@@ -436,6 +455,31 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     upvotes = note.upvotes,
                     thumbnailUrl = note.thumbnailUrl,
                     subject = note.subject,
+                    documentType = docType
+                )
+                bookmarkRepository.addBookmark(studyFile, currentUid)
+            }
+        }
+    }
+
+    fun toggleVideoBookmark(video: com.pravor.notessharing.model.VideoRecommendation) {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == video.id }
+
+        viewModelScope.launch {
+            if (wasBookmarked) {
+                bookmarkRepository.removeBookmark(video.id, currentUid)
+            } else {
+                val docType = video.documentType.ifBlank { "Video" }
+                val studyFile = com.pravor.notessharing.model.StudyFile(
+                    id = video.id,
+                    title = video.title,
+                    uploadDate = "Saved",
+                    fileType = com.pravor.notessharing.model.FileType.Video,
+                    downloads = 0,
+                    upvotes = video.upvotes,
+                    thumbnailUrl = video.thumbnailUrl ?: video.youtubeThumbnailUrl,
+                    subject = video.subject,
                     documentType = docType
                 )
                 bookmarkRepository.addBookmark(studyFile, currentUid)

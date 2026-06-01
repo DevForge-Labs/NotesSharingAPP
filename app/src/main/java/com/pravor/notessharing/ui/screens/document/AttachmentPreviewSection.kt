@@ -108,10 +108,11 @@ fun AttachmentPreviewSection(
 
             // 2. PDF & DOCUMENT VERTICAL COLUMN
             if (pdfUrls.isNotEmpty()) {
+                val horizontalPadding = if (urls.size == 1) 28.dp else 16.dp
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = horizontalPadding),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     pdfUrls.forEach { url ->
@@ -124,8 +125,11 @@ fun AttachmentPreviewSection(
                             fileSize = indSize,
                             thumbnailUrl = doc.thumbnailUrls.getOrNull(index),
                             documentType = doc.documentType,
+                            examYear = doc.examYear,
+                            examType = doc.examType,
                             onDownloadClick = { onDownloadClick(url) },
-                            onShareClick = { onShareClick(url) }
+                            onShareClick = { onShareClick(url) },
+                            isSingleAttachment = urls.size == 1
                         )
                     }
                 }

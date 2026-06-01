@@ -60,19 +60,25 @@ fun TrendingNoteDiscoveryCardContent(
     onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(doc.documentType)
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(cardBrush)
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -175,19 +181,25 @@ fun TrendingNoteDiscoveryCardContentFromNote(
     onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(note.documentType)
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(cardBrush)
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -277,19 +289,25 @@ fun TrendingNoteDiscoveryCardContentFallback(
     onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(note.documentType)
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(cardBrush)
                 .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {

@@ -33,12 +33,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.pravor.notessharing.data.RecentlyOpenedRepository
 import com.pravor.notessharing.model.VideoDetail
+import com.pravor.notessharing.bookmarks.BookmarkRepository
+import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.model.StudyFile
+import com.google.firebase.auth.FirebaseAuth
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.VideoDetailUiState
 import com.pravor.notessharing.viewmodel.VideoDetailViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun VideoDetailRoute(
@@ -89,7 +94,21 @@ fun VideoDetailScreen(
     onNavigateToVideoDetail: (String) -> Unit
 ) {
     val context = LocalContext.current
-    var isBookmarked by remember { mutableStateOf(false) }
+    val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
+    val bookmarks by BookmarkRepository.bookmarksFlow.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var showRemoveBookmarkDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentUid) {
+        if (currentUid.isNotEmpty()) {
+            BookmarkRepository().loadInitialBookmarksIfNeeded(currentUid)
+        }
+    }
+
+    val isBookmarked = remember(bookmarks, uiState) {
+        val videoId = (uiState as? VideoDetailUiState.Success)?.video?.id ?: ""
+        videoId.isNotEmpty() && bookmarks.any { it.id == videoId }
+    }
 
     Scaffold(
         topBar = {
@@ -118,10 +137,37 @@ fun VideoDetailScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            // TODO: Implement bookmark/saved backend integration
-                            isBookmarked = !isBookmarked
-                            val msg = if (isBookmarked) "Saved to bookmarks" else "Removed from bookmarks"
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            if (currentUid.isEmpty()) {
+                                Toast.makeText(
+                                    context,
+                                    "Please sign in to bookmark videos",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@IconButton
+                            }
+                            val video = (uiState as? VideoDetailUiState.Success)?.video
+                            if (video != null) {
+                                if (isBookmarked) {
+                                    showRemoveBookmarkDialog = true
+                                } else {
+                                    scope.launch {
+                                        val bookmarkRepository = BookmarkRepository()
+                                        val studyFile = StudyFile(
+                                            id = video.id,
+                                            title = video.title,
+                                            uploadDate = "Saved",
+                                            fileType = FileType.Video,
+                                            downloads = 0,
+                                            upvotes = video.upvotes,
+                                            thumbnailUrl = video.thumbnailUrl
+                                                ?: video.youtubeThumbnailUrl,
+                                            subject = video.subject,
+                                            documentType = "YouTube Resource"
+                                        )
+                                        bookmarkRepository.addBookmark(studyFile, currentUid)
+                                    }
+                                }
+                            }
                         }
                     ) {
                         Icon(
@@ -152,12 +198,14 @@ fun VideoDetailScreen(
                             CircularProgressIndicator()
                         }
                     }
+
                     is VideoDetailUiState.Error -> {
                         StatePanel(
                             title = "Load Failed",
                             message = state.message
                         )
                     }
+
                     is VideoDetailUiState.Success -> {
                         VideoDetailContent(
                             video = state.video,
@@ -169,6 +217,35 @@ fun VideoDetailScreen(
                     }
                 }
             }
+        }
+
+        if (showRemoveBookmarkDialog) {
+            val video = (uiState as? VideoDetailUiState.Success)?.video
+            AlertDialog(
+                onDismissRequest = { showRemoveBookmarkDialog = false },
+                title = { Text(text = "Remove this bookmark?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (video != null && currentUid.isNotEmpty()) {
+                                scope.launch {
+                                    BookmarkRepository().removeBookmark(video.id, currentUid)
+                                }
+                            }
+                            showRemoveBookmarkDialog = false
+                        }
+                    ) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showRemoveBookmarkDialog = false }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

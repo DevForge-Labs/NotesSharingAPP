@@ -142,11 +142,6 @@ fun ImagePreviewCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ImageGlassIconButton(
-                        icon = Icons.Default.Download,
-                        contentDescription = "Download Image",
-                        onClick = onDownloadClick
-                    )
-                    ImageGlassIconButton(
                         icon = Icons.Default.Share,
                         contentDescription = "Share Image",
                         onClick = onShareClick

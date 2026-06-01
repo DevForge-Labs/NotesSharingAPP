@@ -124,46 +124,40 @@ fun TrendingNoteCard(
         }
     }
 
+    val documentTypeField = if (note.documentType.isNotBlank()) note.documentType else null
+    val typeField = note.type
+
+    val rawDocType = (documentTypeField ?: typeField)
+        ?.lowercase(java.util.Locale.ROOT)?.trim()
+
+    val docType = when (rawDocType) {
+        "pyq" -> "PYQ"
+        "cheatsheet", "cheat sheet" -> "Cheat Sheet"
+        "assignment" -> "Assignment"
+        "notes" -> "Notes"
+        else -> getDocumentTypeFromTitle(note.title)
+    }
+    
+    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(docType)
+    val accentColor = theme.accentColor
+    val cardBrush = theme.cardBrush
+
+    val previewIcon = when (docType) {
+        "PYQ" -> Icons.Default.Help
+        "Assignment" -> Icons.Default.Assignment
+        "Cheat Sheet" -> Icons.Default.Bolt
+        else -> Icons.Default.Description
+    }
+
     PressScaleSurface(
         modifier = Modifier.width(216.dp),
         shape = RoundedCornerShape(26.dp),
+        brush = cardBrush,
         onClick = onClick
     ) {
         Column(
             Modifier.padding(14.dp)
         ) {
-            val documentTypeField = if (note.documentType.isNotBlank()) note.documentType else null
-            val typeField = note.type
-
-            val rawDocType = (documentTypeField ?: typeField)
-                ?.lowercase(java.util.Locale.ROOT)?.trim()
-
-            val docType = when (rawDocType) {
-                "pyq" -> "PYQ"
-                "cheatsheet", "cheat sheet" -> "Cheat Sheet"
-                "assignment" -> "Assignment"
-                "notes" -> "Notes"
-                else -> getDocumentTypeFromTitle(note.title)
-            }
-            val previewIcon = when (docType) {
-                "PYQ" -> Icons.Default.Help
-                "Assignment" -> Icons.Default.Assignment
-                "Cheat Sheet" -> Icons.Default.Bolt
-                else -> Icons.Default.Description
-            }
-            val accentColor = when (docType) {
-                "PYQ" -> Color(0xFFFFA4A2) // Softer red
-                "Assignment" -> Color(0xFFA5D6A7) // Softer green
-                "Cheat Sheet" -> Color(0xFFFFE082) // Softer amber
-                else -> Color(0xFF90CAF9) // Softer blue
-            }
-            val previewGradient = when (docType) {
-                "PYQ" -> listOf(Color(0xFF381F1F), Color(0xFF251414))
-                "Assignment" -> listOf(Color(0xFF1C2E20), Color(0xFF132016))
-                "Cheat Sheet" -> listOf(Color(0xFF322A1E), Color(0xFF221C14))
-                else -> listOf(Color(0xFF202A38), Color(0xFF151C26))
-            }
-            
             // 1. PREVIEW THUMBNAIL (Box)
             Box(
                 modifier = Modifier
@@ -171,7 +165,7 @@ fun TrendingNoteCard(
                     .height(108.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        Brush.linearGradient(previewGradient)
+                        Brush.linearGradient(theme.gradientColors)
                     )
                     .border(
                         BorderStroke(1.dp, accentColor.copy(alpha = 0.15f)),
