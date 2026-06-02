@@ -40,7 +40,6 @@ import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.MyFilesUiState
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.CompactStudyFileRow
-import com.pravor.notessharing.ui.components.NotesSearchBar
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import androidx.compose.ui.unit.sp
@@ -93,19 +92,8 @@ fun HomeSuccessContent(
             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item(key = "home-title", contentType = "header") {
-                Text(
-                    text = "Study Social",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 0.25.sp,
-                        fontSize = 24.sp
-                    ),
-                    color = Color(0xFFF5F7FA)
-                )
-            }
-            item(key = "home-search", contentType = "search") {
-                NotesSearchBar("Search notes, PYQs, PDFs...")
+            item(key = "home-greeting", contentType = "greeting") {
+                SmartBannerSlot()
             }
             if (content.recentlyOpened != null) {
                 item(key = "continue-title", contentType = "section") {
