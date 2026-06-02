@@ -215,6 +215,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val documentTypeField = data["documentType"] as? String
                     val typeField = data["type"] as? String
                     val examYearVal = data["examYear"] as? String
+                    val branchVal = data["branch"] as? String ?: ""
 
                     val resolvedIsUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
                     val resolvedUpvotes = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value[id] ?: upvotes
@@ -233,7 +234,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         documentType = documentTypeField ?: "",
                         type = typeField,
                         examYear = examYearVal,
-                        isUpvoted = resolvedIsUpvoted
+                        isUpvoted = resolvedIsUpvoted,
+                        branch = branchVal
                     )
                 }
 

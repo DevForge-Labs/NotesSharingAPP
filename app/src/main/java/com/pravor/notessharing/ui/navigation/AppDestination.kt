@@ -18,6 +18,8 @@ sealed class AppDestination(
     data object TrendingNotes : AppDestination("explore/trending_notes", "Trending Notes", Icons.Filled.Explore)
     data object RecommendedVideos : AppDestination("explore/recommended_videos", "Recommended Videos", Icons.Filled.Explore)
     data object Discover : AppDestination("explore/discover", "Discover", Icons.Filled.Explore)
+    data object ExamPrep : AppDestination("explore/exam_prep", "Exam Prep", Icons.Filled.Explore)
+    data object Assignments : AppDestination("explore/assignments", "Assignments", Icons.Filled.Explore)
     data object Upload : AppDestination("upload", "Upload", Icons.Filled.UploadFile)
     data object UploadSuccess : AppDestination("upload/success", "Upload Success", Icons.Filled.UploadFile)
     data object MyFiles : AppDestination("my_files", "My Files", Icons.Filled.UploadFile)
