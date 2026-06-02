@@ -79,7 +79,7 @@ fun MyBookmarksScreen(
     val scrollState = rememberScrollState()
     val bottomPadding = LocalBottomBarPadding.current
     var selectedFilter by remember { mutableStateOf("All") }
-    var pendingRemoveBookmarkVideo by remember { mutableStateOf<VideoRecommendation?>(null) }
+    var pendingRemoveBookmarkFile by remember { mutableStateOf<com.pravor.notessharing.model.StudyFile?>(null) }
 
     val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
     val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
@@ -367,6 +367,9 @@ fun MyBookmarksScreen(
                                                          } else {
                                                              onDocumentClick(file.id)
                                                          }
+                                                     },
+                                                     onBookmarkClick = {
+                                                         pendingRemoveBookmarkFile = fileWithLiveStats
                                                      }
                                                  )
                                              }
@@ -382,18 +385,18 @@ fun MyBookmarksScreen(
         }
     }
 
-    if (pendingRemoveBookmarkVideo != null) {
+    if (pendingRemoveBookmarkFile != null) {
         AlertDialog(
-            onDismissRequest = { pendingRemoveBookmarkVideo = null },
+            onDismissRequest = { pendingRemoveBookmarkFile = null },
             title = { Text(text = "Remove this bookmark?") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val video = pendingRemoveBookmarkVideo
-                        if (video != null) {
-                            viewModel.removeBookmark(video.id)
+                        val file = pendingRemoveBookmarkFile
+                        if (file != null) {
+                            viewModel.removeBookmark(file.id)
                         }
-                        pendingRemoveBookmarkVideo = null
+                        pendingRemoveBookmarkFile = null
                     }
                 ) {
                     Text("Remove")
@@ -401,7 +404,7 @@ fun MyBookmarksScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { pendingRemoveBookmarkVideo = null }
+                    onClick = { pendingRemoveBookmarkFile = null }
                 ) {
                     Text("Cancel")
                 }

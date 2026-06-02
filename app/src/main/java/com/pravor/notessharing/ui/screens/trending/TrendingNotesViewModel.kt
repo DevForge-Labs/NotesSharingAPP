@@ -35,6 +35,11 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                 isUpvoted = isUpvoted,
                 upvotes = count
             )
+        }.filter { note ->
+            val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
+            val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
+            val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
+            isValid && !isExcluded
         }
         if (updatedNotes.isEmpty() && refreshing) {
             TrendingNotesUiState.Loading
@@ -58,6 +63,11 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                     isUpvoted = isUpvoted,
                     upvotes = count
                 )
+            }.filter { note ->
+                val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
+                val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
+                val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
+                isValid && !isExcluded
             }
             TrendingNotesUiState.Success(updated)
         } else {

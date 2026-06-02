@@ -79,14 +79,14 @@ fun TrendingNoteDiscoveryCardContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Left Side: Portrait ratio thumbnail preview (visually resembling a document cover)
             Box(
                 modifier = Modifier
-                    .width(110.dp)
-                    .height(160.dp)
+                    .width(90.dp)
+                    .height(130.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
@@ -97,7 +97,7 @@ fun TrendingNoteDiscoveryCardContent(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(160.dp),
+                    .height(130.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Document Title (bold, max 2 lines)
@@ -106,7 +106,7 @@ fun TrendingNoteDiscoveryCardContent(
                 Column {
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 23.sp),
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, lineHeight = 22.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
@@ -114,11 +114,11 @@ fun TrendingNoteDiscoveryCardContent(
                     )
 
                     if (isTitleValid && doc.subject.isNotBlank()) {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(4.dp))
                         SubjectBadge(subject = doc.subject, isLarge = true, semester = doc.semester)
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
                     DocumentTypeBadge(type = doc.documentType, year = doc.examYear)
 
                     // Display branch under the title if it is not default and different from subject
@@ -200,14 +200,14 @@ fun TrendingNoteDiscoveryCardContentFromNote(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Left Side: Portrait ratio thumbnail preview (document cover layout)
             Box(
                 modifier = Modifier
-                    .width(110.dp)
-                    .height(160.dp)
+                    .width(90.dp)
+                    .height(130.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
@@ -235,7 +235,7 @@ fun TrendingNoteDiscoveryCardContentFromNote(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(160.dp),
+                    .height(130.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Title (bold, max 2 lines)
@@ -244,18 +244,18 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                 Column {
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 23.sp),
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, lineHeight = 22.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (isTitleValid && note.subject.isNotBlank()) {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(4.dp))
                         SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
                     DocumentTypeBadge(type = note.documentType, year = note.examYear)
                 }
 
@@ -308,13 +308,13 @@ fun TrendingNoteDiscoveryCardContentFallback(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .width(110.dp)
-                    .height(160.dp)
+                    .width(90.dp)
+                    .height(130.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
@@ -324,7 +324,7 @@ fun TrendingNoteDiscoveryCardContentFallback(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(160.dp),
+                    .height(130.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 val isTitleValid = note.title.isNotBlank() && note.title != "Untitled Document"
@@ -332,18 +332,18 @@ fun TrendingNoteDiscoveryCardContentFallback(
                 Column {
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 23.sp),
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, lineHeight = 22.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (isTitleValid && note.subject.isNotBlank()) {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(4.dp))
                         SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
                     DocumentTypeBadge(type = note.documentType, year = note.examYear)
                 }
 

@@ -2,6 +2,10 @@ package com.pravor.notessharing.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +30,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -168,13 +173,21 @@ fun SectionHeader(
         else -> Color(0xFF94A3B8)
     }
 
+    val widthScale = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        widthScale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
+        )
+    }
+
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .width(16.dp)
+                .width(16.dp * widthScale.value)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(accentColor)
@@ -741,7 +754,8 @@ fun getStudyResourceTheme(documentType: String?): StudyResourceTheme {
 fun StudyHubShelfCard(
     file: StudyFile,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBookmarkClick: (() -> Unit)? = null
 ) {
     val theme = getStudyResourceTheme(file.documentType ?: file.fileType.label)
     val docTypeStr = theme.docTypeStr
@@ -899,45 +913,65 @@ fun StudyHubShelfCard(
 
                 Spacer(Modifier.height(6.dp))
 
-                // Downloads & Likes Row
+                // Downloads & Likes Row & optional bookmark button
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = null,
-                            tint = Color(0xFF64B5F6),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = file.downloads.toString(),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            color = Color(0xFF64B5F6).copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = null,
+                                tint = Color(0xFF64B5F6),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = file.downloads.toString(),
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = Color(0xFF64B5F6).copy(alpha = 0.9f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ThumbUp,
+                                contentDescription = null,
+                                tint = Color(0xFFFFB74D),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = file.upvotes.toString(),
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = Color(0xFFFFB74D).copy(alpha = 0.9f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ThumbUp,
-                            contentDescription = null,
-                            tint = Color(0xFFFFB74D),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = file.upvotes.toString(),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            color = Color(0xFFFFB74D).copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
-                        )
+                    if (onBookmarkClick != null) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(
+                            onClick = onBookmarkClick,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = "Bookmark",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -22,6 +22,8 @@ import com.pravor.notessharing.ui.components.BottomNavBar
 import com.pravor.notessharing.ui.screens.explore.DiscoverRoute
 import com.pravor.notessharing.ui.screens.explore.ExploreRoute
 import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
+import com.pravor.notessharing.ui.screens.explore.ExamPrepRoute
+import com.pravor.notessharing.ui.screens.explore.AssignmentsRoute
 import com.pravor.notessharing.ui.screens.trending.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
@@ -249,6 +251,16 @@ fun NotesSharingApp(
                                 launchSingleTop = true
                             }
                         },
+                        onExamPrepSeeMoreClick = {
+                            navController.navigate(AppDestination.ExamPrep.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onAssignmentsSeeMoreClick = {
+                            navController.navigate(AppDestination.Assignments.route) {
+                                launchSingleTop = true
+                            }
+                        },
                         onDocumentClick = { docId ->
                             navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                         },
@@ -281,6 +293,22 @@ fun NotesSharingApp(
                         },
                         onVideoClick = { videoId ->
                             navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(AppDestination.ExamPrep.route) {
+                    ExamPrepRoute(
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        }
+                    )
+                }
+                composable(AppDestination.Assignments.route) {
+                    AssignmentsRoute(
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                         }
                     )
                 }
