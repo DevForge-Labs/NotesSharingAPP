@@ -11,6 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.FirebaseFirestore
 
 import com.pravor.notessharing.state.EditProfileState
 
@@ -57,11 +62,49 @@ class ProfileViewModel(
                     _uiState.update { ProfileUiState.Success(fallbackProfile) }
                 }
                 .collect { profile ->
-                    if (profile != null) {
-                        _uiState.update { ProfileUiState.Success(profile) }
-                    } else {
-                        // If user has no record in Firestore yet, use fallback
-                        _uiState.update { ProfileUiState.Success(fallbackProfile) }
+                    val baseProfile = profile ?: fallbackProfile
+                    try {
+                        coroutineScope {
+                            val bookmarksDeferred = async {
+                                try {
+                                    FirebaseFirestore.getInstance().collection("bookmarks")
+                                        .whereEqualTo("userId", currentFirebaseUser.uid)
+                                        .get()
+                                        .await()
+                                        .size()
+                                } catch (e: Exception) {
+                                    0
+                                }
+                            }
+                            
+                            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+                            val upvotesDeferred = collections.map { col ->
+                                async {
+                                    try {
+                                        val querySnapshot = FirebaseFirestore.getInstance().collection(col)
+                                            .whereEqualTo("uploaderId", currentFirebaseUser.uid)
+                                            .get()
+                                            .await()
+                                        querySnapshot.documents.sumOf { doc ->
+                                            (doc.getLong("upvotes") ?: doc.getLong("likesCount") ?: 0L).toInt()
+                                        }
+                                    } catch (e: Exception) {
+                                        0
+                                    }
+                                }
+                            }
+                            
+                            val finalBookmarks = bookmarksDeferred.await()
+                            val finalUpvotes = upvotesDeferred.awaitAll().sum()
+                            
+                            val updatedProfile = baseProfile.copy(
+                                bookmarks = finalBookmarks,
+                                upvotes = finalUpvotes
+                            )
+                            _uiState.update { ProfileUiState.Success(updatedProfile) }
+                        }
+                    } catch (e: Exception) {
+                        _uiState.update { ProfileUiState.Success(baseProfile) }
                     }
                 }
         }
