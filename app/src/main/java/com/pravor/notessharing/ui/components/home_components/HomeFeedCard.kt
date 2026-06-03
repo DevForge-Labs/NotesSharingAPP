@@ -743,7 +743,8 @@ fun StudyHubCard(
     accentColor: Color,
     cardBrush: Brush,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    secondaryMetadata: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -814,6 +815,15 @@ fun StudyHubCard(
                             color = accentColor,
                             fontWeight = FontWeight.SemiBold
                         )
+                        if (secondaryMetadata != null) {
+                            Text(
+                                text = secondaryMetadata,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = accentColor.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
                 }
 

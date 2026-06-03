@@ -51,11 +51,14 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.runtime.getValue
 
+import androidx.compose.animation.core.LinearEasing
+
 @Composable
 fun HomeSuccessContent(
     content: HomeContent,
     myFilesUiState: MyFilesUiState,
     bookmarksCount: Int,
+    activeDownloadsCount: Int,
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -225,14 +228,43 @@ fun HomeSuccessContent(
             }
 
             item(key = "study-hub-downloads", contentType = "study-hub-card") {
+                val downloadedCount = when (myFilesUiState) {
+                    is MyFilesUiState.Success -> myFilesUiState.content.savedFiles.size
+                    else -> 0
+                }
+                val downloadsText = if (downloadedCount == 1) "1 Document" else "$downloadedCount Documents"
+                
+                val activeDownloadsText = if (activeDownloadsCount > 0) {
+                    val dotsTransition = rememberInfiniteTransition(label = "downloadsDotTransition")
+                    val dotCount by dotsTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 3f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 1500, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "activeDotCount"
+                    )
+                    val dots = when (dotCount.toInt()) {
+                        0 -> "."
+                        1 -> ".."
+                        else -> "..."
+                    }
+                    val label = if (activeDownloadsCount == 1) "download" else "downloads"
+                    "$activeDownloadsCount $label in progress$dots"
+                } else {
+                    null
+                }
+
                 StudyHubCard(
                     title = "Downloads",
-                    metadata = "0 downloaded files",
+                    metadata = downloadsText,
                     contextHint = "Your downloaded study collection",
                     icon = Icons.Default.Download,
                     accentColor = Color(0xFFCFD8DC), // Muted slate/academic tint
                     cardBrush = Brush.verticalGradient(listOf(Color(0xFF1D2124), Color(0xFF111315))),
-                    onClick = onMyDownloadsClick
+                    onClick = onMyDownloadsClick,
+                    secondaryMetadata = activeDownloadsText
                 )
             }
         }

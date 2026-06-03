@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,9 +36,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,11 +69,18 @@ fun MyFilesRoute(
     viewModel: MyFilesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadDownloads(context)
+    }
+
     MyFilesScreen(
         onBackClick = onBackClick,
         uiState = uiState,
         onDocumentClick = onDocumentClick,
-        onVideoClick = onVideoClick
+        onVideoClick = onVideoClick,
+        onDeleteDownload = { docId -> viewModel.deleteDownload(docId, context) }
     )
 }
 
@@ -81,11 +91,13 @@ fun MyFilesScreen(
     uiState: MyFilesUiState,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
+    onDeleteDownload: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
     val scrollState = rememberScrollState()
     var selectedFilter by remember { mutableStateOf("All") }
+    var pendingDeleteFile by remember { mutableStateOf<StudyFile?>(null) }
 
     Scaffold(
         topBar = {
@@ -245,22 +257,8 @@ fun MyFilesScreen(
                             modifier = Modifier.padding(top = 96.dp)
                         )
                         is MyFilesUiState.Success -> {
-                            // Since downloads are not implemented yet, always show empty state.
-                            // IF downloaded files exist in future, render downloaded files.
-                            val alwaysShowEmpty = true
-                            
-                            val downloadedFiles = if (alwaysShowEmpty) {
-                                emptyList()
-                            } else {
-                                listOf(
-                                    StudyFile("dl-os-scheduling", "OS CPU Scheduling Solved Examples", "Downloaded 2 days ago", FileType.StudyGuide, 203, 58, subject = "OS"),
-                                    StudyFile("dl-dbms-sql", "DBMS SQL Queries Lab Sheet", "Downloaded 3 days ago", FileType.Notes, 146, 41, subject = "DBMS"),
-                                    StudyFile("dl-cn-subnet", "CN TCP/IP Revision Sheet", "Downloaded 5 days ago", FileType.CheatSheet, 174, 46, subject = "CN"),
-                                    StudyFile("dl-dsa-sorting", "Sorting Algorithms Lab Notes", "Downloaded 6 days ago", FileType.LabManual, 267, 73, subject = "DSA")
-                                )
-                            }
-
-                            val displayEmpty = alwaysShowEmpty || downloadedFiles.isEmpty()
+                            val downloadedFiles = state.content.savedFiles
+                            val displayEmpty = downloadedFiles.isEmpty()
                             val filteredFiles = if (displayEmpty) {
                                 emptyList()
                             } else {
@@ -357,6 +355,9 @@ fun MyFilesScreen(
                                                         } else {
                                                             onDocumentClick(file.id)
                                                         }
+                                                    },
+                                                    onDeleteClick = {
+                                                        pendingDeleteFile = file
                                                     }
                                                 )
                                             }
@@ -370,6 +371,34 @@ fun MyFilesScreen(
                 }
             }
         }
+    }
+
+    if (pendingDeleteFile != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDeleteFile = null },
+            title = { Text(text = "Remove Download?") },
+            text = { Text(text = "This will remove the offline copy from your device. The document will remain available online.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val file = pendingDeleteFile
+                        if (file != null) {
+                            onDeleteDownload(file.id)
+                        }
+                        pendingDeleteFile = null
+                    }
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingDeleteFile = null }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

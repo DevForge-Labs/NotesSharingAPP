@@ -3,6 +3,7 @@ package com.pravor.notessharing.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pravor.notessharing.data.download.DownloadDataStoreManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,18 @@ class ImageViewingViewModel : ViewModel() {
         _uiState.value = ImageViewingUiState.Loading
         viewModelScope.launch {
             try {
+                // 1. Check local attachment registry in DataStore
+                val db = DownloadDataStoreManager(context.applicationContext)
+                val localPath = db.getAttachmentLocalPath(imageUrl)
+                if (localPath != null) {
+                    val localFile = File(localPath)
+                    if (localFile.exists() && localFile.length() > 0) {
+                        _uiState.value = ImageViewingUiState.Success(localFile)
+                        return@launch
+                    }
+                }
+
+                // 2. Fall back to cache or download
                 val imageFile = getCachedImageFile(context, documentId, imageUrl)
                 if (imageFile.exists() && imageFile.length() > 0) {
                     _uiState.value = ImageViewingUiState.Success(imageFile)

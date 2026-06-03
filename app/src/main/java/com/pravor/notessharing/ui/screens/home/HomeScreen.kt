@@ -63,14 +63,17 @@ fun HomeRoute(
     myFilesViewModel: MyFilesViewModel = viewModel(),
     bookmarkViewModel: com.pravor.notessharing.bookmarks.BookmarkViewModel = viewModel()
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
     val bookmarkUiState by bookmarkViewModel.uiState.collectAsStateWithLifecycle()
+    val activeDownloadsCount by com.pravor.notessharing.data.download.DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.refreshRecentlyOpened()
         // Refresh bookmarks count cleanly from bookmark layer
         bookmarkViewModel.loadBookmarksForCurrentUser()
+        myFilesViewModel.loadDownloads(context)
     }
 
     val bookmarksCount = when (val state = bookmarkUiState) {
@@ -82,6 +85,7 @@ fun HomeRoute(
         uiState = uiState,
         myFilesUiState = myFilesUiState,
         bookmarksCount = bookmarksCount,
+        activeDownloadsCount = activeDownloadsCount,
         onUpvoteClick = viewModel::toggleUpvote,
         onBookmarkClick = viewModel::toggleSaved,
         onMyUploadsClick = onMyUploadsClick,
@@ -100,6 +104,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     myFilesUiState: MyFilesUiState,
     bookmarksCount: Int,
+    activeDownloadsCount: Int,
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -115,10 +120,10 @@ fun HomeScreen(
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
-
+ 
     var pendingRemoveBookmarkId by remember { mutableStateOf<String?>(null) }
     var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
-
+ 
     val feedListState = rememberLazyListState()
     val stateKey = when (uiState) {
         HomeUiState.Loading -> "loading"
@@ -126,12 +131,12 @@ fun HomeScreen(
         is HomeUiState.Error -> "error"
         is HomeUiState.Success -> "success"
     }
-
+ 
     // Floating pill toast snackbar states
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var toastVisible by remember { mutableStateOf(false) }
     var toastIcon by remember { mutableStateOf<androidx.compose.ui.graphics.vector.ImageVector?>(null) }
-
+ 
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
             toastVisible = true
@@ -141,7 +146,7 @@ fun HomeScreen(
             toastMessage = null
         }
     }
-
+ 
     Box(modifier = modifier.fillMaxSize()) {
         Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
             when (val state = uiState) {
@@ -152,6 +157,7 @@ fun HomeScreen(
                     content = state.content,
                     myFilesUiState = myFilesUiState,
                     bookmarksCount = bookmarksCount,
+                    activeDownloadsCount = activeDownloadsCount,
                     onUpvoteClick = { itemId ->
                         val isCurrentlyUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] == true
                         if (isCurrentlyUpvoted) {
@@ -334,6 +340,7 @@ private fun HomePreview() {
                 com.pravor.notessharing.state.MyFilesContent(emptyList(), DummyData.uploadedFiles)
             ),
             bookmarksCount = 5,
+            activeDownloadsCount = 0,
             onUpvoteClick = {},
             onBookmarkClick = {},
             onMyUploadsClick = {},
