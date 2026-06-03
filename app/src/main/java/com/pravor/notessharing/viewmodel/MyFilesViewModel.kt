@@ -4,41 +4,65 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pravor.notessharing.data.DocumentDetailRepository
+import com.pravor.notessharing.data.download.DownloadDataStoreManager
+import com.pravor.notessharing.data.download.DownloadService
 import com.pravor.notessharing.model.FileType
 import com.pravor.notessharing.model.StudyFile
 import com.pravor.notessharing.state.MyFilesContent
 import com.pravor.notessharing.state.MyFilesUiState
+import android.content.Context
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 
 class MyFilesViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<MyFilesUiState>(MyFilesUiState.Loading)
     val uiState: StateFlow<MyFilesUiState> = _uiState.asStateFlow()
 
     private val firestore = FirebaseFirestore.getInstance()
+    private val docRepository = DocumentDetailRepository()
+
+    private var realUploaded: List<StudyFile> = emptyList()
+    private var downloadedDocs: List<StudyFile> = emptyList()
+
+    private var isObservingDownloads = false
 
     init {
         loadMyFiles()
     }
 
+    fun loadDownloads(context: Context) {
+        if (isObservingDownloads) return
+        isObservingDownloads = true
+
+        val manager = DownloadDataStoreManager(context.applicationContext)
+        viewModelScope.launch {
+            manager.downloadedDocumentsFlow.collect { docs ->
+                val studyFiles = mutableListOf<StudyFile>()
+                for (doc in docs) {
+                    val detail = docRepository.getDocument(doc.documentId)
+                    if (detail != null) {
+                        studyFiles.add(docDetailToStudyFile(detail, doc.downloadedAt))
+                    }
+                }
+                downloadedDocs = studyFiles
+                updateUiState()
+            }
+        }
+    }
+
     fun loadMyFiles() {
         val currentUid = FirebaseAuth.getInstance().currentUser?.uid
         if (currentUid == null) {
-            _uiState.update {
-                MyFilesUiState.Success(
-                    MyFilesContent(
-                        savedFiles = emptyList(),
-                        uploadedFiles = emptyList()
-                    )
-                )
-            }
+            realUploaded = emptyList()
+            updateUiState()
             return
         }
 
@@ -62,30 +86,65 @@ class MyFilesViewModel : ViewModel() {
                     deferreds.awaitAll().flatten()
                 }
                 
-                val realUploaded = allDocs.mapNotNull { doc ->
+                realUploaded = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     documentToStudyFile(data)
                 }
-
-                _uiState.update {
-                    MyFilesUiState.Success(
-                        MyFilesContent(
-                            savedFiles = emptyList(),
-                            uploadedFiles = realUploaded
-                        )
-                    )
-                }
+                updateUiState()
             } catch (e: Exception) {
-                _uiState.update {
-                    MyFilesUiState.Success(
-                        MyFilesContent(
-                            savedFiles = emptyList(),
-                            uploadedFiles = emptyList()
-                        )
-                    )
-                }
+                realUploaded = emptyList()
+                updateUiState()
             }
         }
+    }
+
+    private fun updateUiState() {
+        _uiState.update {
+            if (downloadedDocs.isEmpty() && realUploaded.isEmpty()) {
+                MyFilesUiState.Empty
+            } else {
+                MyFilesUiState.Success(
+                    MyFilesContent(
+                        savedFiles = downloadedDocs,
+                        uploadedFiles = realUploaded
+                    )
+                )
+            }
+        }
+    }
+
+    fun deleteDownload(documentId: String, context: Context) {
+        viewModelScope.launch {
+            DownloadService.deleteDownload(context.applicationContext, documentId)
+        }
+    }
+
+    private fun docDetailToStudyFile(detail: com.pravor.notessharing.model.DocumentDetail, downloadedAt: Long): StudyFile {
+        val fileTypeEnum = when (detail.documentType.lowercase(java.util.Locale.ROOT).trim()) {
+            "pyq", "pyqs" -> FileType.Pyq
+            "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
+            "assignment", "assignments" -> FileType.Notes
+            "notes" -> FileType.Notes
+            else -> FileType.Pdf
+        }
+
+        val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+        val downloadDateStr = "Downloaded " + sdf.format(java.util.Date(downloadedAt))
+
+        return StudyFile(
+            id = detail.id,
+            title = detail.title,
+            uploadDate = downloadDateStr,
+            fileType = fileTypeEnum,
+            downloads = detail.downloads,
+            upvotes = detail.upvotes,
+            thumbnailUrl = detail.thumbnailUrl,
+            subject = detail.subject,
+            documentType = detail.documentType,
+            examYear = detail.examYear,
+            examType = detail.examType,
+            sectionDisplay = detail.sectionDisplay
+        )
     }
 
     private fun documentToStudyFile(doc: Map<String, Any>): StudyFile {

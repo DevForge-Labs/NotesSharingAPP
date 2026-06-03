@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -755,7 +756,8 @@ fun StudyHubShelfCard(
     file: StudyFile,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onBookmarkClick: (() -> Unit)? = null
+    onBookmarkClick: (() -> Unit)? = null,
+    onDeleteClick: (() -> Unit)? = null
 ) {
     val theme = getStudyResourceTheme(file.documentType ?: file.fileType.label)
     val docTypeStr = theme.docTypeStr
@@ -959,7 +961,20 @@ fun StudyHubShelfCard(
                         }
                     }
 
-                    if (onBookmarkClick != null) {
+                    if (onDeleteClick != null) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Download",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else if (onBookmarkClick != null) {
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(
                             onClick = onBookmarkClick,

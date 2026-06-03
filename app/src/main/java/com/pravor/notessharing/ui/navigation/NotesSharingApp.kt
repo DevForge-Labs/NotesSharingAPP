@@ -59,6 +59,38 @@ fun NotesSharingApp(
 ) {
     val authViewModel: AuthViewModel = viewModel()
     val navController = rememberNavController()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? androidx.activity.ComponentActivity
+
+    androidx.compose.runtime.DisposableEffect(activity) {
+        val listener = androidx.core.util.Consumer<android.content.Intent> { intent ->
+            val docId = intent.getStringExtra("document_id")
+            android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp onNewIntent listener - docId: $docId")
+            if (!docId.isNullOrBlank()) {
+                navController.navigate(AppDestination.DocumentDetail.createRoute(docId)) {
+                    popUpTo(AppDestination.Home.route)
+                }
+                intent.removeExtra("document_id")
+            }
+        }
+        activity?.addOnNewIntentListener(listener)
+        onDispose {
+            activity?.removeOnNewIntentListener(listener)
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(navController, activity) {
+        val intent = activity?.intent
+        val docId = intent?.getStringExtra("document_id")
+        android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp LaunchedEffect intent check - docId: $docId")
+        if (!docId.isNullOrBlank()) {
+            navController.navigate(AppDestination.DocumentDetail.createRoute(docId)) {
+                popUpTo(AppDestination.Home.route)
+            }
+            intent.removeExtra("document_id")
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val selectedBottomRoute = if (currentRoute?.startsWith("${AppDestination.Explore.route}/") == true) {
