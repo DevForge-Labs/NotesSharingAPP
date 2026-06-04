@@ -36,11 +36,12 @@ import com.pravor.notessharing.ui.screens.upload.UploadSuccessRoute
 import com.pravor.notessharing.ui.screens.document.DocumentDetailRoute
 import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ThemePreference
-import com.pravor.notessharing.ui.screens.auth.SplashScreen
 import com.pravor.notessharing.ui.screens.auth.WelcomeScreen
 import com.pravor.notessharing.ui.screens.auth.LoginScreen
 import com.pravor.notessharing.ui.screens.auth.SignUpScreen
 import com.pravor.notessharing.auth.AuthViewModel
+import com.pravor.notessharing.state.SessionState
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 object PdfDebugState {
@@ -99,7 +100,7 @@ fun NotesSharingApp(
         currentRoute
     }
 
-    val isAuthScreen = currentRoute == AppDestination.Splash.route ||
+    val isAuthScreen = currentRoute == "auth_gate" ||
             currentRoute == AppDestination.Welcome.route ||
             currentRoute == AppDestination.Login.route ||
             currentRoute == AppDestination.SignUp.route
@@ -165,7 +166,7 @@ fun NotesSharingApp(
         ) {
             NavHost(
                 navController = navController,
-                startDestination = AppDestination.Splash.route,
+                startDestination = "auth_gate",
                 modifier = Modifier.padding(
                     top = innerPadding.calculateTopPadding(),
                     bottom = 0.dp,
@@ -173,20 +174,21 @@ fun NotesSharingApp(
                     end = innerPadding.calculateEndPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
                 )
             ) {
-                composable(AppDestination.Splash.route) {
-                    SplashScreen(
-                        viewModel = authViewModel,
-                        onNavigateToHome = {
-                            navController.navigate(AppDestination.Home.route) {
-                                popUpTo(AppDestination.Splash.route) { inclusive = true }
-                            }
-                        },
-                        onNavigateToAuth = {
-                            navController.navigate(AppDestination.Welcome.route) {
-                                popUpTo(AppDestination.Splash.route) { inclusive = true }
+                composable("auth_gate") {
+                    val sessionState by authViewModel.sessionState.collectAsState()
+                    androidx.compose.runtime.LaunchedEffect(sessionState) {
+                        if (sessionState != SessionState.Checking) {
+                            if (sessionState == SessionState.LoggedIn) {
+                                navController.navigate(AppDestination.Home.route) {
+                                    popUpTo("auth_gate") { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate(AppDestination.Welcome.route) {
+                                    popUpTo("auth_gate") { inclusive = true }
+                                }
                             }
                         }
-                    )
+                    }
                 }
                 composable(AppDestination.Welcome.route) {
                     WelcomeScreen(
@@ -496,7 +498,7 @@ fun NotesSharingApp(
                         onNotificationsChange = onNotificationsChange,
                         onLogoutClick = {
                             authViewModel.logout()
-                            navController.navigate(AppDestination.Splash.route) {
+                            navController.navigate(AppDestination.Welcome.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         },

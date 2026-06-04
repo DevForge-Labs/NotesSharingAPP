@@ -1,6 +1,7 @@
 package com.pravor.notessharing.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -22,7 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class MyFilesViewModel : ViewModel() {
+class MyFilesViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow<MyFilesUiState>(MyFilesUiState.Loading)
     val uiState: StateFlow<MyFilesUiState> = _uiState.asStateFlow()
 
@@ -33,8 +34,11 @@ class MyFilesViewModel : ViewModel() {
     private var downloadedDocs: List<StudyFile> = emptyList()
 
     private var isObservingDownloads = false
+    private var isDownloadsLoaded = false
+    private var isUploadedLoaded = false
 
     init {
+        loadDownloads(application)
         loadMyFiles()
     }
 
@@ -53,6 +57,7 @@ class MyFilesViewModel : ViewModel() {
                     }
                 }
                 downloadedDocs = studyFiles
+                isDownloadsLoaded = true
                 updateUiState()
             }
         }
@@ -62,6 +67,7 @@ class MyFilesViewModel : ViewModel() {
         val currentUid = FirebaseAuth.getInstance().currentUser?.uid
         if (currentUid == null) {
             realUploaded = emptyList()
+            isUploadedLoaded = true
             updateUiState()
             return
         }
@@ -90,15 +96,21 @@ class MyFilesViewModel : ViewModel() {
                     val data = doc.data ?: return@mapNotNull null
                     documentToStudyFile(data)
                 }
+                isUploadedLoaded = true
                 updateUiState()
             } catch (e: Exception) {
                 realUploaded = emptyList()
+                isUploadedLoaded = true
                 updateUiState()
             }
         }
     }
 
     private fun updateUiState() {
+        if (!isDownloadsLoaded || !isUploadedLoaded) {
+            _uiState.update { MyFilesUiState.Loading }
+            return
+        }
         _uiState.update {
             if (downloadedDocs.isEmpty() && realUploaded.isEmpty()) {
                 MyFilesUiState.Empty

@@ -116,6 +116,38 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
 
         viewModelScope.launch {
+            com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
+                _uiState.update { current ->
+                    if (current is ExploreUiState.Success) {
+                        val updatedPopular = current.content.popularUploads.map { item ->
+                            val count = downloadCountsMap[item.id] ?: item.downloads
+                            item.copy(downloads = count)
+                        }
+                        val updatedTrending = current.content.trendingNotes.map { note ->
+                            val count = downloadCountsMap[note.id] ?: note.downloads
+                            note.copy(downloads = count)
+                        }
+                        val updatedDiscover = current.content.discoverItems.map { item ->
+                            if (item is com.pravor.notessharing.model.DiscoverFeedItem.Note) {
+                                val count = downloadCountsMap[item.id] ?: item.downloads
+                                item.copy(downloads = count)
+                            } else {
+                                item
+                            }
+                        }
+                        ExploreUiState.Success(current.content.copy(
+                            popularUploads = updatedPopular,
+                            trendingNotes = updatedTrending,
+                            discoverItems = updatedDiscover
+                        ))
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
             _uiState.collect { state ->
                 if (state is ExploreUiState.Success) {
                     val content = state.content

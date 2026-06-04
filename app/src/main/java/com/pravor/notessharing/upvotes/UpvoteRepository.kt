@@ -20,6 +20,9 @@ class UpvoteRepository {
         private val _upvoteCountsFlow = MutableStateFlow<Map<String, Int>>(emptyMap())
         val upvoteCountsFlow: StateFlow<Map<String, Int>> = _upvoteCountsFlow.asStateFlow()
 
+        private val _downloadCountsFlow = MutableStateFlow<Map<String, Int>>(emptyMap())
+        val downloadCountsFlow: StateFlow<Map<String, Int>> = _downloadCountsFlow.asStateFlow()
+
         var hasLoadedInitial = false
         private var listenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
         private var activeUserId: String? = null
@@ -70,6 +73,13 @@ class UpvoteRepository {
                                     if (count != null) {
                                         _upvoteCountsFlow.update { current ->
                                             current + (docId to count)
+                                        }
+                                    }
+                                    val downloadCount = snapshot.getLong("downloads")?.toInt()
+                                        ?: snapshot.getLong("downloadsCount")?.toInt()
+                                    if (downloadCount != null) {
+                                        _downloadCountsFlow.update { current ->
+                                            current + (docId to downloadCount)
                                         }
                                     }
                                 }

@@ -204,11 +204,9 @@ fun MyFilesScreen(
             ) {
                 Crossfade(targetState = uiState, label = "my-files-state", modifier = Modifier.fillMaxSize()) { state ->
                     when (state) {
-                        MyFilesUiState.Loading -> StatePanel(
-                            title = "Loading downloads",
-                            message = "Collecting your downloaded study collection",
-                            loading = true,
-                            modifier = Modifier.padding(top = 96.dp)
+                        MyFilesUiState.Loading -> com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator(
+                            text = "Loading your library...",
+                            modifier = Modifier.fillMaxSize()
                         )
                         MyFilesUiState.Empty -> {
                             if (selectedFilter == "All") {

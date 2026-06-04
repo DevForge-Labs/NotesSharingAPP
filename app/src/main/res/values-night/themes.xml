@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.NotesSharing" parent="android:Theme.Material.Light.NoActionBar" />
-
-    <!-- Native Splash Screen theme -->
+    <!-- Native Splash Screen theme matching App Dark Theme background (#080A0F) -->
     <style name="Theme.NotesSharing.Starting" parent="Theme.SplashScreen">
-        <!-- Set the splash screen background to match Light Theme background (#F7F9FC) -->
-        <item name="windowSplashScreenBackground">#F7F9FC</item>
+        <!-- Set the splash screen background to match Dark Theme background (#080A0F) -->
+        <item name="windowSplashScreenBackground">#080A0F</item>
         <!-- Use the app logo icon -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/app_logo_normal</item>
         <!-- The theme to use after the splash screen is dismissed -->

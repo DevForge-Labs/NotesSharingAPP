@@ -19,21 +19,31 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
     private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
     private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
 
+    private val upvoteState = combine(
+        com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
+        com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+    ) { upvotesMap, upvoteCountsMap ->
+        Pair(upvotesMap, upvoteCountsMap)
+    }
+
     val uiState: StateFlow<TrendingNotesUiState> = combine(
         repository.trendingNotes,
         com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow,
-        com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
-        com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow,
+        upvoteState,
+        com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow,
         repository.isRefreshing
-    ) { notes, bookmarks, upvotesMap, upvoteCountsMap, refreshing ->
+    ) { notes, bookmarks, upvoteStatePair, downloadCountsMap, refreshing ->
+        val (upvotesMap, upvoteCountsMap) = upvoteStatePair
         val bookmarkedIds = bookmarks.map { it.id }.toSet()
         val updatedNotes = notes.map { note ->
             val isUpvoted = upvotesMap[note.id] ?: false
-            val count = upvoteCountsMap[note.id] ?: note.upvotes
+            val upvotesCount = upvoteCountsMap[note.id] ?: note.upvotes
+            val downloadsCount = downloadCountsMap[note.id] ?: note.downloads
             note.copy(
                 isBookmarked = bookmarkedIds.contains(note.id),
                 isUpvoted = isUpvoted,
-                upvotes = count
+                upvotes = upvotesCount,
+                downloads = downloadsCount
             )
         }.filter { note ->
             val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
@@ -55,13 +65,16 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
             val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
             val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
             val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+            val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
             val updated = repository.trendingNotes.value.map { note ->
                 val isUpvoted = upvotesMap[note.id] ?: false
-                val count = upvoteCountsMap[note.id] ?: note.upvotes
+                val upvotesCount = upvoteCountsMap[note.id] ?: note.upvotes
+                val downloadsCount = downloadCountsMap[note.id] ?: note.downloads
                 note.copy(
                     isBookmarked = bookmarkedIds.contains(note.id),
                     isUpvoted = isUpvoted,
-                    upvotes = count
+                    upvotes = upvotesCount,
+                    downloads = downloadsCount
                 )
             }.filter { note ->
                 val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()

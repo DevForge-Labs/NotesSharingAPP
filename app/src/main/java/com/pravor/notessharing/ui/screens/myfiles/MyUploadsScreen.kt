@@ -182,11 +182,9 @@ fun MyUploadsScreen(
             ) {
                 Crossfade(targetState = uiState, label = "my-uploads-state", modifier = Modifier.fillMaxSize()) { state ->
                     when (state) {
-                        MyFilesUiState.Loading -> StatePanel(
-                            title = "Loading uploads",
-                            message = "Fetching your contributions",
-                            loading = true,
-                            modifier = Modifier.padding(top = 96.dp)
+                        MyFilesUiState.Loading -> com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator(
+                            text = "Loading your uploads...",
+                            modifier = Modifier.fillMaxSize()
                         )
                         is MyFilesUiState.Error -> StatePanel(
                             title = "Uploads unavailable",

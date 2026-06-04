@@ -44,6 +44,7 @@ import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.HomeUiState
 import com.pravor.notessharing.state.MyFilesUiState
 import com.pravor.notessharing.ui.components.StatePanel
+import com.pravor.notessharing.ui.components.loading.KnowledgeNetworkLoading
 import com.pravor.notessharing.ui.components.home_components.HomeSuccessContent
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.DummyData
@@ -150,7 +151,7 @@ fun HomeScreen(
     Box(modifier = modifier.fillMaxSize()) {
         Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
             when (val state = uiState) {
-                HomeUiState.Loading -> StatePanel("Loading feed", "Preparing your study stream", loading = true, modifier = Modifier.padding(top = 96.dp))
+                HomeUiState.Loading -> KnowledgeNetworkLoading()
                 HomeUiState.Empty -> StatePanel("No notes yet", "Saved study resources will appear here", modifier = Modifier.padding(top = 96.dp))
                 is HomeUiState.Error -> StatePanel("Something went wrong", state.message, modifier = Modifier.padding(top = 96.dp))
                 is HomeUiState.Success -> HomeSuccessContent(

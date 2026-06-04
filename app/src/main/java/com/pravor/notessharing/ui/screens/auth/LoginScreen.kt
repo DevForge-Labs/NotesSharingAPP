@@ -330,7 +330,7 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    GoogleIcon(modifier = Modifier.size(22.dp))
+                    GoogleIcon(modifier = Modifier.size(30.dp))
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Continue with Google",

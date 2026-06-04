@@ -18,6 +18,9 @@ import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import androidx.activity.result.contract.ActivityResultContracts
 import com.pravor.notessharing.viewmodel.AppSettingsViewModel
 import java.security.MessageDigest
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.pravor.notessharing.auth.AuthViewModel
+import com.pravor.notessharing.state.SessionState
 
 class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
@@ -26,9 +29,15 @@ class MainActivity : ComponentActivity() {
         Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "MainActivity requestPermissionLauncher - POST_NOTIFICATIONS permission result: $isGranted")
     }
     private val appSettingsViewModel: AppSettingsViewModel by viewModels()
+    private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        splashScreen.setKeepOnScreenCondition {
+            authViewModel.sessionState.value == SessionState.Checking
+        }
         enableEdgeToEdge(
             navigationBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,

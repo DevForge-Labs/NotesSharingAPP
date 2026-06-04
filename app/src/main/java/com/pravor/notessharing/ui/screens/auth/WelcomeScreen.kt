@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -43,12 +44,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.pravor.notessharing.R
 import com.pravor.notessharing.state.AuthUiState
 import com.pravor.notessharing.auth.AuthViewModel
 
@@ -125,27 +128,15 @@ fun WelcomeScreen(
         ) {
             // Glowing App Logo
             Surface(
-                modifier = Modifier
-                    .size(96.dp)
-                    .border(
-                        1.dp,
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                        ),
-                        RoundedCornerShape(26.dp)
-                    ),
-                shape = RoundedCornerShape(26.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
-                tonalElevation = 6.dp
+                modifier = Modifier.size(110.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = Color.Transparent
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.FilePresent,
-                        contentDescription = "App Logo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(50.dp)
-                    )
-                }
+                Image(
+                    painter = painterResource(R.drawable.app_logo_normal),
+                    contentDescription = "App Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
             }
             
             Spacer(modifier = Modifier.height(28.dp))
@@ -221,7 +212,7 @@ fun WelcomeScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         // Embedded Google G Vector Logo
-                        GoogleIcon(modifier = Modifier.size(22.dp))
+                        GoogleIcon(modifier = Modifier.size(30.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "Continue with Google",
@@ -282,26 +273,18 @@ fun WelcomeScreen(
 
 @Composable
 fun GoogleIcon(modifier: Modifier = Modifier) {
-    // Elegant SVG representing the Google logo
-    androidx.compose.foundation.Canvas(modifier = modifier) {
-        val size = this.size.width
-        val strokeWidth = size * 0.1f
-        // Draw standard Google G using beautiful canvas shapes or simple text/fallback.
-        // Let's draw an elegant glowing G using canvas or path, or standard character.
-    }
-    // Alternatively, draw custom shapes representing the 4 Google colors
     Box(
         modifier = modifier
-            .background(Color.White, CircleShape)
-            .padding(3.dp),
+            .fillMaxSize()
+            .clip(CircleShape)
+            .size(30.dp)
+            .background(Color.White, CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "G",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Black,
-            color = Color(0xFF4285F4),
-            textAlign = TextAlign.Center
+        Image(
+            painter = painterResource(R.drawable.google_icon),
+            contentDescription = "Google",
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

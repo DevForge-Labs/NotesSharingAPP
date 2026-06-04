@@ -28,7 +28,6 @@ sealed class AppDestination(
     data object Profile : AppDestination("profile", "Profile", Icons.Filled.Person)
     data object EditProfile : AppDestination("profile/edit", "Edit Profile", Icons.Filled.Person)
     
-    data object Splash : AppDestination("splash", "Splash", Icons.Filled.Home)
     data object Welcome : AppDestination("welcome", "Welcome", Icons.Filled.Home)
     data object Login : AppDestination("login", "Login", Icons.Filled.Home)
     data object SignUp : AppDestination("signup", "Sign Up", Icons.Filled.Home)

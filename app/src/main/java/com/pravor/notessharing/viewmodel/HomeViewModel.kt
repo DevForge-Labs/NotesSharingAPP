@@ -104,6 +104,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
+            com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
+                _uiState.update { current ->
+                    if (current is HomeUiState.Success) {
+                        val updatedFeed = current.content.feedItems.map { item ->
+                            val count = downloadCountsMap[item.id] ?: item.downloads
+                            item.copy(downloads = count)
+                        }
+                        val updatedRecentlyOpened = current.content.recentlyOpened?.let { item ->
+                            val count = downloadCountsMap[item.id] ?: item.downloads
+                            item.copy(downloads = count)
+                        }
+                        current.copy(content = current.content.copy(
+                            feedItems = updatedFeed,
+                            recentlyOpened = updatedRecentlyOpened
+                        ))
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
             _uiState.collect { state ->
                 if (state is HomeUiState.Success) {
                     val feedItems = state.content.feedItems
