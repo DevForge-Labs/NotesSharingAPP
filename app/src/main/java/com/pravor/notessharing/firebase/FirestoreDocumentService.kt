@@ -1,6 +1,7 @@
 package com.pravor.notessharing.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.tasks.await
 
 class FirestoreDocumentService {
@@ -13,5 +14,15 @@ class FirestoreDocumentService {
         } else {
             collection.add(doc).await()
         }
+    }
+
+    suspend fun incrementDownloadCount(collection: String, documentId: String) {
+        val documentRef = firestore.collection(collection).document(documentId)
+        documentRef.update(
+            mapOf(
+                "downloads" to FieldValue.increment(1),
+                "downloadsCount" to FieldValue.increment(1)
+            )
+        ).await()
     }
 }

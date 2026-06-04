@@ -2,6 +2,7 @@ package com.pravor.notessharing.data.download
 
 import android.content.Context
 import com.pravor.notessharing.model.DocumentDetail
+import com.pravor.notessharing.viewmodel.DownloadState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -112,6 +113,9 @@ object DownloadService {
 
             // Remove metadata in DataStore
             manager.removeDownload(documentId)
+
+            // Reset download tracker state to NotDownloaded
+            DownloadTracker.updateState(documentId, DownloadState.NotDownloaded)
         }
     }
 

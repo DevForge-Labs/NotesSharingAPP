@@ -13,6 +13,7 @@ import com.pravor.notessharing.MainActivity
 import com.pravor.notessharing.R
 import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.viewmodel.DownloadState
+import com.pravor.notessharing.firebase.FirestoreDocumentService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ class DownloadForegroundService : Service() {
     private val activeDocuments = ConcurrentHashMap<String, DocumentDetail>()
     private val activeProgress = ConcurrentHashMap<String, Int>()
     private var firstNotificationId: Int? = null
+    private val firestoreService = FirestoreDocumentService()
 
     private fun getNotificationId(docId: String): Int {
         val rawHash = docId.hashCode()
@@ -223,6 +225,18 @@ class DownloadForegroundService : Service() {
                 // Download Success
                 Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "Download completed successfully: docId=$docId")
                 DownloadTracker.updateState(docId, DownloadState.Downloaded)
+                
+                try {
+                    val collection = getCollectionName(document.documentType)
+                    Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "Incrementing download count in Firestore: docId=$docId, collection=$collection")
+                    firestoreService.incrementDownloadCount(collection, docId)
+                    Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "Firestore download count incremented successfully for docId=$docId")
+                    
+                    val newCount = document.downloads + 1
+                    DownloadCountTracker.updateDownloadCount(docId, newCount)
+                } catch (e: Exception) {
+                    Log.e("DOWNLOAD_NOTIFICATION_DEBUG", "Failed to increment download count in Firestore for docId=$docId: ${e.message}", e)
+                }
                 
                 if (isNotificationPreferenceEnabled()) {
                     val successNotification = buildSuccessNotification(document)
@@ -444,6 +458,17 @@ class DownloadForegroundService : Service() {
             } else {
                 Log.e("DOWNLOAD_NOTIFICATION_DEBUG", "createNotificationChannel verification: Failed to locate channel after creation!")
             }
+        }
+    }
+
+    private fun getCollectionName(documentType: String): String {
+        return when (documentType.trim().lowercase()) {
+            "assignment", "assignments" -> "assignments"
+            "notes" -> "notes"
+            "pyq", "pyqs" -> "pyqs"
+            "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
+            "videos", "youtube resource" -> "videos"
+            else -> "notes"
         }
     }
 

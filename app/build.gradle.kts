@@ -84,4 +84,7 @@ dependencies {
 
     // OkHttp
     implementation(libs.okhttp)
+
+    // Splash Screen
+    implementation(libs.androidx.core.splashscreen)
 }
