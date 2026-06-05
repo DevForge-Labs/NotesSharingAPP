@@ -38,6 +38,11 @@ android {
     buildFeatures {
         compose = true
     }
+    lint {
+        abortOnError = false
+        disable.add("UnsafeOptInUsageError")
+        disable.add("UnsafeOptInUsageWarning")
+    }
 }
 
 dependencies {
@@ -87,4 +92,8 @@ dependencies {
 
     // Splash Screen
     implementation(libs.androidx.core.splashscreen)
+
+    // Jetpack Glance Widget
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 }

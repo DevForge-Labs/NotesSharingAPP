@@ -118,6 +118,13 @@ class BookmarkRepository {
                 "uploaderName" to feedItem.uploaderName
             )
             bookmarksCollection.document(bookmarkId).set(data).await()
+            try {
+                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(
+                    com.google.firebase.FirebaseApp.getInstance().applicationContext
+                )
+            } catch (ex: Exception) {
+                android.util.Log.e("BookmarkRepository", "Widget update error: ${ex.message}", ex)
+            }
         } catch (e: Exception) {
             // lightweight fallback or log
         }
@@ -144,6 +151,13 @@ class BookmarkRepository {
                 "uploaderName" to "Contributor"
             )
             bookmarksCollection.document(bookmarkId).set(data).await()
+            try {
+                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(
+                    com.google.firebase.FirebaseApp.getInstance().applicationContext
+                )
+            } catch (ex: Exception) {
+                android.util.Log.e("BookmarkRepository", "Widget update error: ${ex.message}", ex)
+            }
         } catch (e: Exception) {
             // Ignore
         }
@@ -158,6 +172,13 @@ class BookmarkRepository {
         try {
             val bookmarkId = "${userId}_${documentId}"
             bookmarksCollection.document(bookmarkId).delete().await()
+            try {
+                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(
+                    com.google.firebase.FirebaseApp.getInstance().applicationContext
+                )
+            } catch (ex: Exception) {
+                android.util.Log.e("BookmarkRepository", "Widget update error: ${ex.message}", ex)
+            }
         } catch (e: Exception) {
             // Ignore
         }

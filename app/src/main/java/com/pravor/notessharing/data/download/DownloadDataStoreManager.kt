@@ -51,6 +51,11 @@ class DownloadDataStoreManager(private val context: Context) {
             atts.addAll(attachments)
             preferences[DOWNLOADED_ATTACHMENTS_KEY] = serializeDownloadedAttachments(atts)
         }
+        try {
+            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+        } catch (ex: Exception) {
+            android.util.Log.e("DownloadDataStoreManager", "Widget update error: ${ex.message}", ex)
+        }
     }
 
     suspend fun removeDownload(documentId: String) {
@@ -62,6 +67,11 @@ class DownloadDataStoreManager(private val context: Context) {
             val atts = parseDownloadedAttachments(preferences[DOWNLOADED_ATTACHMENTS_KEY] ?: "[]").toMutableList()
             atts.removeAll { it.documentId == documentId }
             preferences[DOWNLOADED_ATTACHMENTS_KEY] = serializeDownloadedAttachments(atts)
+        }
+        try {
+            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+        } catch (ex: Exception) {
+            android.util.Log.e("DownloadDataStoreManager", "Widget update error: ${ex.message}", ex)
         }
     }
 

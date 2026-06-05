@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">NotesSharing</string>
+    <string name="widget_description">Quick access to bookmarks, uploads, and downloads.</string>
 </resources>
