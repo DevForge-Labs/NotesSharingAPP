@@ -5,6 +5,12 @@ import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadType
 
 @Immutable
+data class CatalogSubject(
+    val id: String,
+    val name: String
+)
+
+@Immutable
 data class YoutubePreview(
     val title: String,
     val channelTitle: String,
@@ -16,9 +22,15 @@ data class YoutubePreview(
 data class UploadUiState(
     val branches: List<String> = emptyList(),
     val semesters: List<String> = emptyList(),
+    val groups: List<String> = listOf("Group A", "Group B"),
     val selectedBranch: String = "",
     val selectedSemester: String = "",
+    val selectedGroup: String = "",
     val subject: String = "",
+    val subjectId: String = "",
+    val useCatalogDropdown: Boolean = false,
+    val subjectCatalogKeyExists: Boolean = false,
+    val catalogSubjects: List<CatalogSubject> = emptyList(),
     val selectedType: UploadType? = null,
     val selectedFiles: List<SelectedUploadFile> = emptyList(),
     val youtubeUrl: String = "",
@@ -45,7 +57,11 @@ data class UploadUiState(
     val uploadProgress: Float = 0f
 ) {
     val metadataComplete: Boolean
-        get() = selectedBranch.isNotBlank() && selectedSemester.isNotBlank() && subject.isNotBlank() && selectedType != null
+        get() {
+            val isFirstYear = selectedSemester == "Semester 1" || selectedSemester == "Semester 2"
+            val groupComplete = !isFirstYear || selectedGroup.isNotBlank()
+            return selectedBranch.isNotBlank() && selectedSemester.isNotBlank() && groupComplete && subject.isNotBlank() && selectedType != null
+        }
 
     val totalSizeBytes: Long
         get() = selectedFiles.sumOf { it.sizeBytes }

@@ -61,6 +61,7 @@ class UploadRepository(private val context: Context) {
         branch: String,
         semester: String,
         subject: String,
+        subjectId: String = "",
         selectedFiles: List<SelectedUploadFile>,
         title: String,
         description: String = "",
@@ -70,6 +71,7 @@ class UploadRepository(private val context: Context) {
             branch = branch,
             semester = semester,
             subject = subject,
+            subjectId = subjectId,
             type = UploadType.Notes,
             selectedFiles = selectedFiles,
             youtubeUrl = null,
@@ -86,6 +88,7 @@ class UploadRepository(private val context: Context) {
         branch: String,
         semester: String,
         subject: String,
+        subjectId: String = "",
         selectedFiles: List<SelectedUploadFile>,
         title: String,
         description: String = "",
@@ -95,6 +98,7 @@ class UploadRepository(private val context: Context) {
             branch = branch,
             semester = semester,
             subject = subject,
+            subjectId = subjectId,
             type = UploadType.CheatSheet,
             selectedFiles = selectedFiles,
             youtubeUrl = null,
@@ -111,6 +115,7 @@ class UploadRepository(private val context: Context) {
         branch: String,
         semester: String,
         subject: String,
+        subjectId: String = "",
         selectedFiles: List<SelectedUploadFile>,
         title: String,
         description: String = "",
@@ -122,6 +127,7 @@ class UploadRepository(private val context: Context) {
             branch = branch,
             semester = semester,
             subject = subject,
+            subjectId = subjectId,
             type = UploadType.Assignment,
             selectedFiles = selectedFiles,
             youtubeUrl = null,
@@ -140,6 +146,7 @@ class UploadRepository(private val context: Context) {
         branch: String,
         semester: String,
         subject: String,
+        subjectId: String = "",
         youtubeUrl: String,
         youtubePreview: YoutubePreview?,
         youtubeResourceType: String = "video",
@@ -150,6 +157,7 @@ class UploadRepository(private val context: Context) {
             branch = branch,
             semester = semester,
             subject = subject,
+            subjectId = subjectId,
             type = UploadType.Youtube,
             selectedFiles = emptyList(),
             youtubeUrl = youtubeUrl,
@@ -167,6 +175,7 @@ class UploadRepository(private val context: Context) {
         branch: String,
         semester: String,
         subject: String,
+        subjectId: String = "",
         type: UploadType,
         selectedFiles: List<SelectedUploadFile>,
         youtubeUrl: String?,
@@ -212,6 +221,7 @@ class UploadRepository(private val context: Context) {
                 "semester" to semester,
                 "subject" to displaySubject,
                 "displaySubject" to displaySubject,
+                "subjectId" to if (subjectId.isNotBlank()) subjectId else null,
                 "searchKey" to searchKey,
                 "documentType" to type.label,
                 "type" to type.label,
@@ -332,6 +342,10 @@ class UploadRepository(private val context: Context) {
                     "attachmentCount" to 1
                 )
 
+                if (subjectId.isNotBlank()) {
+                    doc["subjectId"] = subjectId
+                }
+
                 doc["examYear"] = normalizedYear
                 doc["examType"] = normalizedExamType
                 firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
@@ -409,43 +423,47 @@ class UploadRepository(private val context: Context) {
             val formattedTitle = if (!title.isNullOrBlank()) title.trim() else subject.trim()
 
             val doc = mutableMapOf<String, Any>(
-                "documentId" to documentId,
-                "title" to formattedTitle,
-                "description" to description,
-                "branch" to branch,
-                "semester" to semester,
-                "subject" to displaySubject,
-                "displaySubject" to displaySubject,
-                "searchKey" to searchKey,
-                "documentType" to type.label,
-                "type" to type.label,
-                "uploaderId" to uploaderId,
-                "uploaderName" to uploaderName,
-                "uploaderPhotoUrl" to uploaderPhotoUrl,
-                "uploadTimestamp" to uploadedAt,
-                "uploadedAt" to uploadedAt,
-                "downloadsCount" to 0,
-                "downloads" to 0,
-                "likesCount" to 0,
-                "upvotes" to 0,
-                "bookmarks" to 0,
-                "viewsCount" to 0,
-                "fileUrl" to downloadUrls.first(),
-                "downloadUrl" to downloadUrls.first(),
-                "storagePath" to storagePaths.first(),
-                "storagePaths" to storagePaths,
-                "fileSize" to totalBytes,
-                "fileExtension" to firstFileExtension,
-                "isVerified" to false,
-                "tags" to emptyList<String>(),
-                
-                // Enhanced metadata fields
-                "fileType" to fileType,
-                "mimeType" to mimeType,
-                "fileUrls" to downloadUrls,
-                "thumbnailUrl" to (if (fileType == "image") downloadUrls.first() else ""),
-                "attachmentCount" to selectedFiles.size
-            )
+                    "documentId" to documentId,
+                    "title" to formattedTitle,
+                    "description" to description,
+                    "branch" to branch,
+                    "semester" to semester,
+                    "subject" to displaySubject,
+                    "displaySubject" to displaySubject,
+                    "searchKey" to searchKey,
+                    "documentType" to type.label,
+                    "type" to type.label,
+                    "uploaderId" to uploaderId,
+                    "uploaderName" to uploaderName,
+                    "uploaderPhotoUrl" to uploaderPhotoUrl,
+                    "uploadTimestamp" to uploadedAt,
+                    "uploadedAt" to uploadedAt,
+                    "downloadsCount" to 0,
+                    "downloads" to 0,
+                    "likesCount" to 0,
+                    "upvotes" to 0,
+                    "bookmarks" to 0,
+                    "viewsCount" to 0,
+                    "fileUrl" to downloadUrls.first(),
+                    "downloadUrl" to downloadUrls.first(),
+                    "storagePath" to storagePaths.first(),
+                    "storagePaths" to storagePaths,
+                    "fileSize" to totalBytes,
+                    "fileExtension" to firstFileExtension,
+                    "isVerified" to false,
+                    "tags" to emptyList<String>(),
+                    
+                    // Enhanced metadata fields
+                    "fileType" to fileType,
+                    "mimeType" to mimeType,
+                    "fileUrls" to downloadUrls,
+                    "thumbnailUrl" to (if (fileType == "image") downloadUrls.first() else ""),
+                    "attachmentCount" to selectedFiles.size
+                )
+
+                if (subjectId.isNotBlank()) {
+                    doc["subjectId"] = subjectId
+                }
             
             if (type == UploadType.Assignment) {
                 if (section != null) doc["section"] = section

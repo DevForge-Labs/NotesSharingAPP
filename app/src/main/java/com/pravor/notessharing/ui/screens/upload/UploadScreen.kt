@@ -8,21 +8,31 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -69,19 +79,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -128,7 +143,9 @@ fun UploadRoute(
         uiState = uiState,
         onBranchChange = viewModel::selectBranch,
         onSemesterChange = viewModel::selectSemester,
+        onGroupChange = viewModel::selectGroup,
         onSubjectChange = viewModel::updateSubject,
+        onSubjectSelected = viewModel::selectCatalogSubject,
         onTitleChange = viewModel::updateTitle,
         onDescriptionChange = viewModel::updateDescription,
         onSectionChange = viewModel::updateSection,
@@ -150,7 +167,9 @@ fun UploadScreen(
     uiState: UploadUiState,
     onBranchChange: (String) -> Unit,
     onSemesterChange: (String) -> Unit,
+    onGroupChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
+    onSubjectSelected: (com.pravor.notessharing.state.CatalogSubject) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onSectionChange: (String) -> Unit,
@@ -214,7 +233,9 @@ fun UploadScreen(
                     uiState = uiState,
                     onBranchChange = onBranchChange,
                     onSemesterChange = onSemesterChange,
+                    onGroupChange = onGroupChange,
                     onSubjectChange = onSubjectChange,
+                    onSubjectSelected = onSubjectSelected,
                     onTitleChange = onTitleChange,
                     onDescriptionChange = onDescriptionChange,
                     onSectionChange = onSectionChange,
@@ -304,7 +325,9 @@ fun MetadataSection(
     uiState: UploadUiState,
     onBranchChange: (String) -> Unit,
     onSemesterChange: (String) -> Unit,
+    onGroupChange: (String) -> Unit,
     onSubjectChange: (String) -> Unit,
+    onSubjectSelected: (com.pravor.notessharing.state.CatalogSubject) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onSectionChange: (String) -> Unit,
@@ -337,31 +360,63 @@ fun MetadataSection(
                 options = uiState.semesters,
                 onValueChange = onSemesterChange
             )
-            
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(
-                    value = uiState.subject,
-                    onValueChange = onSubjectChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Subject") },
-                    placeholder = { Text("DBMS, Operating Systems, DSA...") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
-                    )
+
+            val isFirstYear = uiState.selectedSemester == "Semester 1" || uiState.selectedSemester == "Semester 2"
+            if (isFirstYear) {
+                DropdownField(
+                    label = "Group",
+                    value = uiState.selectedGroup,
+                    options = uiState.groups,
+                    onValueChange = onGroupChange
                 )
-                val showSubjectError = uiState.subject.isBlank() && (uiState.selectedBranch.isNotBlank() || uiState.selectedSemester.isNotBlank())
-                if (showSubjectError) {
-                    Text(
-                        text = "Subject is required",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = 8.dp)
+            }
+            
+            if (uiState.useCatalogDropdown) {
+                DropdownFieldSubject(
+                    label = "Subject",
+                    value = uiState.subject,
+                    options = uiState.catalogSubjects,
+                    onValueChange = onSubjectSelected
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedTextField(
+                        value = uiState.subject,
+                        onValueChange = onSubjectChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Subject") },
+                        placeholder = { Text("DBMS, Operating Systems, DSA...") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                        )
                     )
+                    val selectionDone = if (uiState.selectedSemester == "Semester 1" || uiState.selectedSemester == "Semester 2") {
+                        uiState.selectedSemester.isNotBlank() && uiState.selectedGroup.isNotBlank()
+                    } else {
+                        uiState.selectedBranch.isNotBlank() && uiState.selectedSemester.isNotBlank()
+                    }
+                    if (selectionDone && !uiState.subjectCatalogKeyExists) {
+                        Text(
+                            text = "Subject catalog unavailable for this branch/semester. Enter subject manually.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    val showSubjectError = uiState.subject.isBlank() && (uiState.selectedBranch.isNotBlank() || uiState.selectedSemester.isNotBlank())
+                    if (showSubjectError) {
+                        Text(
+                            text = "Subject is required",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
                 }
             }
 
@@ -537,16 +592,64 @@ private fun DropdownField(
         )
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 200.dp)
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        onValueChange(option)
-                        expanded = false
+            val scrollState = rememberScrollState()
+            val primaryColor = MaterialTheme.colorScheme.primary
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp)
+                    .verticalScroll(scrollState)
+                    .drawWithContent {
+                        drawContent()
+                        val maxScroll = scrollState.maxValue
+                        if (maxScroll > 0) {
+                            val viewportHeight = size.height
+                            val totalContentHeight = maxScroll + viewportHeight
+                            
+                            val trackWidth = 3.dp.toPx()
+                            val trackRightPadding = 4.dp.toPx()
+                            val trackTopPadding = 8.dp.toPx()
+                            val trackX = size.width - trackWidth - trackRightPadding
+                            
+                            val usableHeight = viewportHeight - trackTopPadding * 2
+                            val thumbFraction = (viewportHeight / totalContentHeight).coerceIn(0.08f, 0.18f)
+                            val thumbHeight = usableHeight * thumbFraction
+
+                            val scrollFraction = scrollState.value.toFloat() / maxScroll.toFloat()
+                            val maxOffset = usableHeight - thumbHeight
+                            val thumbOffset = maxOffset * scrollFraction
+
+                            // Draw track
+                            drawRoundRect(
+                                color = primaryColor.copy(alpha = 0.08f),
+                                topLeft = Offset(trackX, trackTopPadding),
+                                size = Size(trackWidth, usableHeight),
+                                cornerRadius = CornerRadius(x = trackWidth / 2f, y = trackWidth / 2f)
+                            )
+
+                            // Draw thumb
+                            drawRoundRect(
+                                color = primaryColor.copy(alpha = 0.85f),
+                                topLeft = Offset(trackX, thumbOffset + trackTopPadding),
+                                size = Size(trackWidth, thumbHeight.coerceAtLeast(trackWidth)),
+                                cornerRadius = CornerRadius(x = trackWidth / 2f, y = trackWidth / 2f)
+                            )
+                        }
                     }
-                )
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            onValueChange(option)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
@@ -586,16 +689,161 @@ private fun DropdownFieldUploadType(
         )
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 200.dp)
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.label) },
-                    onClick = {
-                        onValueChange(option)
-                        expanded = false
+            val scrollState = rememberScrollState()
+            val primaryColor = MaterialTheme.colorScheme.primary
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp)
+                    .verticalScroll(scrollState)
+                    .drawWithContent {
+                        drawContent()
+                        val maxScroll = scrollState.maxValue
+                        if (maxScroll > 0) {
+                            val viewportHeight = size.height
+                            val totalContentHeight = maxScroll + viewportHeight
+                            
+                            val trackWidth = 3.dp.toPx()
+                            val trackRightPadding = 4.dp.toPx()
+                            val trackTopPadding = 8.dp.toPx()
+                            val trackX = size.width - trackWidth - trackRightPadding
+                            
+                            val usableHeight = viewportHeight - trackTopPadding * 2
+                            val thumbFraction = (viewportHeight / totalContentHeight).coerceIn(0.08f, 0.18f)
+                            val thumbHeight = usableHeight * thumbFraction
+
+                            val scrollFraction = scrollState.value.toFloat() / maxScroll.toFloat()
+                            val maxOffset = usableHeight - thumbHeight
+                            val thumbOffset = maxOffset * scrollFraction
+
+                            // Draw track
+                            drawRoundRect(
+                                color = primaryColor.copy(alpha = 0.08f),
+                                topLeft = Offset(trackX, trackTopPadding),
+                                size = Size(trackWidth, usableHeight),
+                                cornerRadius = CornerRadius(x = trackWidth / 2f, y = trackWidth / 2f)
+                            )
+
+                            // Draw thumb
+                            drawRoundRect(
+                                color = primaryColor.copy(alpha = 0.85f),
+                                topLeft = Offset(trackX, thumbOffset + trackTopPadding),
+                                size = Size(trackWidth, thumbHeight.coerceAtLeast(trackWidth)),
+                                cornerRadius = CornerRadius(x = trackWidth / 2f, y = trackWidth / 2f)
+                            )
+                        }
                     }
-                )
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.label) },
+                        onClick = {
+                            onValueChange(option)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DropdownFieldSubject(
+    label: String,
+    value: String,
+    options: List<com.pravor.notessharing.state.CatalogSubject>,
+    onValueChange: (com.pravor.notessharing.state.CatalogSubject) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            label = { Text(label) },
+            placeholder = { Text("Select $label") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            shape = RoundedCornerShape(18.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+            )
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 200.dp)
+        ) {
+            val scrollState = rememberScrollState()
+            val primaryColor = MaterialTheme.colorScheme.primary
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp)
+                    .verticalScroll(scrollState)
+                    .drawWithContent {
+                        drawContent()
+                        val maxScroll = scrollState.maxValue
+                        if (maxScroll > 0) {
+                            val viewportHeight = size.height
+                            val totalContentHeight = maxScroll + viewportHeight
+                            
+                            val trackWidth = 3.dp.toPx()
+                            val trackRightPadding = 4.dp.toPx()
+                            val trackTopPadding = 8.dp.toPx()
+                            val trackX = size.width - trackWidth - trackRightPadding
+                            
+                            val usableHeight = viewportHeight - trackTopPadding * 2
+                            val thumbFraction = (viewportHeight / totalContentHeight).coerceIn(0.08f, 0.18f)
+                            val thumbHeight = usableHeight * thumbFraction
+
+                            val scrollFraction = scrollState.value.toFloat() / maxScroll.toFloat()
+                            val maxOffset = usableHeight - thumbHeight
+                            val thumbOffset = maxOffset * scrollFraction
+
+                            // Draw track
+                            drawRoundRect(
+                                color = primaryColor.copy(alpha = 0.08f),
+                                topLeft = Offset(trackX, trackTopPadding),
+                                size = Size(trackWidth, usableHeight),
+                                cornerRadius = CornerRadius(x = trackWidth / 2f, y = trackWidth / 2f)
+                            )
+
+                            // Draw thumb
+                            drawRoundRect(
+                                color = primaryColor.copy(alpha = 0.85f),
+                                topLeft = Offset(trackX, thumbOffset + trackTopPadding),
+                                size = Size(trackWidth, thumbHeight.coerceAtLeast(trackWidth)),
+                                cornerRadius = CornerRadius(x = trackWidth / 2f, y = trackWidth / 2f)
+                            )
+                        }
+                    }
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.name) },
+                        onClick = {
+                            onValueChange(option)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }

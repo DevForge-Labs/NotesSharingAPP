@@ -6,12 +6,14 @@ import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.data.UploadRepository
 import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.model.extractYoutubeVideoId
 import com.pravor.notessharing.model.extractYoutubePlaylistId
+import com.pravor.notessharing.state.CatalogSubject
 import com.pravor.notessharing.state.UploadUiState
 import com.pravor.notessharing.state.YoutubePreview
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -36,10 +39,11 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     private val repository = UploadRepository(application)
     private var pendingCameraUri: Uri? = null
     private var youtubeFetchJob: Job? = null
+    private var subjectCatalogDocument: Map<String, Any>? = null
 
     private val _uiState = MutableStateFlow(
         UploadUiState(
-            branches = listOf("Computer Science", "Mechanical", "Civil", "Electrical", "ECE"),
+            branches = listOf("CS", "IT", "CSC", "CSS", "ECE", "Electrical", "Mechanical", "Civil", "Biotechnology"),
             semesters = listOf(
                 "Semester 1", "Semester 2", "Semester 3", "Semester 4",
                 "Semester 5", "Semester 6", "Semester 7", "Semester 8"
@@ -50,16 +54,194 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     )
     val uiState: StateFlow<UploadUiState> = _uiState.asStateFlow()
 
+    init {
+        loadSubjectCatalog()
+    }
+
+    private fun loadSubjectCatalog() {
+        viewModelScope.launch {
+            try {
+                val snapshot = FirebaseFirestore.getInstance()
+                    .collection("app_config")
+                    .document("subject_catalog")
+                    .get()
+                    .await()
+                if (snapshot.exists()) {
+                    subjectCatalogDocument = snapshot.data
+                    resolveSubjectForCurrentKey()
+                }
+            } catch (e: Exception) {
+                // Ignore and use manual fallback
+            }
+        }
+    }
+
+    private fun resolveSubjectForCurrentKey() {
+        val state = _uiState.value
+        val sem = state.selectedSemester
+        val branch = state.selectedBranch
+        val group = state.selectedGroup
+
+        val key = when {
+            sem == "Semester 1" -> {
+                if (group == "Group A") "GROUP_A"
+                else if (group == "Group B") "GROUP_B"
+                else null
+            }
+            sem == "Semester 2" -> {
+                if (group == "Group A") "GROUP_B"
+                else if (group == "Group B") "GROUP_A"
+                else null
+            }
+            branch.isNotBlank() && sem.isNotBlank() -> {
+                val semNum = sem.filter { it.isDigit() }
+                if (semNum.isNotEmpty()) "${branch}_$semNum" else null
+            }
+            else -> null
+        }
+
+        if (key == null) {
+            _uiState.update { it.copy(
+                catalogSubjects = emptyList(),
+                useCatalogDropdown = false,
+                subjectCatalogKeyExists = false
+            ) }
+            return
+        }
+
+        val doc = subjectCatalogDocument
+        if (doc == null) {
+            _uiState.update { it.copy(
+                catalogSubjects = emptyList(),
+                useCatalogDropdown = false,
+                subjectCatalogKeyExists = false
+            ) }
+            return
+        }
+
+        val catalogData = doc[key]
+        if (catalogData != null) {
+            val resolvedSubjects = mutableListOf<CatalogSubject>()
+            if (catalogData is Map<*, *>) {
+                for ((subId, subVal) in catalogData) {
+                    val id = subId.toString()
+                    val name = when (subVal) {
+                        is Map<*, *> -> subVal["name"]?.toString() ?: id
+                        is String -> subVal
+                        else -> id
+                    }
+                    resolvedSubjects.add(CatalogSubject(id, name))
+                }
+            } else if (catalogData is List<*>) {
+                for (item in catalogData) {
+                    if (item is Map<*, *>) {
+                        val id = item["subjectId"]?.toString() ?: item["id"]?.toString() ?: ""
+                        val name = item["name"]?.toString() ?: item["subject"]?.toString() ?: id
+                        if (id.isNotEmpty()) {
+                            resolvedSubjects.add(CatalogSubject(id, name))
+                        }
+                    }
+                }
+            }
+
+            resolvedSubjects.sortBy { it.name }
+
+            if (resolvedSubjects.isNotEmpty()) {
+                val currentInList = resolvedSubjects.any { it.name.equals(state.subject, ignoreCase = true) }
+                if (currentInList) {
+                    val matched = resolvedSubjects.first { it.name.equals(state.subject, ignoreCase = true) }
+                    _uiState.update { it.copy(
+                        catalogSubjects = resolvedSubjects,
+                        useCatalogDropdown = true,
+                        subjectCatalogKeyExists = true,
+                        subject = matched.name,
+                        subjectId = matched.id
+                    ) }
+                } else {
+                    _uiState.update { it.copy(
+                        catalogSubjects = resolvedSubjects,
+                        useCatalogDropdown = true,
+                        subjectCatalogKeyExists = true,
+                        subject = "",
+                        subjectId = ""
+                    ) }
+                }
+                return
+            }
+        }
+
+        // Key not found or empty -> fallback to manual free-text entry. Clear subjectId, preserve subject
+        _uiState.update { it.copy(
+            catalogSubjects = emptyList(),
+            useCatalogDropdown = false,
+            subjectCatalogKeyExists = false,
+            subjectId = ""
+        ) }
+    }
+
     fun selectBranch(branch: String) {
-        _uiState.update { it.copy(selectedBranch = branch, errorMessage = null, uploadSuccess = false) }
+        _uiState.update { it.copy(
+            selectedBranch = branch,
+            selectedSemester = "",
+            selectedGroup = "",
+            subject = "",
+            subjectId = "",
+            catalogSubjects = emptyList(),
+            useCatalogDropdown = false,
+            subjectCatalogKeyExists = false,
+            errorMessage = null,
+            uploadSuccess = false
+        ) }
+        resolveSubjectForCurrentKey()
     }
 
     fun selectSemester(semester: String) {
-        _uiState.update { it.copy(selectedSemester = semester, errorMessage = null, uploadSuccess = false) }
+        _uiState.update { 
+            it.copy(
+                selectedSemester = semester,
+                selectedGroup = "",
+                subject = "",
+                subjectId = "",
+                catalogSubjects = emptyList(),
+                useCatalogDropdown = false,
+                subjectCatalogKeyExists = false,
+                errorMessage = null,
+                uploadSuccess = false
+            )
+        }
+        resolveSubjectForCurrentKey()
+    }
+
+    fun selectGroup(group: String) {
+        _uiState.update { it.copy(
+            selectedGroup = group,
+            subject = "",
+            subjectId = "",
+            catalogSubjects = emptyList(),
+            useCatalogDropdown = false,
+            subjectCatalogKeyExists = false,
+            errorMessage = null,
+            uploadSuccess = false
+        ) }
+        resolveSubjectForCurrentKey()
     }
 
     fun updateSubject(subject: String) {
-        _uiState.update { it.copy(subject = subject, errorMessage = null, uploadSuccess = false) }
+        _uiState.update { it.copy(
+            subject = subject,
+            subjectId = "", // Clear subjectId in manual text entry mode
+            errorMessage = null,
+            uploadSuccess = false
+        ) }
+    }
+
+    fun selectCatalogSubject(catalogSubject: CatalogSubject) {
+        _uiState.update { it.copy(
+            subject = catalogSubject.name,
+            subjectId = catalogSubject.id,
+            errorMessage = null,
+            uploadSuccess = false
+        ) }
     }
 
     fun selectUploadType(type: UploadType) {
@@ -261,7 +443,13 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         
         // Metadata validations
         if (!state.metadataComplete) {
-            _uiState.update { it.copy(errorMessage = "Branch, Semester, Subject, and Document Type are required.") }
+            val isFirstYear = state.selectedSemester == "Semester 1" || state.selectedSemester == "Semester 2"
+            val msg = if (isFirstYear) {
+                "Branch, Semester, Group, Subject, and Document Type are required."
+            } else {
+                "Branch, Semester, Subject, and Document Type are required."
+            }
+            _uiState.update { it.copy(errorMessage = msg) }
             return
         }
 
@@ -347,6 +535,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
+                            subjectId = state.subjectId,
                             type = type,
                             selectedFiles = state.selectedFiles,
                             youtubeUrl = state.youtubeUrl,
@@ -363,6 +552,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
+                            subjectId = state.subjectId,
                             selectedFiles = state.selectedFiles,
                             title = state.title,
                             description = state.description
@@ -375,6 +565,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
+                            subjectId = state.subjectId,
                             selectedFiles = state.selectedFiles,
                             title = state.title,
                             description = state.description
@@ -400,6 +591,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
+                            subjectId = state.subjectId,
                             selectedFiles = state.selectedFiles,
                             title = state.title,
                             description = state.description,
@@ -414,6 +606,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                             branch = state.selectedBranch,
                             semester = state.selectedSemester,
                             subject = state.subject,
+                            subjectId = state.subjectId,
                             youtubeUrl = state.youtubeUrl,
                             youtubePreview = state.youtubePreview,
                             youtubeResourceType = state.youtubeResourceType,
