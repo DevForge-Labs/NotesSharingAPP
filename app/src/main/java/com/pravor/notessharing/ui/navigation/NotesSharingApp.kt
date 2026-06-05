@@ -74,12 +74,32 @@ fun NotesSharingApp(
                 }
                 intent.removeExtra("document_id")
             }
+
+            val widgetDest = intent.getStringExtra("destination")
+            if (!widgetDest.isNullOrBlank()) {
+                val route = when (widgetDest) {
+                    "bookmarks" -> AppDestination.MyBookmarks.route
+                    "upload" -> AppDestination.Upload.route
+                    "downloads" -> AppDestination.MyFiles.route
+                    else -> null
+                }
+                if (route != null) {
+                    navController.navigate(route) {
+                        popUpTo(AppDestination.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+                intent.removeExtra("destination")
+            }
         }
         activity?.addOnNewIntentListener(listener)
         onDispose {
             activity?.removeOnNewIntentListener(listener)
         }
     }
+
+    val sessionState by authViewModel.sessionState.collectAsState()
 
     androidx.compose.runtime.LaunchedEffect(navController, activity) {
         val intent = activity?.intent
@@ -92,8 +112,31 @@ fun NotesSharingApp(
             intent.removeExtra("document_id")
         }
     }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+
+    androidx.compose.runtime.LaunchedEffect(currentRoute) {
+        if (currentRoute == AppDestination.Home.route) {
+            val intent = activity?.intent ?: return@LaunchedEffect
+            val widgetDest = intent.getStringExtra("destination")
+            if (!widgetDest.isNullOrBlank()) {
+                val route = when (widgetDest) {
+                    "bookmarks" -> AppDestination.MyBookmarks.route
+                    "upload" -> AppDestination.Upload.route
+                    "downloads" -> AppDestination.MyFiles.route
+                    else -> null
+                }
+                if (route != null) {
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                    }
+                }
+                intent.removeExtra("destination")
+            }
+        }
+    }
+
     val selectedBottomRoute = if (currentRoute?.startsWith("${AppDestination.Explore.route}/") == true) {
         AppDestination.Explore.route
     } else {
