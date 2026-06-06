@@ -55,6 +55,10 @@ sealed class AppDestination(
             return "image_viewing/$documentId/$encodedUrl/$encodedTitle"
         }
     }
+
+    data object SubjectResources : AppDestination("explore/subject_resources/{subjectName}", "Subject Resources", Icons.Filled.Explore) {
+        fun createRoute(subjectName: String) = "explore/subject_resources/${android.net.Uri.encode(subjectName)}"
+    }
 }
 
 val bottomDestinations = listOf(

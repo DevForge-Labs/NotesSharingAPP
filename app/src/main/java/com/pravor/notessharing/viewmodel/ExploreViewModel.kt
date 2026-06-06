@@ -9,6 +9,7 @@ import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.model.FileType
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.state.ExploreUiState
+import com.pravor.notessharing.state.CatalogSubject
 import com.pravor.notessharing.data.ExploreCacheRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,13 +33,94 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
     private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
 
+    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+    private val _allowedSubjects = MutableStateFlow<List<CatalogSubject>>(emptyList())
+    val allowedSubjects: StateFlow<List<CatalogSubject>> = _allowedSubjects.asStateFlow()
+
     private var fetchJob: kotlinx.coroutines.Job? = null
     private val isRefreshingState = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = isRefreshingState.asStateFlow()
 
+    private fun loadCatalogSubjects() {
+        viewModelScope.launch {
+            val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+            try {
+                val profile = profileRepository.getProfile(currentUid)
+                val branch = profile?.branch ?: "Computer Science"
+                val semester = profile?.semester ?: "Semester 4"
+
+                val branchCode = when {
+                    branch.trim().lowercase(java.util.Locale.ROOT).contains("computer science") || branch.trim().lowercase(java.util.Locale.ROOT) == "cs" -> "CS"
+                    branch.trim().lowercase(java.util.Locale.ROOT).contains("information technology") || branch.trim().lowercase(java.util.Locale.ROOT) == "it" -> "IT"
+                    branch.trim().lowercase(java.util.Locale.ROOT).contains("electronics") || branch.trim().lowercase(java.util.Locale.ROOT) == "ece" -> "ECE"
+                    branch.trim().lowercase(java.util.Locale.ROOT).contains("electrical") -> "Electrical"
+                    branch.trim().lowercase(java.util.Locale.ROOT).contains("mechanical") -> "Mechanical"
+                    branch.trim().lowercase(java.util.Locale.ROOT).contains("civil") -> "Civil"
+                    else -> branch.uppercase(java.util.Locale.ROOT).trim()
+                }
+
+                val semNum = semester.filter { it.isDigit() }
+
+                val key = when {
+                    semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 1") || semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 1") || semester.trim() == "1" || semester.trim().lowercase(java.util.Locale.ROOT).startsWith("1st") -> "GROUP_A"
+                    semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 2") || semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 2") || semester.trim() == "2" || semester.trim().lowercase(java.util.Locale.ROOT).startsWith("2nd") -> "GROUP_B"
+                    branchCode.isNotBlank() && semNum.isNotEmpty() -> "${branchCode}_$semNum"
+                    else -> null
+                }
+
+                if (key != null) {
+                    val snapshot = firestore.collection("app_config")
+                        .document("subject_catalog")
+                        .get()
+                        .await()
+                    if (snapshot.exists()) {
+                        val catalogData = snapshot.data?.get(key)
+                        val resolvedSubjects = mutableListOf<CatalogSubject>()
+                        if (catalogData != null) {
+                            if (catalogData is Map<*, *>) {
+                                for ((subId, subVal) in catalogData) {
+                                    val id = subId.toString()
+                                    val name = when (subVal) {
+                                        is Map<*, *> -> subVal["name"]?.toString() ?: id
+                                        is String -> subVal
+                                        else -> id
+                                    }
+                                    resolvedSubjects.add(CatalogSubject(id, name))
+                                }
+                            } else if (catalogData is List<*>) {
+                                for (item in catalogData) {
+                                    when (item) {
+                                        is Map<*, *> -> {
+                                            val id = item["subjectId"]?.toString() ?: item["id"]?.toString() ?: ""
+                                            val name = item["name"]?.toString() ?: item["subject"]?.toString() ?: id
+                                            if (id.isNotEmpty()) {
+                                                resolvedSubjects.add(CatalogSubject(id, name))
+                                            }
+                                        }
+                                        is String -> {
+                                            if (item.isNotEmpty()) {
+                                                resolvedSubjects.add(CatalogSubject(item, item))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Preserves exact ordering from firestore catalog document mapping
+                        _allowedSubjects.value = resolvedSubjects
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore and keep defaults
+            }
+        }
+    }
+
     init {
         val cached = cacheRepository.getCache()
         loadRealDocuments(silent = cached != null)
+        loadCatalogSubjects()
 
         viewModelScope.launch {
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
@@ -175,6 +257,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     fun loadRealDocuments(silent: Boolean = false, isPullToRefresh: Boolean = false) {
         if (isPullToRefresh) {
             isRefreshingState.value = true
+            loadCatalogSubjects()
         }
 
         fetchJob?.cancel()

@@ -51,11 +51,13 @@ import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 fun ExploreSuccessContent(
     content: ExploreContent,
     listState: LazyListState,
+    allowedSubjects: List<com.pravor.notessharing.state.CatalogSubject>,
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit = {},
     onExamPrepSeeMoreClick: () -> Unit,
     onAssignmentsSeeMoreClick: () -> Unit,
+    onSubjectSeeMoreClick: (String) -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
@@ -96,25 +98,33 @@ fun ExploreSuccessContent(
     }
     val visibleAssignments = filteredAssignments.take(7)
 
-    // 5. Subject Hero Section resources grouping
-    val resourcesBySubject = remember(content.trendingNotes, content.videoRecommendations) {
-        val map = mutableMapOf<String, MutableList<Any>>()
-        
-        content.trendingNotes.forEach { note ->
-            if (note.subject.isNotBlank()) {
-                val normalized = com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject)
-                map.getOrPut(normalized) { mutableListOf() }.add(note)
+    // 5. Subject Hero Section resources grouping (semester-aware and catalog-driven)
+    val resourcesBySubject = remember(content.trendingNotes, content.videoRecommendations, allowedSubjects) {
+        allowedSubjects.map { catalogSubject ->
+            val matchingResources = mutableListOf<Any>()
+            val normalizedCatId = com.pravor.notessharing.ui.components.utils.normalizeSubject(catalogSubject.id)
+            val normalizedCatName = com.pravor.notessharing.ui.components.utils.normalizeSubject(catalogSubject.name)
+
+            content.trendingNotes.forEach { note ->
+                if (note.subject.isNotBlank()) {
+                    val normalizedRes = com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject)
+                    if (normalizedRes == normalizedCatId || normalizedRes == normalizedCatName) {
+                        matchingResources.add(note)
+                    }
+                }
             }
-        }
-        
-        content.videoRecommendations.forEach { video ->
-            if (video.subject.isNotBlank()) {
-                val normalized = com.pravor.notessharing.ui.components.utils.normalizeSubject(video.subject)
-                map.getOrPut(normalized) { mutableListOf() }.add(video)
+
+            content.videoRecommendations.forEach { video ->
+                if (video.subject.isNotBlank()) {
+                    val normalizedRes = com.pravor.notessharing.ui.components.utils.normalizeSubject(video.subject)
+                    if (normalizedRes == normalizedCatId || normalizedRes == normalizedCatName) {
+                        matchingResources.add(video)
+                    }
+                }
             }
+
+            Pair(catalogSubject, matchingResources)
         }
-        
-        map.filter { it.value.isNotEmpty() }.toList().sortedBy { it.first }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -351,7 +361,7 @@ fun ExploreSuccessContent(
 
             // Subject Hero Section (All-in-one grouped by subject)
             item(key = "subjecthero-title", contentType = "section") {
-                SectionHeader("🎓 Subjects Hero")
+                SectionHeader("🎓 Subjects")
             }
             if (resourcesBySubject.isEmpty()) {
                 item(key = "subjecthero-empty", contentType = "empty") {
@@ -364,18 +374,16 @@ fun ExploreSuccessContent(
             } else {
                 itemsIndexed(
                     items = resourcesBySubject,
-                    key = { _, pair -> "subject_${pair.first}" },
+                    key = { _, pair -> "subject_${pair.first.id}" },
                     contentType = { _, _ -> "subject-card" }
-                ) { _, (subjectKey, resources) ->
-                    val rawSubjectName = remember(resources) {
-                        val first = resources.first()
-                        if (first is TrendingNote) first.subject else (first as VideoRecommendation).subject
-                    }
+                ) { _, (catalogSubject, resources) ->
                     SubjectHeroCard(
-                        subjectName = rawSubjectName,
+                        subjectName = catalogSubject.name,
+                        subjectId = catalogSubject.id,
                         resources = resources,
                         onDocumentClick = onDocumentClick,
-                        onVideoClick = onVideoClick
+                        onVideoClick = onVideoClick,
+                        onSeeMoreClick = { onSubjectSeeMoreClick(catalogSubject.id) }
                     )
                 }
             }
@@ -387,11 +395,13 @@ fun ExploreSuccessContent(
 @Composable
 fun SubjectHeroCard(
     subjectName: String,
+    subjectId: String,
     resources: List<Any>,
     onDocumentClick: (String) -> Unit,
-    onVideoClick: (String) -> Unit
+    onVideoClick: (String) -> Unit,
+    onSeeMoreClick: () -> Unit
 ) {
-    val normalized = remember(subjectName) { com.pravor.notessharing.ui.components.utils.normalizeSubject(subjectName) }
+    val normalized = remember(subjectId) { com.pravor.notessharing.ui.components.utils.normalizeSubject(subjectId) }
     val accentColor = remember(normalized) { com.pravor.notessharing.ui.components.utils.getSubjectColor(normalized) }
     val displayName = remember(subjectName, normalized) { com.pravor.notessharing.ui.components.utils.getSubjectDisplayName(subjectName, normalized) }
 
@@ -429,59 +439,97 @@ fun SubjectHeroCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // List resources
-            resources.take(5).forEachIndexed { index, res ->
-                val (title, icon, onClick) = when (res) {
-                    is TrendingNote -> {
-                        val docType = res.documentType.ifBlank { res.type ?: "Notes" }.lowercase(java.util.Locale.ROOT).trim()
-                        val resIcon = when {
-                            docType.contains("pyq") -> Icons.Default.Help
-                            docType.contains("assignment") -> Icons.Default.Assignment
-                            docType.contains("cheat") -> Icons.Default.Bolt
-                            else -> Icons.Default.Description
+            if (resources.isEmpty()) {
+                Text(
+                    text = "No resources yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
+                )
+            } else {
+                resources.take(4).forEachIndexed { index, res ->
+                    val (title, icon, onClick) = when (res) {
+                        is TrendingNote -> {
+                            val docType = res.documentType.ifBlank { res.type ?: "Notes" }.lowercase(java.util.Locale.ROOT).trim()
+                            val resIcon = when {
+                                docType.contains("pyq") -> Icons.Default.Help
+                                docType.contains("assignment") -> Icons.Default.Assignment
+                                docType.contains("cheat") -> Icons.Default.Bolt
+                                else -> Icons.Default.Description
+                            }
+                            Triple(res.title.ifBlank { res.subject }, resIcon, { onDocumentClick(res.id) })
                         }
-                        Triple(res.title.ifBlank { res.subject }, resIcon, { onDocumentClick(res.id) })
+                        is VideoRecommendation -> {
+                            Triple(res.title, Icons.Default.PlayArrow, { onVideoClick(res.id) })
+                        }
+                        else -> Triple("Curated Resource", Icons.Default.Description, {})
                     }
-                    is VideoRecommendation -> {
-                        Triple(res.title, Icons.Default.PlayArrow, { onVideoClick(res.id) })
-                    }
-                    else -> Triple("Curated Resource", Icons.Default.Description, {})
-                }
 
-                Surface(
-                    onClick = onClick,
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Surface(
+                        onClick = onClick,
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    if (index < resources.size - 1 && index < 3) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                         )
                     }
                 }
+            }
 
-                if (index < resources.lastIndex && index < 4) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            )
+
+            // See More ▼ Row (always show)
+            Surface(
+                onClick = onSeeMoreClick,
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "See More ▼",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor
                     )
                 }
             }
