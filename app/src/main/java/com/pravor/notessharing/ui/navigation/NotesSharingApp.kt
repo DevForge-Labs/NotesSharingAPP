@@ -75,6 +75,15 @@ fun NotesSharingApp(
                 intent.removeExtra("document_id")
             }
 
+            val videoId = intent.getStringExtra("video_id")
+            android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp onNewIntent listener - videoId: $videoId")
+            if (!videoId.isNullOrBlank()) {
+                navController.navigate(AppDestination.VideoDetail.createRoute(videoId)) {
+                    popUpTo(AppDestination.Home.route)
+                }
+                intent.removeExtra("video_id")
+            }
+
             val widgetDest = intent.getStringExtra("destination")
             if (!widgetDest.isNullOrBlank()) {
                 val route = when (widgetDest) {
@@ -101,17 +110,7 @@ fun NotesSharingApp(
 
     val sessionState by authViewModel.sessionState.collectAsState()
 
-    androidx.compose.runtime.LaunchedEffect(navController, activity) {
-        val intent = activity?.intent
-        val docId = intent?.getStringExtra("document_id")
-        android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp LaunchedEffect intent check - docId: $docId")
-        if (!docId.isNullOrBlank()) {
-            navController.navigate(AppDestination.DocumentDetail.createRoute(docId)) {
-                popUpTo(AppDestination.Home.route)
-            }
-            intent.removeExtra("document_id")
-        }
-    }
+    // Redundant LaunchedEffect removed. Intent checks handled directly in auth_gate and addOnNewIntentListener.
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -222,8 +221,25 @@ fun NotesSharingApp(
                     androidx.compose.runtime.LaunchedEffect(sessionState) {
                         if (sessionState != SessionState.Checking) {
                             if (sessionState == SessionState.LoggedIn) {
-                                navController.navigate(AppDestination.Home.route) {
-                                    popUpTo("auth_gate") { inclusive = true }
+                                val intent = activity?.intent
+                                val docId = intent?.getStringExtra("document_id")
+                                val videoId = intent?.getStringExtra("video_id")
+                                if (!docId.isNullOrBlank()) {
+                                    navController.navigate(AppDestination.Home.route) {
+                                        popUpTo("auth_gate") { inclusive = true }
+                                    }
+                                    navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                                    intent.removeExtra("document_id")
+                                } else if (!videoId.isNullOrBlank()) {
+                                    navController.navigate(AppDestination.Home.route) {
+                                        popUpTo("auth_gate") { inclusive = true }
+                                    }
+                                    navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                                    intent.removeExtra("video_id")
+                                } else {
+                                    navController.navigate(AppDestination.Home.route) {
+                                        popUpTo("auth_gate") { inclusive = true }
+                                    }
                                 }
                             } else {
                                 navController.navigate(AppDestination.Welcome.route) {

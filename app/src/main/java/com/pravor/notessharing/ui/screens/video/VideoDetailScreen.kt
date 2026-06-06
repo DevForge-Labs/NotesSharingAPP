@@ -76,6 +76,20 @@ fun VideoDetailRoute(
                 documentType = "YouTube Resource",
                 youtubeThumbnailUrl = video.youtubeThumbnailUrl
             )
+            com.pravor.notessharing.data.ContinueLearningRepository(context).saveLastOpened(
+                id = video.id,
+                type = "video",
+                title = video.title,
+                subject = video.subject,
+                youtubeVideoId = video.youtubeVideoId,
+                uploaderName = video.uploaderName,
+                thumbnailUrl = video.thumbnailUrl,
+                thumbnailGenerated = null,
+                thumbnailType = null,
+                documentType = "YouTube Resource",
+                youtubeThumbnailUrl = video.youtubeThumbnailUrl
+            )
+            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
         }
     }
 
