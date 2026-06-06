@@ -100,6 +100,24 @@ fun DocumentDetailRoute(
                 section = doc.section,
                 sectionDisplay = doc.sectionDisplay
             )
+            com.pravor.notessharing.data.ContinueLearningRepository(context).saveLastOpened(
+                id = doc.id,
+                type = "document",
+                title = doc.title,
+                subject = doc.subject,
+                youtubeVideoId = null,
+                uploaderName = doc.uploaderName,
+                thumbnailUrl = doc.thumbnailUrl,
+                thumbnailGenerated = doc.thumbnailGenerated,
+                thumbnailType = doc.thumbnailType,
+                thumbnailUrls = doc.thumbnailUrls,
+                documentType = doc.documentType,
+                typeField = doc.documentType,
+                examYear = doc.examYear,
+                section = doc.section,
+                sectionDisplay = doc.sectionDisplay
+            )
+            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
         }
     }
 
