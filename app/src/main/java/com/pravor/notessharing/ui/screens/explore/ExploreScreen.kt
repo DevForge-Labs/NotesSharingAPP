@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.state.ExploreUiState
+import com.pravor.notessharing.state.CatalogSubject
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.explore_components.ExploreSuccessContent
 import com.pravor.notessharing.viewmodel.ExploreViewModel
@@ -41,12 +42,14 @@ fun ExploreRoute(
     onDiscoverSeeMoreClick: () -> Unit = {},
     onExamPrepSeeMoreClick: () -> Unit,
     onAssignmentsSeeMoreClick: () -> Unit,
+    onSubjectSeeMoreClick: (String) -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val allowedSubjects by viewModel.allowedSubjects.collectAsStateWithLifecycle()
 
     var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
     var pendingRemoveBookmarkVideo by remember { mutableStateOf<VideoRecommendation?>(null) }
@@ -90,12 +93,14 @@ fun ExploreRoute(
     ExploreScreen(
         uiState = uiState,
         isRefreshing = isRefreshing,
+        allowedSubjects = allowedSubjects,
         onRefresh = onRefreshRemembered,
         onTrendingSeeMoreClick = onTrendingSeeMoreClick,
         onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
         onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
         onExamPrepSeeMoreClick = onExamPrepSeeMoreClick,
         onAssignmentsSeeMoreClick = onAssignmentsSeeMoreClick,
+        onSubjectSeeMoreClick = onSubjectSeeMoreClick,
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick,
         onBookmarkClick = onBookmarkClickRemembered,
@@ -191,12 +196,14 @@ fun ExploreRoute(
 fun ExploreScreen(
     uiState: ExploreUiState,
     isRefreshing: Boolean,
+    allowedSubjects: List<CatalogSubject>,
     onRefresh: () -> Unit,
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit = {},
     onExamPrepSeeMoreClick: () -> Unit,
     onAssignmentsSeeMoreClick: () -> Unit,
+    onSubjectSeeMoreClick: (String) -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
@@ -239,11 +246,13 @@ fun ExploreScreen(
                             ExploreSuccessContent(
                                 content = successState.content,
                                 listState = listState,
+                                allowedSubjects = allowedSubjects,
                                 onTrendingSeeMoreClick = onTrendingSeeMoreClick,
                                 onRecommendedVideosSeeMoreClick = onRecommendedVideosSeeMoreClick,
                                 onDiscoverSeeMoreClick = onDiscoverSeeMoreClick,
                                 onExamPrepSeeMoreClick = onExamPrepSeeMoreClick,
                                 onAssignmentsSeeMoreClick = onAssignmentsSeeMoreClick,
+                                onSubjectSeeMoreClick = onSubjectSeeMoreClick,
                                 onDocumentClick = onDocumentClick,
                                 onVideoClick = onVideoClick,
                                 onBookmarkClick = onBookmarkClick,

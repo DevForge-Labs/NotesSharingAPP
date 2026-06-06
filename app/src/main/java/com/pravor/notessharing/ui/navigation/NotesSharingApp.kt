@@ -24,6 +24,7 @@ import com.pravor.notessharing.ui.screens.explore.ExploreRoute
 import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
 import com.pravor.notessharing.ui.screens.explore.ExamPrepRoute
 import com.pravor.notessharing.ui.screens.explore.AssignmentsRoute
+import com.pravor.notessharing.ui.screens.explore.SubjectResourcesRoute
 import com.pravor.notessharing.ui.screens.trending.TrendingNotesRoute
 import com.pravor.notessharing.ui.screens.home.HomeRoute
 import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
@@ -354,6 +355,31 @@ fun NotesSharingApp(
                                 launchSingleTop = true
                             }
                         },
+                        onSubjectSeeMoreClick = { subjectName ->
+                            navController.navigate(AppDestination.SubjectResources.createRoute(subjectName)) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
+                    )
+                }
+                composable(
+                    route = AppDestination.SubjectResources.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("subjectName") {
+                            type = androidx.navigation.NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                    SubjectResourcesRoute(
+                        subjectName = subjectName,
+                        onBackClick = { navController.popBackStack() },
                         onDocumentClick = { docId ->
                             navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
                         },
