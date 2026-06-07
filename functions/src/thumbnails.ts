@@ -1,8 +1,13 @@
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { downloadFile, uploadThumbnail } from "./storageUtils.js";
+import { downloadFile, uploadThumbnail, getFileSize, downloadFileToPath } from "./storageUtils.js";
 import { convertPdfPageToImage } from "./pdfUtils.js";
 import { resizeAndCompressImageToJpeg, resizeAndCompressImageToWebp } from "./imageUtils.js";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+
+const LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024; // 100 MB
 
 /**
  * Main orchestrator to generate a thumbnail for a Firestore document.
@@ -60,6 +65,7 @@ export async function generateThumbnailForDocument(
         continue;
       }
 
+      let tempFilePath: string | null = null;
       try {
         let cleanPath = storagePath;
         if (storagePath.startsWith("http://") || storagePath.startsWith("https://")) {
@@ -73,10 +79,22 @@ export async function generateThumbnailForDocument(
           }
         }
 
-        const originalBuffer = await downloadFile(cleanPath);
-        logger.info(`Downloaded attachment ${index} of size ${originalBuffer.length} bytes`);
+        const fileSize = await getFileSize(cleanPath);
+        logger.info(`Attachment ${index} size: ${fileSize} bytes`);
 
-        let thumbnailBuffer: Buffer;
+        let originalBuffer: Buffer | null = null;
+        const isLargePdf = isPdf && (fileSize > LARGE_FILE_THRESHOLD_BYTES);
+
+        if (isLargePdf) {
+          tempFilePath = path.join(os.tmpdir(), `pdf_${docId}_${index}.pdf`);
+          logger.info(`Downloading large PDF to temporary file: ${tempFilePath}`);
+          await downloadFileToPath(cleanPath, tempFilePath);
+        } else {
+          originalBuffer = await downloadFile(cleanPath);
+          logger.info(`Downloaded attachment ${index} of size ${originalBuffer.length} bytes`);
+        }
+
+        let thumbnailBuffer: Buffer | null = null;
         let thumbnailStoragePath: string;
         let contentType: string;
 
@@ -86,7 +104,12 @@ export async function generateThumbnailForDocument(
 
         if (isPdf) {
           logger.info(`Processing PDF attachment ${index}: extracting page 1...`);
-          const page1ImageBuffer = await convertPdfPageToImage(originalBuffer, docId);
+          const pdfSource = isLargePdf ? tempFilePath! : originalBuffer!;
+          const page1ImageBuffer = await convertPdfPageToImage(pdfSource, docId);
+          
+          // Release original buffer as early as possible
+          originalBuffer = null;
+
           logger.info(`Compressing PDF preview ${index} to WebP...`);
           thumbnailBuffer = await resizeAndCompressImageToWebp(page1ImageBuffer);
           contentType = "image/webp";
@@ -106,7 +129,11 @@ export async function generateThumbnailForDocument(
           }
         } else {
           logger.info(`Processing image attachment ${index}: compressing to JPEG...`);
-          thumbnailBuffer = await resizeAndCompressImageToJpeg(originalBuffer);
+          thumbnailBuffer = await resizeAndCompressImageToJpeg(originalBuffer!);
+          
+          // Release original buffer as early as possible
+          originalBuffer = null;
+          
           contentType = "image/jpeg";
 
           const fileNameWithoutExt = originalFileName && originalFileName.includes(".")
@@ -125,13 +152,25 @@ export async function generateThumbnailForDocument(
         }
 
         logger.info(`Uploading thumbnail for attachment ${index} to ${thumbnailStoragePath}...`);
-        const thumbnailUrl = await uploadThumbnail(thumbnailStoragePath, thumbnailBuffer, contentType);
+        const thumbnailUrl = await uploadThumbnail(thumbnailStoragePath, thumbnailBuffer!, contentType);
         logger.info(`Uploaded thumbnail for attachment ${index}. URL: ${thumbnailUrl}`);
 
         thumbnailUrls.push(thumbnailUrl);
+        
+        // Release thumbnail buffer
+        thumbnailBuffer = null;
       } catch (err) {
         logger.error(`Error generating thumbnail for attachment ${index} (${storagePath}):`, err);
         thumbnailUrls.push("");
+      } finally {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          try {
+            fs.unlinkSync(tempFilePath);
+            logger.info(`Deleted temporary file: ${tempFilePath}`);
+          } catch (cleanupErr) {
+            logger.error(`Failed to delete temporary file ${tempFilePath}:`, cleanupErr);
+          }
+        }
       }
     }
 

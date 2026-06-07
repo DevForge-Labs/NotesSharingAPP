@@ -2,7 +2,10 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { generateThumbnailForDocument } from "./thumbnails.js";
 
 // Notes trigger
-export const onNotesCreated = onDocumentCreated("notes/{docId}", async (event) => {
+export const onNotesCreated = onDocumentCreated({
+  document: "notes/{docId}",
+  memory: "1GiB",
+}, async (event) => {
   const docId = event.params.docId;
   const data = event.data?.data();
   if (!data) return;

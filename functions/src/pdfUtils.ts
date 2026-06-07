@@ -1,5 +1,6 @@
 import { createCanvas, Image, ImageData } from "@napi-rs/canvas";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import { pathToFileURL } from "url";
 
 // Polyfill Image and ImageData globals for the Node.js environment
 if (typeof global !== "undefined") {
@@ -8,17 +9,26 @@ if (typeof global !== "undefined") {
 }
 
 /**
- * Converts the first page of a PDF buffer into a PNG image buffer using pdfjs-dist and @napi-rs/canvas.
- * @param pdfBuffer The original PDF file buffer.
+ * Converts the first page of a PDF buffer or local file path into a PNG image buffer using pdfjs-dist and @napi-rs/canvas.
+ * @param pdfSource The original PDF file buffer or local file path.
  * @param docId Unique identifier to avoid temporary file name collisions.
  */
-export async function convertPdfPageToImage(pdfBuffer: Buffer, docId: string): Promise<Buffer> {
-  // Directly load the PDF from memory using a zero-copy Uint8Array view of the Buffer
-  const uint8Array = new Uint8Array(pdfBuffer.buffer, pdfBuffer.byteOffset, pdfBuffer.byteLength);
-
-  const loadingTask = pdfjsLib.getDocument({
-    data: uint8Array,
-  });
+export async function convertPdfPageToImage(pdfSource: Buffer | string, docId: string): Promise<Buffer> {
+  let loadingTask;
+  if (typeof pdfSource === "string") {
+    const fileUrl = pdfSource.startsWith("file://")
+      ? pdfSource
+      : pathToFileURL(pdfSource).href;
+    loadingTask = pdfjsLib.getDocument({
+      url: fileUrl,
+    });
+  } else {
+    // Directly load the PDF from memory using a zero-copy Uint8Array view of the Buffer
+    const uint8Array = new Uint8Array(pdfSource.buffer, pdfSource.byteOffset, pdfSource.byteLength);
+    loadingTask = pdfjsLib.getDocument({
+      data: uint8Array,
+    });
+  }
 
   const pdfDocument = await loadingTask.promise;
   try {
