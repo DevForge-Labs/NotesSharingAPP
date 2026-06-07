@@ -13,6 +13,32 @@ export async function downloadFile(storagePath: string): Promise<Buffer> {
 }
 
 /**
+ * Gets the size of a file in Firebase Storage in bytes.
+ * @param storagePath The path to the file in the bucket.
+ */
+export async function getFileSize(storagePath: string): Promise<number> {
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+  const [metadata] = await file.getMetadata();
+  const size = metadata.size;
+  if (typeof size === "number") {
+    return size;
+  }
+  return parseInt(size || "0", 10);
+}
+
+/**
+ * Downloads a file from Firebase Storage directly to a local file path.
+ * @param storagePath The path to the file in the bucket.
+ * @param localPath The local destination path.
+ */
+export async function downloadFileToPath(storagePath: string, localPath: string): Promise<void> {
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+  await file.download({ destination: localPath });
+}
+
+/**
  * Uploads a compressed thumbnail buffer to Firebase Storage, sets the public access token,
  * and returns the persistent download URL.
  * @param thumbnailPath The path where the thumbnail will be saved.
