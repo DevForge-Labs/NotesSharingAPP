@@ -67,6 +67,7 @@ class ContinueLearningWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val startTime = System.currentTimeMillis()
+        android.util.Log.d("PERF", "[PERF] Widget update START thread=${Thread.currentThread().name}")
         Log.d("WidgetDebug", "ContinueLearningWidget: [TIMESTAMP STARTED] provideGlance() triggered at $startTime for ID $id")
         
         val repository = ContinueLearningRepository(context)
@@ -146,7 +147,11 @@ class ContinueLearningWidget : GlanceAppWidget() {
 
                 // Reactive state-driven thumbnail loading inside the composition block
                 val bitmapState = androidx.compose.runtime.produceState<Bitmap?>(initialValue = null, item) {
+                    val widgetThumbStart = System.currentTimeMillis()
+                    android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Widget thumbnail generation thread=${Thread.currentThread().name}")
                     value = getThumbnailBitmap(context, item)
+                    val widgetThumbDuration = System.currentTimeMillis() - widgetThumbStart
+                    android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Widget thumbnail generation duration=${widgetThumbDuration}ms thread=${Thread.currentThread().name}")
                 }
                 val bitmap = bitmapState.value ?: generateFallbackBitmap(context, item?.fileType?.name ?: "pdf", item?.subject ?: "General")
 
@@ -157,6 +162,8 @@ class ContinueLearningWidget : GlanceAppWidget() {
                 )
             }
         }
+        val duration = System.currentTimeMillis() - startTime
+        android.util.Log.d("PERF", "[PERF] Widget update END duration=${duration}ms thread=${Thread.currentThread().name}")
     }
 
     private suspend fun getThumbnailBitmap(context: Context, item: FeedItem?): Bitmap {
@@ -185,7 +192,11 @@ class ContinueLearningWidget : GlanceAppWidget() {
 
             if (localFile.exists()) {
                 try {
+                    val decodeStartTime = System.currentTimeMillis()
+                    android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Bitmap decoding thread=${Thread.currentThread().name}")
                     val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+                    val decodeDuration = System.currentTimeMillis() - decodeStartTime
+                    android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Bitmap decoding duration=${decodeDuration}ms thread=${Thread.currentThread().name}")
                     if (bitmap != null) {
                         Log.d("WidgetDebug", "getThumbnailBitmap: Loaded from cache instantly. Size: ${bitmap.width}x${bitmap.height}, duration: ${System.currentTimeMillis() - startTime}ms")
                         return bitmap

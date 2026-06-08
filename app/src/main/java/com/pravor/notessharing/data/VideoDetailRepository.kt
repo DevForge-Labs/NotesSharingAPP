@@ -14,6 +14,8 @@ class VideoDetailRepository {
     private val usersCollection = firestore.collection("users")
 
     suspend fun getVideo(videoId: String): VideoDetail? {
+        val startTime = System.currentTimeMillis()
+        android.util.Log.d("PERF", "[PERF] getVideo START id=$videoId thread=${Thread.currentThread().name}")
         return try {
             val collections = listOf("documents", "videos")
             var foundData: Map<String, Any>? = null
@@ -21,7 +23,11 @@ class VideoDetailRepository {
                 val deferreds = collections.map { col ->
                     async {
                         try {
+                            val firestoreQueryStartTime = System.currentTimeMillis()
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col document=$videoId thread=${Thread.currentThread().name}")
                             val snap = firestore.collection(col).document(videoId).get().await()
+                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col document=$videoId duration=${firestoreQueryDuration}ms exists=${snap.exists()} thread=${Thread.currentThread().name}")
                             if (snap.exists()) snap.data else null
                         } catch (e: Exception) {
                             null
@@ -30,13 +36,19 @@ class VideoDetailRepository {
                 }
                 foundData = deferreds.awaitAll().firstOrNull { it != null }
             }
-            if (foundData != null) {
+            val result = if (foundData != null) {
                 foundData?.toVideoDetail(videoId)
             } else {
                 getDummyVideoDetail(videoId)
             }
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getVideo END duration=${duration}ms id=$videoId thread=${Thread.currentThread().name}")
+            result
         } catch (e: Exception) {
-            getDummyVideoDetail(videoId)
+            val result = getDummyVideoDetail(videoId)
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getVideo END duration=${duration}ms id=$videoId thread=${Thread.currentThread().name}")
+            result
         }
     }
 
@@ -44,8 +56,16 @@ class VideoDetailRepository {
         if (uploaderId == "dummy-uid" || uploaderId.isEmpty()) {
             return "Gold Contributor"
         }
+        val startTime = System.currentTimeMillis()
         return try {
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=users document=$uploaderId thread=${Thread.currentThread().name}")
             val snapshot = usersCollection.document(uploaderId).get().await()
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=${snapshot.exists()} thread=${Thread.currentThread().name}")
+            
+            val fromCache = snapshot.metadata.isFromCache
+            UserFetchDiagnostics.recordFetch(uploaderId, fromCache)
+
             if (snapshot.exists()) {
                 val level = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 getContributorLevelName(level)
@@ -53,24 +73,32 @@ class VideoDetailRepository {
                 "Bronze Contributor"
             }
         } catch (e: Exception) {
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=false thread=${Thread.currentThread().name}")
             "Bronze Contributor"
         }
     }
 
     suspend fun getRelatedVideos(video: VideoDetail): List<VideoDetail> {
+        val startTime = System.currentTimeMillis()
+        android.util.Log.d("PERF", "[PERF] getRelatedVideos START id=${video.id} thread=${Thread.currentThread().name}")
         return try {
             val collections = listOf("documents", "videos")
             val allRelatedDocs = coroutineScope {
                 val deferreds = collections.map { col ->
                     async {
                         try {
-                            firestore.collection(col)
+                            val firestoreQueryStartTime = System.currentTimeMillis()
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
+                            val snapshot = firestore.collection(col)
                                 .whereEqualTo("semester", video.semester)
                                 .whereEqualTo("subject", video.subject)
                                 .limit(10)
                                 .get()
                                 .await()
-                                .documents
+                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${snapshot.size()} thread=${Thread.currentThread().name}")
+                            snapshot.documents
                         } catch (e: Exception) {
                             emptyList()
                         }
@@ -93,13 +121,19 @@ class VideoDetailRepository {
                 data.toVideoDetail(d.id)
             }.distinctBy { it.id }.take(3)
 
-            if (realRelated.isNotEmpty()) {
+            val result = if (realRelated.isNotEmpty()) {
                 realRelated
             } else {
                 getDummyRelatedVideos(video)
             }
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getRelatedVideos END duration=${duration}ms count=${result.size} thread=${Thread.currentThread().name}")
+            result
         } catch (e: Exception) {
-            getDummyRelatedVideos(video)
+            val result = getDummyRelatedVideos(video)
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getRelatedVideos END duration=${duration}ms count=${result.size} thread=${Thread.currentThread().name}")
+            result
         }
     }
 

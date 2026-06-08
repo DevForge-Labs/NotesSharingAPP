@@ -260,6 +260,8 @@ fun PdfPage(
 
     LaunchedEffect(pageIndex, pdfRenderer) {
         withContext(Dispatchers.IO) {
+            val renderStartTime = System.currentTimeMillis()
+            android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=PDF thumbnail loading thread=${Thread.currentThread().name}")
             try {
                 val page = pdfRenderer.openPage(pageIndex)
                 val targetWidth = 1200
@@ -279,6 +281,9 @@ fun PdfPage(
                 bitmap = bmp
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                val renderDuration = System.currentTimeMillis() - renderStartTime
+                android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=PDF thumbnail loading duration=${renderDuration}ms thread=${Thread.currentThread().name}")
             }
         }
     }

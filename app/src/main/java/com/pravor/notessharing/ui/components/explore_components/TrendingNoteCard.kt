@@ -62,6 +62,12 @@ object TrendingPreviewCache {
     }
 }
 
+object TrendingCardDiagnostics {
+    val totalRequests = java.util.concurrent.atomic.AtomicInteger(0)
+    val cacheHits = java.util.concurrent.atomic.AtomicInteger(0)
+    val cacheMisses = java.util.concurrent.atomic.AtomicInteger(0)
+}
+
 @Composable
 fun TrendingNoteCard(
     note: TrendingNote,
@@ -69,12 +75,22 @@ fun TrendingNoteCard(
     onClick: () -> Unit = {},
     onUpvoteClick: () -> Unit = {}
 ) {
+    val recompositionCount = remember { java.util.concurrent.atomic.AtomicInteger(0) }
+    SideEffect {
+        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] TrendingNoteCard id=${note.id} count=${recompositionCount.incrementAndGet()}")
+    }
+
     val cached = remember(note.id, note.thumbnailUrl) {
-        if (!note.thumbnailUrl.isNullOrBlank()) {
+        val res = if (!note.thumbnailUrl.isNullOrBlank()) {
             Pair(note.thumbnailUrl, true)
         } else {
             TrendingPreviewCache.get(note.id)
         }
+        if (res == null) {
+            val misses = TrendingCardDiagnostics.cacheMisses.incrementAndGet()
+            android.util.Log.d("PERF", "[PERF] Metadata cache MISS id=${note.id}")
+        }
+        res
     }
 
     var firstAttachmentUrl by remember(note.id) { mutableStateOf(cached?.first) }
