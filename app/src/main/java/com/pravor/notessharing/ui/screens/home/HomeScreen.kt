@@ -40,6 +40,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.functions
+import com.google.firebase.messaging.FirebaseMessaging
 import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.HomeUiState
 import com.pravor.notessharing.state.MyFilesUiState
@@ -77,6 +82,42 @@ fun HomeRoute(
         // Refresh bookmarks count cleanly from bookmark layer
         bookmarkViewModel.loadBookmarksForCurrentUser()
         myFilesViewModel.loadDownloads(context)
+
+        //firebase FCM token
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    android.util.Log.e("FCM_TOKEN", "Failed", task.exception)
+                    return@addOnCompleteListener
+                }
+
+                val token = task.result
+                android.util.Log.d("FCM_TOKEN", token)
+
+                val uid = FirebaseAuth.getInstance().currentUser?.uid
+                if (uid != null) {
+                    FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(uid)
+                        .update("fcmToken", token)
+                }
+            }
+
+        //Notification test...uncomment to view notification toggle
+
+//        Firebase.functions
+//            .getHttpsCallable("sendTestNotification")
+//            .call(
+//                mapOf(
+//                    "uid" to FirebaseAuth.getInstance().currentUser!!.uid
+//                )
+//            )
+//            .addOnSuccessListener {
+//                android.util.Log.d("NOTIFICATION_TEST", "Function success")
+//            }
+//            .addOnFailureListener {
+//                android.util.Log.e("NOTIFICATION_TEST", "Function failed", it)
+//            }
     }
 
     val bookmarksCount = when (val state = bookmarkUiState) {

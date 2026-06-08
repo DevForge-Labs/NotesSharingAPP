@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -27,6 +28,7 @@ sealed class AppDestination(
     data object MyBookmarks : AppDestination("my_bookmarks", "My Bookmarks", Icons.Filled.Bookmark)
     data object Profile : AppDestination("profile", "Profile", Icons.Filled.Person)
     data object EditProfile : AppDestination("profile/edit", "Edit Profile", Icons.Filled.Person)
+    data object NotificationPreferences : AppDestination("profile/notification_preferences", "Notification Preferences", Icons.Filled.Notifications)
     
     data object Welcome : AppDestination("welcome", "Welcome", Icons.Filled.Home)
     data object Login : AppDestination("login", "Login", Icons.Filled.Home)

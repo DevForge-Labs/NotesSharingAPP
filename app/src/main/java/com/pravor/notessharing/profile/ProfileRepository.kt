@@ -17,8 +17,8 @@ class ProfileRepository(private val userService: FirestoreUserService = Firestor
         userService.createUserProfile(profile)
     }
 
-    suspend fun updateProfileFields(uid: String, name: String, semester: String, profileImageUrl: String) {
-        userService.updateProfileFields(uid, name, semester, profileImageUrl)
+    suspend fun updateProfileFields(uid: String, name: String, semester: String, section: String, profileImageUrl: String) {
+        userService.updateProfileFields(uid, name, semester, section, profileImageUrl)
     }
 
     suspend fun uploadProfileImage(uid: String, imageUriStr: String): String {
