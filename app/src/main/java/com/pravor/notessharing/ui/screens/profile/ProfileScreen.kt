@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -122,7 +123,7 @@ fun ProfileRoute(
     appSettings: AppSettingsUiState,
     onDarkModeChange: (Boolean) -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit,
+    onNotificationPreferencesClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit = {},
@@ -133,7 +134,7 @@ fun ProfileRoute(
         uiState = uiState,
         appSettings = appSettings,
         onThemePreferenceChange = onThemePreferenceChange,
-        onNotificationsChange = onNotificationsChange,
+        onNotificationPreferencesClick = onNotificationPreferencesClick,
         onLogoutClick = onLogoutClick,
         onEditProfileClick = onEditProfileClick,
         onMyUploadsClick = onMyUploadsClick
@@ -146,7 +147,7 @@ fun ProfileScreen(
     uiState: ProfileUiState,
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit,
+    onNotificationPreferencesClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -174,7 +175,7 @@ fun ProfileScreen(
                 profile = state.profile,
                 appSettings = appSettings,
                 onThemePreferenceChange = onThemePreferenceChange,
-                onNotificationsChange = onNotificationsChange,
+                onNotificationPreferencesClick = onNotificationPreferencesClick,
                 onLogoutClick = onLogoutClick,
                 onEditProfileClick = onEditProfileClick,
                 onMyUploadsClick = onMyUploadsClick,
@@ -189,7 +190,7 @@ private fun ProfileContent(
     profile: Profile,
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit,
+    onNotificationPreferencesClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -464,11 +465,14 @@ private fun ProfileContent(
                             scaleY = notificationsScale
                         }
                 ) {
-                    SpeedDialSwitchItem(
+                    SpeedDialItem(
                         label = "Notifications",
+                        description = "Manage Preferences",
                         icon = Icons.Rounded.Notifications,
-                        checked = appSettings.notificationsEnabled,
-                        onCheckedChange = onNotificationsChange
+                        onClick = {
+                            isExpanded = false
+                            onNotificationPreferencesClick()
+                        }
                     )
                 }
             }
@@ -628,8 +632,18 @@ fun ProfileHeaderCard(profile: Profile) {
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
+            val academicText = remember(profile.branch, profile.semester, profile.section) {
+                val branchDisplay = com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(profile.branch)
+                val semesterDisplay = profile.semester
+                val sectionDisplay = profile.section
+                if (sectionDisplay.isNotBlank()) {
+                    "$branchDisplay | $semesterDisplay | $sectionDisplay"
+                } else {
+                    "$branchDisplay | $semesterDisplay"
+                }
+            }
             Text(
-                text = "${com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(profile.branch)} | ${profile.semester}",
+                text = academicText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -828,6 +842,7 @@ fun QuickActionButton(
 private fun SpeedDialItem(
     label: String,
     icon: ImageVector,
+    description: String? = null,
     onClick: () -> Unit
 ) {
     Surface(
@@ -840,8 +855,8 @@ private fun SpeedDialItem(
     ) {
         Row(
             modifier = Modifier
-                .height(54.dp)
-                .padding(horizontal = 24.dp),
+                .heightIn(min = 54.dp)
+                .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -851,68 +866,27 @@ private fun SpeedDialItem(
                 modifier = Modifier.size(22.dp)
             )
             Spacer(Modifier.width(12.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun SpeedDialSwitchItem(
-    label: String,
-    icon: ImageVector,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .shadow(6.dp, shape = CircleShape)
-            .clip(CircleShape)
-            .clickable { onCheckedChange(!checked) },
-        color = MaterialTheme.colorScheme.primary,
-        shape = CircleShape
-    ) {
-        Row(
-            modifier = Modifier
-                .height(54.dp)
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.width(16.dp))
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.scale(0.8f),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.primary,
-                    checkedTrackColor = Color.White,
-                    uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
-                    uncheckedTrackColor = Color.White.copy(alpha = 0.4f),
-                    checkedBorderColor = Color.Transparent,
-                    uncheckedBorderColor = Color.White.copy(alpha = 0.5f)
+            Column(
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            )
+                if (!description.isNullOrBlank()) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }

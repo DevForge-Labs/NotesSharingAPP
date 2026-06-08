@@ -14,9 +14,10 @@ setGlobalOptions({
 // 3. Export Firestore triggers
 export * from "./firestoreTriggers.js";
 export * from "./upvote.js";
+export { sendTestNotification } from "./notificationService.js";
 
 // 4. Preserve existing test function
 export const helloWorld = onRequest((request, response) => {
   const name = request.query.name || "Student";
   response.send(`Hola Bhai ${name} 😭`);
-});
+});

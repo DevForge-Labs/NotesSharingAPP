@@ -113,6 +113,7 @@ class ProfileViewModel(
     fun updateProfile(
         name: String,
         semester: String,
+        section: String,
         newLocalImageUri: String?,
         isImageRemoved: Boolean,
         onSuccess: () -> Unit
@@ -150,10 +151,13 @@ class ProfileViewModel(
                     finalImageUrl = profileRepository.uploadProfileImage(currentFirebaseUser.uid, newLocalImageUri)
                 }
 
+                val normalizedSection = com.pravor.notessharing.util.NormalizationUtil.normalizeSection(section)
+
                 profileRepository.updateProfileFields(
                     uid = currentFirebaseUser.uid,
                     name = name.trim(),
                     semester = semester.trim(),
+                    section = normalizedSection,
                     profileImageUrl = finalImageUrl
                 )
                 _editState.update { EditProfileState.Success }

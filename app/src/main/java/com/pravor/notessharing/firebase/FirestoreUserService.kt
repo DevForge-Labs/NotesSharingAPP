@@ -154,10 +154,11 @@ class FirestoreUserService {
         usersCollection.document(profile.uid).set(userMap).await()
     }
 
-    suspend fun updateProfileFields(uid: String, name: String, semester: String, profileImageUrl: String) {
+    suspend fun updateProfileFields(uid: String, name: String, semester: String, section: String, profileImageUrl: String) {
         val updates = mapOf(
             "name" to name,
             "semester" to semester,
+            "section" to section,
             "profileImageUrl" to profileImageUrl
         )
         usersCollection.document(uid).update(updates).await()

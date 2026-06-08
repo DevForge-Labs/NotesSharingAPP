@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,8 +97,8 @@ fun EditProfileRoute(
             EditProfileScreen(
                 profile = state.profile,
                 editState = editState,
-                onSaveChanges = { name, semester, localUri, isRemoved, onSuccess ->
-                    viewModel.updateProfile(name, semester, localUri, isRemoved, onSuccess)
+                onSaveChanges = { name, semester, section, localUri, isRemoved, onSuccess ->
+                    viewModel.updateProfile(name, semester, section, localUri, isRemoved, onSuccess)
                 },
                 clearEditState = { viewModel.clearEditState() },
                 onNavigateBack = onNavigateBack,
@@ -117,7 +118,7 @@ fun EditProfileRoute(
 fun EditProfileScreen(
     profile: Profile,
     editState: EditProfileState,
-    onSaveChanges: (String, String, String?, Boolean, () -> Unit) -> Unit,
+    onSaveChanges: (String, String, String, String?, Boolean, () -> Unit) -> Unit,
     clearEditState: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToProfile: () -> Unit,
@@ -129,6 +130,7 @@ fun EditProfileScreen(
 
     var fullName by remember { mutableStateOf(profile.name) }
     var semester by remember { mutableStateOf(profile.semester) }
+    var section by remember { mutableStateOf(profile.section) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isImageRemoved by remember { mutableStateOf(false) }
 
@@ -138,9 +140,11 @@ fun EditProfileScreen(
     // Validation States
     var nameError by remember { mutableStateOf<String?>(null) }
     var semesterError by remember { mutableStateOf<String?>(null) }
+    var sectionError by remember { mutableStateOf<String?>(null) }
 
     val hasChanges = fullName != profile.name ||
             semester != profile.semester ||
+            section != profile.section ||
             selectedImageUri != null ||
             isImageRemoved
 
@@ -462,6 +466,36 @@ fun EditProfileScreen(
                             )
                         }
                     }
+
+                    // Section Selector (Free text)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedTextField(
+                            value = section,
+                            onValueChange = {
+                                section = it
+                                sectionError = if (it.trim().isBlank()) "Section is mandatory." else null
+                            },
+                            label = { Text("Section (e.g. CSE-52, IT 7, A1)") },
+                            leadingIcon = {
+                                Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            },
+                            isError = sectionError != null,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
+                        sectionError?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -502,6 +536,7 @@ fun EditProfileScreen(
                 onClick = {
                     nameError = null
                     semesterError = null
+                    sectionError = null
                     if (fullName.trim().isBlank() || fullName.trim().length < 2) {
                         nameError = "Name cannot be blank and must be at least 2 characters."
                         return@Button
@@ -510,10 +545,15 @@ fun EditProfileScreen(
                         semesterError = "Semester selection is mandatory."
                         return@Button
                     }
+                    if (section.trim().isBlank()) {
+                        sectionError = "Section is mandatory."
+                        return@Button
+                    }
 
                     onSaveChanges(
                         fullName.trim(),
                         semester.trim(),
+                        section.trim(),
                         selectedImageUri?.toString(),
                         isImageRemoved
                     ) {
