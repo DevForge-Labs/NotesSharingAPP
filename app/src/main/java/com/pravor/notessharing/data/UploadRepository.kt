@@ -196,6 +196,7 @@ class UploadRepository(private val context: Context) {
 
         var uploaderName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Anonymous"
         var uploaderPhotoUrl = FirebaseAuth.getInstance().currentUser?.photoUrl?.toString() ?: ""
+        var college: String? = null
         try {
             val userProfile = com.pravor.notessharing.firebase.FirestoreUserService().getUserProfile(uploaderId)
             if (userProfile != null) {
@@ -204,6 +205,9 @@ class UploadRepository(private val context: Context) {
                 }
                 if (userProfile.profileImageUrl.isNotBlank()) {
                     uploaderPhotoUrl = userProfile.profileImageUrl
+                }
+                if (userProfile.college.isNotBlank()) {
+                    college = userProfile.college
                 }
             }
         } catch (e: Exception) {
@@ -275,6 +279,9 @@ class UploadRepository(private val context: Context) {
                 doc["youtubeVideoId"] = videoId
             }
             
+            if (college != null) {
+                doc["college"] = college
+            }
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
             onProgress(1.0f)
@@ -348,6 +355,9 @@ class UploadRepository(private val context: Context) {
 
                 doc["examYear"] = normalizedYear
                 doc["examType"] = normalizedExamType
+                if (college != null) {
+                    doc["college"] = college
+                }
                 firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             }
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, selectedFiles.size)
@@ -470,6 +480,9 @@ class UploadRepository(private val context: Context) {
                 if (sectionDisplay != null) doc["sectionDisplay"] = sectionDisplay
             }
 
+            if (college != null) {
+                doc["college"] = college
+            }
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
         }

@@ -17,7 +17,10 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
     fun emailSignUp(
         name: String,
         email: String,
+        college: String,
+        branch: String,
         semester: String,
+        section: String,
         password: String
     ): Flow<Result<Profile>> = flow {
         try {
@@ -28,7 +31,10 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
                 uid = user.uid,
                 name = name,
                 email = email,
+                college = college,
+                branch = branch,
                 semester = semester,
+                section = section,
                 profileImageUrl = "",
                 role = "user",
                 uploads = 0,
@@ -36,7 +42,6 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
                 upvotes = 0,
                 notesUploaded = 0,
                 contributorLevel = 1,
-                branch = "Computer Science",
                 createdAt = System.currentTimeMillis()
             )
             userService.createUserProfile(profile)
@@ -65,17 +70,31 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
             val authResult = firebaseAuth.signInWithCredential(credential).await()
             val user = authResult.user ?: throw Exception("Google Sign-In failed: User is null.")
             
-            val profile = userService.createOrGetGoogleUser(
-                uid = user.uid,
-                name = user.displayName ?: "User",
-                email = user.email ?: "",
-                profileImageUrl = user.photoUrl?.toString() ?: ""
-            )
-            emit(Result.success(profile))
+            val existingProfile = userService.getUserProfile(user.uid)
+            if (existingProfile != null) {
+                emit(Result.success(existingProfile))
+            } else {
+                val tempProfile = Profile(
+                    uid = user.uid,
+                    name = user.displayName ?: "User",
+                    email = user.email ?: "",
+                    profileImageUrl = user.photoUrl?.toString() ?: "",
+                    isOnboardingRequired = true
+                )
+                emit(Result.success(tempProfile))
+            }
         } catch (e: Exception) {
             Log.e("GOOGLE_AUTH", "Google sign in failed", e)
             emit(Result.failure(e))
         }
+    }
+
+    suspend fun getUserProfile(uid: String): Profile? {
+        return userService.getUserProfile(uid)
+    }
+
+    suspend fun createUserProfile(profile: Profile) {
+        userService.createUserProfile(profile)
     }
 
     fun logout() {

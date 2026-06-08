@@ -629,7 +629,7 @@ fun ProfileHeaderCard(profile: Profile) {
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "${profile.branch} | ${profile.semester}",
+                text = "${com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(profile.branch)} | ${profile.semester}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

@@ -116,6 +116,63 @@ fun NotesSharingApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    androidx.compose.runtime.LaunchedEffect(sessionState, currentRoute) {
+        if (sessionState != SessionState.Checking) {
+            when (sessionState) {
+                SessionState.LoggedIn -> {
+                    val isCurrentlyAuth = currentRoute == "auth_gate" ||
+                            currentRoute == AppDestination.Welcome.route ||
+                            currentRoute == AppDestination.Login.route ||
+                            currentRoute == AppDestination.SignUp.route ||
+                            currentRoute == "google_onboarding"
+                    
+                    if (isCurrentlyAuth) {
+                        val intent = activity?.intent
+                        val docId = intent?.getStringExtra("document_id")
+                        val videoId = intent?.getStringExtra("video_id")
+                        if (!docId.isNullOrBlank()) {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                            intent.removeExtra("document_id")
+                        } else if (!videoId.isNullOrBlank()) {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                            intent.removeExtra("video_id")
+                        } else {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
+                }
+                SessionState.OnboardingRequired -> {
+                    if (currentRoute != "google_onboarding") {
+                        navController.navigate("google_onboarding") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
+                SessionState.LoggedOut -> {
+                    val isCurrentlyAuth = currentRoute == "auth_gate" ||
+                            currentRoute == AppDestination.Welcome.route ||
+                            currentRoute == AppDestination.Login.route ||
+                            currentRoute == AppDestination.SignUp.route
+                    
+                    if (!isCurrentlyAuth) {
+                        navController.navigate(AppDestination.Welcome.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
     androidx.compose.runtime.LaunchedEffect(currentRoute) {
         if (currentRoute == AppDestination.Home.route) {
             val intent = activity?.intent ?: return@LaunchedEffect
@@ -146,7 +203,8 @@ fun NotesSharingApp(
     val isAuthScreen = currentRoute == "auth_gate" ||
             currentRoute == AppDestination.Welcome.route ||
             currentRoute == AppDestination.Login.route ||
-            currentRoute == AppDestination.SignUp.route
+            currentRoute == AppDestination.SignUp.route ||
+            currentRoute == "google_onboarding"
 
     val showBottomBar = !isAuthScreen &&
             currentRoute?.startsWith("pdf_viewing") != true &&
@@ -218,37 +276,7 @@ fun NotesSharingApp(
                 )
             ) {
                 composable("auth_gate") {
-                    val sessionState by authViewModel.sessionState.collectAsState()
-                    androidx.compose.runtime.LaunchedEffect(sessionState) {
-                        if (sessionState != SessionState.Checking) {
-                            if (sessionState == SessionState.LoggedIn) {
-                                val intent = activity?.intent
-                                val docId = intent?.getStringExtra("document_id")
-                                val videoId = intent?.getStringExtra("video_id")
-                                if (!docId.isNullOrBlank()) {
-                                    navController.navigate(AppDestination.Home.route) {
-                                        popUpTo("auth_gate") { inclusive = true }
-                                    }
-                                    navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
-                                    intent.removeExtra("document_id")
-                                } else if (!videoId.isNullOrBlank()) {
-                                    navController.navigate(AppDestination.Home.route) {
-                                        popUpTo("auth_gate") { inclusive = true }
-                                    }
-                                    navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
-                                    intent.removeExtra("video_id")
-                                } else {
-                                    navController.navigate(AppDestination.Home.route) {
-                                        popUpTo("auth_gate") { inclusive = true }
-                                    }
-                                }
-                            } else {
-                                navController.navigate(AppDestination.Welcome.route) {
-                                    popUpTo("auth_gate") { inclusive = true }
-                                }
-                            }
-                        }
-                    }
+                    // Start destination placeholder, navigation is managed by root-level LaunchedEffect
                 }
                 composable(AppDestination.Welcome.route) {
                     WelcomeScreen(
@@ -290,6 +318,22 @@ fun NotesSharingApp(
                         onNavigateToHome = {
                             navController.navigate(AppDestination.Home.route) {
                                 popUpTo(AppDestination.Welcome.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                composable("google_onboarding") {
+                    com.pravor.notessharing.ui.screens.auth.GoogleOnboardingScreen(
+                        viewModel = authViewModel,
+                        onNavigateToHome = {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo("google_onboarding") { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = {
+                            authViewModel.logout()
+                            navController.navigate(AppDestination.Welcome.route) {
+                                popUpTo(0) { inclusive = true }
                             }
                         }
                     )

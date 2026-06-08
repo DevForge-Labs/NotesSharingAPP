@@ -52,15 +52,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val branch = profile?.branch ?: "Computer Science"
                 val semester = profile?.semester ?: "Semester 4"
 
-                val branchCode = when {
-                    branch.trim().lowercase(java.util.Locale.ROOT).contains("computer science") || branch.trim().lowercase(java.util.Locale.ROOT) == "cs" -> "CS"
-                    branch.trim().lowercase(java.util.Locale.ROOT).contains("information technology") || branch.trim().lowercase(java.util.Locale.ROOT) == "it" -> "IT"
-                    branch.trim().lowercase(java.util.Locale.ROOT).contains("electronics") || branch.trim().lowercase(java.util.Locale.ROOT) == "ece" -> "ECE"
-                    branch.trim().lowercase(java.util.Locale.ROOT).contains("electrical") -> "Electrical"
-                    branch.trim().lowercase(java.util.Locale.ROOT).contains("mechanical") -> "Mechanical"
-                    branch.trim().lowercase(java.util.Locale.ROOT).contains("civil") -> "Civil"
-                    else -> branch.uppercase(java.util.Locale.ROOT).trim()
-                }
+                val branchCode = com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(branch)
 
                 val semNum = semester.filter { it.isDigit() }
 

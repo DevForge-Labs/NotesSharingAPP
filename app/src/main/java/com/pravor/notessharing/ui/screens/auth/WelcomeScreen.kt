@@ -1,8 +1,5 @@
 package com.pravor.notessharing.ui.screens.auth
 
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -48,9 +45,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
+import com.pravor.notessharing.auth.GoogleAuthHelper
+import kotlinx.coroutines.launch
 import com.pravor.notessharing.R
 import com.pravor.notessharing.state.AuthUiState
 import com.pravor.notessharing.auth.AuthViewModel
@@ -72,37 +68,7 @@ fun WelcomeScreen(
         alpha.animateTo(1f, animationSpec = tween(800))
     }
     
-    // Google Sign-In setup
-    val gso = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("1093598842915-7un8eep0q7323t57tgjb4f034mtrvprq.apps.googleusercontent.com")
-            .requestEmail()
-            .requestProfile()
-            .build()
-    }
-    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
-    
-    val googleLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)!!
-                val idToken = account.idToken!!
-                viewModel.signInWithGoogle(idToken)
-            } catch (e: Exception) {
-                // error handled via viewModel state
-            }
-        }
-    }
-    
-    LaunchedEffect(uiState) {
-        if (uiState is AuthUiState.Success) {
-            onNavigateToHome()
-            viewModel.clearState()
-        }
-    }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     
     Box(
         modifier = modifier
@@ -191,7 +157,17 @@ fun WelcomeScreen(
                 Button(
                     onClick = {
                         viewModel.clearState()
-                        googleLauncher.launch(googleSignInClient.signInIntent)
+                        coroutineScope.launch {
+                            GoogleAuthHelper.performGoogleSignIn(
+                                context = context,
+                                onTokenReceived = { idToken ->
+                                    viewModel.signInWithGoogle(idToken)
+                                },
+                                onError = { errorMsg ->
+                                    // Error will be caught and set in viewModel
+                                }
+                            )
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

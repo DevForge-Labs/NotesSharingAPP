@@ -2,6 +2,7 @@ package com.pravor.notessharing.auth
 
 import android.content.Context
 import android.util.Log
+import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.CustomCredential
@@ -43,6 +44,14 @@ object GoogleAuthHelper {
             Log.d(TAG, "[GoogleAuth] Starting Google Sign-In with Credential Manager...")
             val webClientId = getVerifiedWebClientId(context)
             val credentialManager = CredentialManager.create(context)
+
+            Log.d(TAG, "[GoogleAuth] Clearing cached Google Sign-In account...")
+            try {
+                credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                Log.d(TAG, "[GoogleAuth] Cached Google Sign-In account cleared successfully.")
+            } catch (e: Exception) {
+                Log.w(TAG, "[GoogleAuth] Failed to clear credential state: ${e.message}")
+            }
 
             Log.d(TAG, "[GoogleAuth] Configuring GetGoogleIdOption with server client ID...")
             val googleIdOption = GetGoogleIdOption.Builder()

@@ -12,5 +12,6 @@ sealed interface AuthUiState {
 enum class SessionState {
     Checking,
     LoggedIn,
-    LoggedOut
+    LoggedOut,
+    OnboardingRequired
 }
