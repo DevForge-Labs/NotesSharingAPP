@@ -66,6 +66,8 @@ data class Profile(
     val name: String = "",
     val email: String = "",
     val semester: String = "Not Set",
+    val college: String = "kiit",
+    val section: String = "",
     val profileImageUrl: String = "",
     val role: String = "user",
     val uploads: Int = 0,
@@ -81,7 +83,11 @@ data class Profile(
     val notesUploads: Int = 0,
     val assignmentUploads: Int = 0,
     val cheatSheetUploads: Int = 0,
-    val youtubeUploads: Int = 0
+    val youtubeUploads: Int = 0,
+    
+    // Auth-only property (ignored in Firestore using @Exclude)
+    @get:com.google.firebase.firestore.Exclude
+    val isOnboardingRequired: Boolean = false
 ) {
     @get:Exclude
     val initials: String

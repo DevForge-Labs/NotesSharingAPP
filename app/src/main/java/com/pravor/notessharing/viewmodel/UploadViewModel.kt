@@ -43,11 +43,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _uiState = MutableStateFlow(
         UploadUiState(
-            branches = listOf("CS", "IT", "CSC", "CSS", "ECE", "Electrical", "Mechanical", "Civil", "Biotechnology"),
-            semesters = listOf(
-                "Semester 1", "Semester 2", "Semester 3", "Semester 4",
-                "Semester 5", "Semester 6", "Semester 7", "Semester 8"
-            ),
+            branches = com.pravor.notessharing.model.AcademicCatalog.branches,
+            semesters = com.pravor.notessharing.model.AcademicCatalog.semesters,
             examYears = listOf("2026", "2025", "2024", "2023", "2022", "2021", "2020"),
             examTypes = listOf("Midsem", "Endsem")
         )

@@ -93,7 +93,6 @@ fun LoginScreen(
     
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
-            onNavigateToHome()
             viewModel.clearState()
         } else if (uiState is AuthUiState.Error) {
             snackbarHostState.showSnackbar((uiState as AuthUiState.Error).message)

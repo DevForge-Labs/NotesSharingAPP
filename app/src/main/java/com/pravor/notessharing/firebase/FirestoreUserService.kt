@@ -25,7 +25,9 @@ class FirestoreUserService {
                 val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
                 val notesUploaded = snapshot.getLong("notesUploaded")?.toInt() ?: 0
                 val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
-                val branch = snapshot.getString("branch") ?: "Computer Science"
+                val branch = snapshot.getString("branch")?.let { com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(it) } ?: "CS"
+                val college = snapshot.getString("college") ?: "kiit"
+                val section = snapshot.getString("section") ?: ""
                 val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
                 
                 val pyqUploads = snapshot.getLong("pyqUploads")?.toInt() ?: 0
@@ -39,6 +41,8 @@ class FirestoreUserService {
                     name = name,
                     email = email,
                     semester = semester,
+                    college = college,
+                    section = section,
                     profileImageUrl = profileImageUrl,
                     role = role,
                     uploads = uploads,
@@ -80,7 +84,9 @@ class FirestoreUserService {
                     val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
                     val notesUploaded = snapshot.getLong("notesUploaded")?.toInt() ?: 0
                     val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
-                    val branch = snapshot.getString("branch") ?: "Computer Science"
+                    val branch = snapshot.getString("branch")?.let { com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(it) } ?: "CS"
+                    val college = snapshot.getString("college") ?: "kiit"
+                    val section = snapshot.getString("section") ?: ""
                     val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
                     
                     val pyqUploads = snapshot.getLong("pyqUploads")?.toInt() ?: 0
@@ -94,6 +100,8 @@ class FirestoreUserService {
                         name = name,
                         email = email,
                         semester = semester,
+                        college = college,
+                        section = section,
                         profileImageUrl = profileImageUrl,
                         role = role,
                         uploads = uploads,
@@ -121,7 +129,29 @@ class FirestoreUserService {
     }
 
     suspend fun createUserProfile(profile: Profile) {
-        usersCollection.document(profile.uid).set(profile).await()
+        val userMap = mapOf(
+            "uid" to profile.uid,
+            "name" to profile.name,
+            "email" to profile.email,
+            "semester" to profile.semester,
+            "college" to com.pravor.notessharing.util.NormalizationUtil.normalizeCollege(profile.college),
+            "branch" to com.pravor.notessharing.util.NormalizationUtil.normalizeBranch(profile.branch),
+            "section" to com.pravor.notessharing.util.NormalizationUtil.normalizeSection(profile.section),
+            "profileImageUrl" to profile.profileImageUrl,
+            "role" to profile.role,
+            "uploads" to profile.uploads,
+            "bookmarks" to profile.bookmarks,
+            "upvotes" to profile.upvotes,
+            "notesUploaded" to profile.notesUploaded,
+            "contributorLevel" to profile.contributorLevel,
+            "createdAt" to profile.createdAt,
+            "pyqUploads" to profile.pyqUploads,
+            "notesUploads" to profile.notesUploads,
+            "assignmentUploads" to profile.assignmentUploads,
+            "cheatSheetUploads" to profile.cheatSheetUploads,
+            "youtubeUploads" to profile.youtubeUploads
+        )
+        usersCollection.document(profile.uid).set(userMap).await()
     }
 
     suspend fun updateProfileFields(uid: String, name: String, semester: String, profileImageUrl: String) {

@@ -1,13 +1,9 @@
 package com.pravor.notessharing.ui.screens.auth
 
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,115 +19,121 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
-import com.pravor.notessharing.auth.GoogleAuthHelper
-import kotlinx.coroutines.launch
-import com.pravor.notessharing.state.AuthUiState
 import com.pravor.notessharing.auth.AuthViewModel
+import com.pravor.notessharing.model.AcademicCatalog
+import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.state.AuthUiState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignUpScreen(
+fun GoogleOnboardingScreen(
     viewModel: AuthViewModel,
-    onNavigateBack: () -> Unit,
-    onNavigateToLogin: () -> Unit,
     onNavigateToHome: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val tempProfile = viewModel.tempGoogleProfile
     val snackbarHostState = remember { SnackbarHostState() }
-    
-    var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+
+    var fullName by remember { mutableStateOf(tempProfile?.name ?: "") }
+    var email by remember { mutableStateOf(tempProfile?.email ?: "") }
     var college by remember { mutableStateOf("KIIT") }
     var branch by remember { mutableStateOf("") }
     var semester by remember { mutableStateOf("") }
     var section by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    
+
     var collegeExpanded by remember { mutableStateOf(false) }
     var branchExpanded by remember { mutableStateOf(false) }
     var semesterExpanded by remember { mutableStateOf(false) }
-    
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
-    
+
     val alpha = remember { Animatable(0f) }
-    
+
     LaunchedEffect(Unit) {
         alpha.animateTo(1f, animationSpec = tween(600))
     }
-    
+
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
+            onNavigateToHome()
             viewModel.clearState()
         } else if (uiState is AuthUiState.Error) {
-            snackbarHostState.showSnackbar((uiState as? AuthUiState.Error)?.message ?: "An error occurred")
+            snackbarHostState.showSnackbar((uiState as AuthUiState.Error).message)
         }
     }
-    
-    fun performSignUp() {
-        viewModel.signUpWithEmail(
-            name = fullName,
-            email = email,
+
+    fun handleCompleteOnboarding() {
+        if (fullName.isBlank()) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Name cannot be blank.") }
+            return
+        }
+        if (college.isBlank()) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Please select your college.") }
+            return
+        }
+        if (branch.isBlank()) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Please select your branch.") }
+            return
+        }
+        if (semester.isBlank()) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Please select your semester.") }
+            return
+        }
+        if (section.isBlank()) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Please enter your section.") }
+            return
+        }
+
+        viewModel.completeGoogleOnboarding(
+            name = fullName.trim(),
             college = college,
             branch = branch,
             semester = semester,
-            section = section,
-            password = password,
-            confirmPassword = confirmPassword
+            section = section
         )
     }
-    
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -152,7 +154,7 @@ fun SignUpScreen(
                 .alpha(alpha.value)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Back navigation
+            // Back Button
             IconButton(
                 onClick = onNavigateBack,
                 modifier = Modifier
@@ -165,26 +167,53 @@ fun SignUpScreen(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Header
             Text(
-                text = "Create Account",
+                text = "Academic Profile",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Join us and share resources with your campus.",
+                text = "Complete your academic details to continue.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            
+
             Spacer(modifier = Modifier.height(28.dp))
-            
-            // Full Name Input
+
+            // Email (Read-Only)
+            OutlinedTextField(
+                value = email,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Email Address") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.3f)
+                ),
+                enabled = false
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Name (Prefilled, Editable)
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it },
@@ -205,35 +234,10 @@ fun SignUpScreen(
                     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
-            
+
             Spacer(modifier = Modifier.height(14.dp))
-            
-            // Email Input
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email Address") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-            
-            Spacer(modifier = Modifier.height(14.dp))
-            
-            // College Selector
+
+            // College Dropdown
             ExposedDropdownMenuBox(
                 expanded = collegeExpanded,
                 onExpandedChange = { collegeExpanded = !collegeExpanded },
@@ -267,7 +271,7 @@ fun SignUpScreen(
                     expanded = collegeExpanded,
                     onDismissRequest = { collegeExpanded = false }
                 ) {
-                    com.pravor.notessharing.model.AcademicCatalog.colleges.forEach { option ->
+                    AcademicCatalog.colleges.forEach { option ->
                         DropdownMenuItem(
                             text = { Text(option) },
                             onClick = {
@@ -279,10 +283,10 @@ fun SignUpScreen(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(14.dp))
-            
-            // Branch Selector
+
+            // Branch Dropdown
             ExposedDropdownMenuBox(
                 expanded = branchExpanded,
                 onExpandedChange = { branchExpanded = !branchExpanded },
@@ -316,7 +320,7 @@ fun SignUpScreen(
                     expanded = branchExpanded,
                     onDismissRequest = { branchExpanded = false }
                 ) {
-                    com.pravor.notessharing.model.AcademicCatalog.branches.forEach { option ->
+                    AcademicCatalog.branches.forEach { option ->
                         DropdownMenuItem(
                             text = { Text(option) },
                             onClick = {
@@ -328,14 +332,10 @@ fun SignUpScreen(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(14.dp))
-            
-            // Semester Selector
-            val semesterOptions = listOf(
-                "Semester 1", "Semester 2", "Semester 3", "Semester 4",
-                "Semester 5", "Semester 6", "Semester 7", "Semester 8"
-            )
+
+            // Semester Dropdown
             ExposedDropdownMenuBox(
                 expanded = semesterExpanded,
                 onExpandedChange = { semesterExpanded = !semesterExpanded },
@@ -369,11 +369,11 @@ fun SignUpScreen(
                     expanded = semesterExpanded,
                     onDismissRequest = { semesterExpanded = false }
                 ) {
-                    com.pravor.notessharing.model.AcademicCatalog.semesters.forEach { selectionOption ->
+                    AcademicCatalog.semesters.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(selectionOption) },
+                            text = { Text(option) },
                             onClick = {
-                                semester = selectionOption
+                                semester = option
                                 semesterExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -381,10 +381,10 @@ fun SignUpScreen(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(14.dp))
-            
-            // Section Selector (Free text)
+
+            // Section Free-text
             OutlinedTextField(
                 value = section,
                 onValueChange = { section = it },
@@ -405,90 +405,12 @@ fun SignUpScreen(
                     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
-            
-            Spacer(modifier = Modifier.height(14.dp))
-            
-            // Password Input
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password (Min 8 chars)") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                trailingIcon = {
-                    val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = icon, contentDescription = "Toggle password visibility")
-                    }
-                },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-            
-            Spacer(modifier = Modifier.height(14.dp))
-            
-            // Confirm Password Input
-            OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = { Text("Confirm Password") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                trailingIcon = {
-                    val icon = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                        Icon(imageVector = icon, contentDescription = "Toggle password visibility")
-                    }
-                },
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Error Display
-            val errorToShow = (uiState as? AuthUiState.Error)?.message
-            AnimatedVisibility(visible = errorToShow != null) {
-                Text(
-                    text = errorToShow ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-            
-            // Sign Up Button
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Complete Profile Button
             Button(
-                onClick = { performSignUp() },
+                onClick = { handleCompleteOnboarding() },
                 enabled = uiState !is AuthUiState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -504,115 +426,14 @@ fun SignUpScreen(
                     )
                 } else {
                     Text(
-                        text = "Create Account",
+                        text = "Complete Profile",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // Divider
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Spacer(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-                )
-                Text(
-                    text = " or continue with ",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 14.dp)
-                )
-                Spacer(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // Google Signup Button
-            Button(
-                onClick = {
-                    viewModel.clearState()
-                    coroutineScope.launch {
-                        GoogleAuthHelper.performGoogleSignIn(
-                            context = context,
-                            onTokenReceived = { idToken ->
-                                viewModel.signInWithGoogle(idToken)
-                            },
-                            onError = { errorMsg ->
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(errorMsg)
-                                }
-                            }
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(20.dp)
-                    ),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    GoogleIcon(modifier = Modifier.size(30.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Continue with Google",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(28.dp))
-            
-            // Redirect to Log in
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Already have an account?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = " Sign In",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable {
-                        viewModel.clearState()
-                        onNavigateToLogin()
-                    }
-                )
             }
         }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
