@@ -1,6 +1,9 @@
 package com.pravor.notessharing.ui.screens.trending
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.compose.ui.Modifier
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.ui.components.trending_components.TrendingNotesContent
@@ -18,6 +21,11 @@ fun TrendingNotesScreen(
     onUpvoteClick: (TrendingNote) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val recompositionCount = remember { AtomicInteger(0) }
+    SideEffect {
+        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] TrendingNotesScreen count=${recompositionCount.incrementAndGet()}")
+    }
+
     TrendingNotesContent(
         uiState = uiState,
         isRefreshing = isRefreshing,

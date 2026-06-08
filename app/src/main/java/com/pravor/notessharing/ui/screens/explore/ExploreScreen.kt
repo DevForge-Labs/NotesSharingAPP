@@ -24,6 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import java.util.concurrent.atomic.AtomicInteger
 import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.state.CatalogSubject
 import com.pravor.notessharing.ui.components.StatePanel
@@ -211,12 +216,31 @@ fun ExploreScreen(
     onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    val recompositionCount = remember { AtomicInteger(0) }
+    SideEffect {
+        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] ExploreScreen count=${recompositionCount.incrementAndGet()}")
+    }
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
-
+ 
     val listState = rememberLazyListState()
+
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            Pair(listState.firstVisibleItemIndex, listState.layoutInfo.visibleItemsInfo.size)
+        }
+        .distinctUntilChanged()
+        .collect { (firstVisible, visibleCount) ->
+            if (visibleCount > 0) {
+                android.util.Log.d("PERF", "[PERF] First visible item=$firstVisible")
+                android.util.Log.d("PERF", "[PERF] Visible items count=$visibleCount")
+            }
+        }
+    }
+
     val pullToRefreshState = rememberPullToRefreshState()
 
     Box(modifier = modifier.fillMaxSize()) {

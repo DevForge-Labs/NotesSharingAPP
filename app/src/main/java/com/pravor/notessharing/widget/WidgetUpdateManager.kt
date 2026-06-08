@@ -18,6 +18,8 @@ object WidgetUpdateManager {
     private val scope = CoroutineScope(Dispatchers.Default)
 
     fun updateAllWidgets(context: Context) {
+        val startTime = System.currentTimeMillis()
+        android.util.Log.d("PERF", "[PERF] Widget update START thread=${Thread.currentThread().name}")
         val caller = Throwable().stackTrace.getOrNull(1)?.let { "${it.className}.${it.methodName}:${it.lineNumber}" } ?: "unknown"
         Log.d("WidgetDebug", "WidgetUpdateManager.updateAllWidgets() called by $caller at ${java.lang.System.currentTimeMillis()}")
         scope.launch {
@@ -78,8 +80,12 @@ object WidgetUpdateManager {
                     }
                 }
                 Log.d("WidgetDebug", "WidgetUpdateManager: updateAllWidgets() executed successfully: bookmarks=$bookmarks downloads=$downloads")
+                val duration = System.currentTimeMillis() - startTime
+                android.util.Log.d("PERF", "[PERF] Widget update END duration=${duration}ms thread=${Thread.currentThread().name}")
             } catch (e: Exception) {
                 Log.e("WidgetDebug", "WidgetUpdateManager: Failed to update widgets: ${e.message}", e)
+                val duration = System.currentTimeMillis() - startTime
+                android.util.Log.d("PERF", "[PERF] Widget update END duration=${duration}ms thread=${Thread.currentThread().name}")
             }
         }
     }

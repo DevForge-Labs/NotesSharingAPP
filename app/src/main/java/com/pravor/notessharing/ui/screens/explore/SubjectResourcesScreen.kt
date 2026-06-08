@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.data.DocumentDetailRepository
+import kotlinx.coroutines.flow.distinctUntilChanged
+import java.util.concurrent.atomic.AtomicInteger
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.model.VideoRecommendation
 import com.pravor.notessharing.ui.components.StatePanel
@@ -204,8 +206,27 @@ fun SubjectResourcesScreen(
     onVideoBookmarkClick: (VideoRecommendation) -> Unit,
     onUpvoteClick: (String, String?, Int) -> Unit
 ) {
+    val recompositionCount = remember { AtomicInteger(0) }
+    SideEffect {
+        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] SubjectResourcesScreen count=${recompositionCount.incrementAndGet()}")
+    }
+
     val bottomPadding = LocalBottomBarPadding.current
     val listState = rememberLazyListState()
+
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            Pair(listState.firstVisibleItemIndex, listState.layoutInfo.visibleItemsInfo.size)
+        }
+        .distinctUntilChanged()
+        .collect { (firstVisible, visibleCount) ->
+            if (visibleCount > 0) {
+                android.util.Log.d("PERF", "[PERF] First visible item=$firstVisible")
+                android.util.Log.d("PERF", "[PERF] Visible items count=$visibleCount")
+            }
+        }
+    }
+
     val detailRepository = remember { DocumentDetailRepository() }
 
     val normalized = remember(subjectName) { normalizeSubject(subjectName) }

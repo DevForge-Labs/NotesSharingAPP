@@ -37,10 +37,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -108,6 +110,11 @@ fun ContinueReadingCard(
 ) {
     if (item == null) return
 
+    val recompositionCount = remember { AtomicInteger(0) }
+    SideEffect {
+        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] ContinueReadingCard count=${recompositionCount.incrementAndGet()}")
+    }
+
     val isVideo = item.fileType == com.pravor.notessharing.model.FileType.Video
     
     val repository = remember { com.pravor.notessharing.data.DocumentDetailRepository() }
@@ -158,6 +165,8 @@ fun ContinueReadingCard(
 
         // 2. Fetch and download the file to persistent local storage in a background thread
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val preparationStartTime = System.currentTimeMillis()
+            android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=ContinueReadingCard thumbnail preparation thread=${Thread.currentThread().name}")
             try {
                 // If item.thumbnailUrl is blank, query the database for latest document metadata
                 val remoteUrlToUse = if (!item.thumbnailUrl.isNullOrBlank()) {
@@ -227,10 +236,10 @@ fun ContinueReadingCard(
                         } else {
                             // Not an image file
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                firstFileUrl = remoteUrlToUse
-                                isImage = false
-                                resolvedDocType = item.documentType
-                            }
+                                    firstFileUrl = remoteUrlToUse
+                                    isImage = false
+                                    resolvedDocType = item.documentType
+                                }
                         }
                     }
                 } else {
@@ -247,6 +256,8 @@ fun ContinueReadingCard(
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     isLoading = false
                 }
+                val preparationDuration = System.currentTimeMillis() - preparationStartTime
+                android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=ContinueReadingCard thumbnail preparation duration=${preparationDuration}ms thread=${Thread.currentThread().name}")
             }
         }
     }

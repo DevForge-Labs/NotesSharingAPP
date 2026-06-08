@@ -30,6 +30,7 @@ import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.screens.trending.TrendingNotesUiState
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +72,19 @@ fun TrendingNotesContent(
                 is TrendingNotesUiState.Success -> {
                     val documentNotes = uiState.trendingNotes
                     val listState = rememberLazyListState()
+
+                    LaunchedEffect(listState) {
+                        androidx.compose.runtime.snapshotFlow {
+                            Pair(listState.firstVisibleItemIndex, listState.layoutInfo.visibleItemsInfo.size)
+                        }
+                        .distinctUntilChanged()
+                        .collect { (firstVisible, visibleCount) ->
+                            if (visibleCount > 0) {
+                                android.util.Log.d("PERF", "[PERF] First visible item=$firstVisible")
+                                android.util.Log.d("PERF", "[PERF] Visible items count=$visibleCount")
+                            }
+                        }
+                    }
 
                     // Detect when scrolling near the bottom (infinite scroll threshold)
                     val shouldLoadMore = remember(listState) {

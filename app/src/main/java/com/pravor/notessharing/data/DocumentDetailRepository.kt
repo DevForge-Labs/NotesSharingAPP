@@ -9,20 +9,57 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
+object UserFetchDiagnostics {
+    val fetchedUids = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    val totalFetches = java.util.concurrent.atomic.AtomicInteger(0)
+    val duplicateFetches = java.util.concurrent.atomic.AtomicInteger(0)
+    val cacheHits = java.util.concurrent.atomic.AtomicInteger(0)
+    val cacheMisses = java.util.concurrent.atomic.AtomicInteger(0)
+    
+    fun recordFetch(uid: String, fromCache: Boolean) {
+        val total = totalFetches.incrementAndGet()
+        val isDuplicate = !fetchedUids.add(uid)
+        if (isDuplicate) {
+            duplicateFetches.incrementAndGet()
+        }
+        if (fromCache) {
+            cacheHits.incrementAndGet()
+        } else {
+            cacheMisses.incrementAndGet()
+        }
+        
+        android.util.Log.d("FIRESTORE", "[FIRESTORE] User fetch uid=$uid")
+        if (isDuplicate) {
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] User fetch duplicate=true uid=$uid")
+        }
+        android.util.Log.d("FIRESTORE", "[FIRESTORE] User fetch cacheHit=$fromCache uid=$uid")
+    }
+}
+
 class DocumentDetailRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
 
     suspend fun getDocument(documentId: String): DocumentDetail? {
+        val startTime = System.currentTimeMillis()
+        android.util.Log.d("PERF", "[PERF] getDocument START id=$documentId")
         return try {
             val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
-            var foundData: Map<String, Any>? = null
+            var foundData: Pair<Map<String, Any>, String>? = null
             coroutineScope {
                 val deferreds = collections.map { col ->
                     async {
                         try {
+                            android.util.Log.d("PERF", "[PERF] Collection searched=$col")
+                            val firestoreQueryStartTime = System.currentTimeMillis()
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col document=$documentId thread=${Thread.currentThread().name}")
                             val snap = firestore.collection(col).document(documentId).get().await()
-                            if (snap.exists()) snap.data else null
+                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col document=$documentId duration=${firestoreQueryDuration}ms exists=${snap.exists()} thread=${Thread.currentThread().name}")
+                            if (snap.exists() && snap.data != null) {
+                                android.util.Log.d("PERF", "[PERF] Found in collection=$col")
+                                Pair(snap.data!!, col)
+                            } else null
                         } catch (e: Exception) {
                             null
                         }
@@ -30,13 +67,19 @@ class DocumentDetailRepository {
                 }
                 foundData = deferreds.awaitAll().firstOrNull { it != null }
             }
-            if (foundData != null) {
-                foundData?.toDocumentDetail(documentId)
+            val result = if (foundData != null) {
+                foundData?.first?.toDocumentDetail(documentId)
             } else {
                 getDummyDocumentDetail(documentId)
             }
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
+            result
         } catch (e: Exception) {
-            getDummyDocumentDetail(documentId)
+            val result = getDummyDocumentDetail(documentId)
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
+            result
         }
     }
 
@@ -44,8 +87,16 @@ class DocumentDetailRepository {
         if (uploaderId == "dummy-uid" || uploaderId.isEmpty()) {
             return "Gold Contributor" // Premium look for dummy uploader
         }
+        val startTime = System.currentTimeMillis()
         return try {
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=users document=$uploaderId thread=${Thread.currentThread().name}")
             val snapshot = usersCollection.document(uploaderId).get().await()
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=${snapshot.exists()} thread=${Thread.currentThread().name}")
+            
+            val fromCache = snapshot.metadata.isFromCache
+            UserFetchDiagnostics.recordFetch(uploaderId, fromCache)
+
             if (snapshot.exists()) {
                 val level = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 getContributorLevelName(level)
@@ -53,25 +104,33 @@ class DocumentDetailRepository {
                 "Bronze Contributor"
             }
         } catch (e: Exception) {
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=false thread=${Thread.currentThread().name}")
             "Bronze Contributor"
         }
     }
 
     suspend fun getRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> {
+        val startTime = System.currentTimeMillis()
+        android.util.Log.d("PERF", "[PERF] getRelatedDocuments START id=${doc.id} thread=${Thread.currentThread().name}")
         return try {
             val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
             val allRelatedDocs = coroutineScope {
                 val deferreds = collections.map { col ->
                     async {
                         try {
-                            firestore.collection(col)
+                            val firestoreQueryStartTime = System.currentTimeMillis()
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
+                            val snapshot = firestore.collection(col)
                                 .whereEqualTo("semester", doc.semester)
                                 .whereEqualTo("subject", doc.subject)
                                 .whereEqualTo("documentType", doc.documentType)
                                 .limit(4)
                                 .get()
                                 .await()
-                                .documents
+                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${snapshot.size()} thread=${Thread.currentThread().name}")
+                            snapshot.documents
                         } catch (e: Exception) {
                             emptyList()
                         }
@@ -85,13 +144,19 @@ class DocumentDetailRepository {
                 else d.data?.toDocumentDetail(d.id)
             }.distinctBy { it.id }.take(3)
 
-            if (firestoreRelated.isNotEmpty()) {
+            val result = if (firestoreRelated.isNotEmpty()) {
                 firestoreRelated
             } else {
                 getDummyRelatedDocuments(doc)
             }
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${result.size} thread=${Thread.currentThread().name}")
+            result
         } catch (e: Exception) {
-            getDummyRelatedDocuments(doc)
+            val result = getDummyRelatedDocuments(doc)
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${result.size} thread=${Thread.currentThread().name}")
+            result
         }
     }
 

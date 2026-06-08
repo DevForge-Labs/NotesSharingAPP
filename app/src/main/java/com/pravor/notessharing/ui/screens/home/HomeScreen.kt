@@ -50,6 +50,8 @@ import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.DummyData
 import com.pravor.notessharing.viewmodel.HomeViewModel
 import com.pravor.notessharing.viewmodel.MyFilesViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import java.util.concurrent.atomic.AtomicInteger
 
 @Composable
 fun HomeRoute(
@@ -117,6 +119,11 @@ fun HomeScreen(
     onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val recompositionCount = remember { AtomicInteger(0) }
+    androidx.compose.runtime.SideEffect {
+        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] HomeScreen count=${recompositionCount.incrementAndGet()}")
+    }
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
@@ -126,6 +133,19 @@ fun HomeScreen(
     var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
  
     val feedListState = rememberLazyListState()
+
+    LaunchedEffect(feedListState) {
+        androidx.compose.runtime.snapshotFlow {
+            Pair(feedListState.firstVisibleItemIndex, feedListState.layoutInfo.visibleItemsInfo.size)
+        }
+        .distinctUntilChanged()
+        .collect { (firstVisible, visibleCount) ->
+            if (visibleCount > 0) {
+                android.util.Log.d("PERF", "[PERF] First visible item=$firstVisible")
+                android.util.Log.d("PERF", "[PERF] Visible items count=$visibleCount")
+            }
+        }
+    }
     val stateKey = when (uiState) {
         HomeUiState.Loading -> "loading"
         HomeUiState.Empty -> "empty"

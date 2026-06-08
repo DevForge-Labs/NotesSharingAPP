@@ -24,6 +24,9 @@ import kotlinx.coroutines.coroutineScope
 class ExploreViewModel(application: Application) : AndroidViewModel(application) {
     private val cacheRepository = ExploreCacheRepository(application)
 
+    private var isFirstLoad = true
+    private val startupStartTime = System.currentTimeMillis()
+
     private val _uiState = MutableStateFlow<ExploreUiState>(
         cacheRepository.getCache()?.let { ExploreUiState.Success(it) } ?: ExploreUiState.Loading
     )
@@ -69,10 +72,14 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (key != null) {
+                    val firestoreQueryStartTime = System.currentTimeMillis()
+                    android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=app_config/subject_catalog thread=${Thread.currentThread().name}")
                     val snapshot = firestore.collection("app_config")
                         .document("subject_catalog")
                         .get()
                         .await()
+                    val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                    android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=app_config/subject_catalog duration=${firestoreQueryDuration}ms docs=${if (snapshot.exists()) 1 else 0} thread=${Thread.currentThread().name}")
                     if (snapshot.exists()) {
                         val catalogData = snapshot.data?.get(key)
                         val resolvedSubjects = mutableListOf<CatalogSubject>()
@@ -118,6 +125,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     }
 
     init {
+        android.util.Log.d("PERF", "[PERF] Explore startup START thread=${Thread.currentThread().name}")
         val cached = cacheRepository.getCache()
         loadRealDocuments(silent = cached != null)
         loadCatalogSubjects()
@@ -262,6 +270,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
         fetchJob?.cancel()
         fetchJob = viewModelScope.launch {
+            val startTime = System.currentTimeMillis()
+            android.util.Log.d("PERF", "[PERF] Explore load START thread=${Thread.currentThread().name}")
             try {
                 if (!silent && !isPullToRefresh && cacheRepository.getCache() == null) {
                     _uiState.value = ExploreUiState.Loading
@@ -272,7 +282,12 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val deferreds = collections.map { col ->
                         async {
                             try {
-                                firestore.collection(col).get().await().documents
+                                val firestoreQueryStartTime = System.currentTimeMillis()
+                                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
+                                val documents = firestore.collection(col).get().await().documents
+                                val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${documents.size} thread=${Thread.currentThread().name}")
+                                documents
                             } catch (e: Exception) {
                                 emptyList()
                             }
@@ -439,6 +454,15 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
                 cacheRepository.saveCache(freshContent)
                 _uiState.update { ExploreUiState.Success(freshContent) }
+
+                val duration = System.currentTimeMillis() - startTime
+                android.util.Log.d("PERF", "[PERF] Explore load END - duration=$duration ms thread=${Thread.currentThread().name}")
+                android.util.Log.d("PERF", "[PERF] Explore documents loaded=${allDocs.size}")
+                if (isFirstLoad) {
+                    isFirstLoad = false
+                    val startupDuration = System.currentTimeMillis() - startupStartTime
+                    android.util.Log.d("PERF", "[PERF] Explore startup END duration=${startupDuration}ms thread=${Thread.currentThread().name}")
+                }
             } catch (e: Exception) {
                 if (cacheRepository.getCache() == null) {
                     _uiState.update {
@@ -456,6 +480,14 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             )
                         )
                     }
+                }
+                val duration = System.currentTimeMillis() - startTime
+                android.util.Log.d("PERF", "[PERF] Explore load END - duration=$duration ms thread=${Thread.currentThread().name}")
+                android.util.Log.d("PERF", "[PERF] Explore documents loaded=0")
+                if (isFirstLoad) {
+                    isFirstLoad = false
+                    val startupDuration = System.currentTimeMillis() - startupStartTime
+                    android.util.Log.d("PERF", "[PERF] Explore startup END duration=${startupDuration}ms thread=${Thread.currentThread().name}")
                 }
             } finally {
                 isRefreshingState.value = false
