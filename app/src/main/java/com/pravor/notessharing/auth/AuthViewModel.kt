@@ -192,6 +192,10 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
         }
     }
 
+    fun setError(message: String) {
+        _uiState.update { AuthUiState.Error(message) }
+    }
+
     fun clearState() {
         _uiState.update { AuthUiState.Idle }
     }

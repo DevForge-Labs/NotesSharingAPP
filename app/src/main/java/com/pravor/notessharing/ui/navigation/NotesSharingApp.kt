@@ -44,6 +44,9 @@ import com.pravor.notessharing.auth.AuthViewModel
 import com.pravor.notessharing.state.SessionState
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.content.Context
+import com.pravor.notessharing.updates.UpdatesScreen
+
 
 object PdfDebugState {
     var lastOriginalUrl: String = ""
@@ -121,6 +124,7 @@ fun NotesSharingApp(
             when (sessionState) {
                 SessionState.LoggedIn -> {
                     val isCurrentlyAuth = currentRoute == "auth_gate" ||
+                            currentRoute == "onboarding" ||
                             currentRoute == AppDestination.Welcome.route ||
                             currentRoute == AppDestination.Login.route ||
                             currentRoute == AppDestination.SignUp.route ||
@@ -157,13 +161,21 @@ fun NotesSharingApp(
                     }
                 }
                 SessionState.LoggedOut -> {
-                    val isCurrentlyAuth = currentRoute == "auth_gate" ||
+                    val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+                    val hasCompletedOnboarding = prefs.getBoolean("has_completed_onboarding", false)
+                    
+                    val isCurrentlyAuth = currentRoute == "onboarding" ||
                             currentRoute == AppDestination.Welcome.route ||
                             currentRoute == AppDestination.Login.route ||
                             currentRoute == AppDestination.SignUp.route
                     
                     if (!isCurrentlyAuth) {
-                        navController.navigate(AppDestination.Welcome.route) {
+                        val startRoute = if (hasCompletedOnboarding) {
+                            AppDestination.Welcome.route
+                        } else {
+                            "onboarding"
+                        }
+                        navController.navigate(startRoute) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
@@ -201,6 +213,7 @@ fun NotesSharingApp(
     }
 
     val isAuthScreen = currentRoute == "auth_gate" ||
+            currentRoute == "onboarding" ||
             currentRoute == AppDestination.Welcome.route ||
             currentRoute == AppDestination.Login.route ||
             currentRoute == AppDestination.SignUp.route ||
@@ -278,7 +291,25 @@ fun NotesSharingApp(
                 composable("auth_gate") {
                     // Start destination placeholder, navigation is managed by root-level LaunchedEffect
                 }
+                composable("onboarding") {
+                    UpdatesScreen(
+                        viewModel = authViewModel,
+                        onNavigateToLogin = {
+                            navController.navigate(AppDestination.Welcome.route) {
+                                popUpTo("onboarding") { inclusive = true }
+                            }
+                            navController.navigate(AppDestination.Login.route)
+                        },
+                        onNavigateToSignUp = {
+                            navController.navigate(AppDestination.Welcome.route) {
+                                popUpTo("onboarding") { inclusive = true }
+                            }
+                            navController.navigate(AppDestination.SignUp.route)
+                        }
+                    )
+                }
                 composable(AppDestination.Welcome.route) {
+
                     WelcomeScreen(
                         viewModel = authViewModel,
                         onNavigateToLogin = { navController.navigate(AppDestination.Login.route) },
