@@ -70,6 +70,14 @@ fun NotesSharingApp(
 
     androidx.compose.runtime.DisposableEffect(activity) {
         val listener = androidx.core.util.Consumer<android.content.Intent> { intent ->
+            val notificationId = intent.getStringExtra("notification_id")
+            android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp onNewIntent listener - notificationId: $notificationId")
+            if (!notificationId.isNullOrBlank()) {
+                navController.navigate(AppDestination.Home.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+
             val docId = intent.getStringExtra("document_id")
             android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp onNewIntent listener - docId: $docId")
             if (!docId.isNullOrBlank()) {
@@ -134,7 +142,12 @@ fun NotesSharingApp(
                         val intent = activity?.intent
                         val docId = intent?.getStringExtra("document_id")
                         val videoId = intent?.getStringExtra("video_id")
-                        if (!docId.isNullOrBlank()) {
+                        val notificationId = intent?.getStringExtra("notification_id")
+                        if (!notificationId.isNullOrBlank()) {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        } else if (!docId.isNullOrBlank()) {
                             navController.navigate(AppDestination.Home.route) {
                                 popUpTo(0) { inclusive = true }
                             }
@@ -371,6 +384,9 @@ fun NotesSharingApp(
                     )
                 }
                 composable(AppDestination.Home.route) {
+                    val intent = activity?.intent
+                    val notificationId = intent?.getStringExtra("notification_id")
+                    
                     HomeRoute(
                         onMyUploadsClick = {
                             navController.navigate(AppDestination.MyUploads.route) {
@@ -401,6 +417,10 @@ fun NotesSharingApp(
                         },
                         onVideoClick = { videoId ->
                             navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        },
+                        pendingNotificationId = notificationId,
+                        onClearPendingNotificationId = {
+                            intent?.removeExtra("notification_id")
                         }
                     )
                 }

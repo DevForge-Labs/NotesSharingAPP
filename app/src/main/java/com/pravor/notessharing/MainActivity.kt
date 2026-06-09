@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "MainActivity onNewIntent: document_id=${intent.getStringExtra("document_id")}")
+        Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "MainActivity onNewIntent: document_id=${intent.getStringExtra("document_id")} notification_id=${intent.getStringExtra("notification_id")}")
     }
 
     private fun logAppSignatures() {

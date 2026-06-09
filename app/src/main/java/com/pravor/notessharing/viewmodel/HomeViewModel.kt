@@ -22,6 +22,9 @@ import kotlinx.coroutines.coroutineScope
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val recentlyOpenedRepository = RecentlyOpenedRepository(application)
+    private val notificationRepository = com.pravor.notessharing.data.NotificationRepository()
+    val notifications = notificationRepository.notifications
+    val unreadNotificationsCount = notificationRepository.unreadCount
 
     private val _uiState = MutableStateFlow<HomeUiState>(
         HomeUiState.Success(
@@ -77,10 +80,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         if (uid != null) {
             lastReloadCause = "InitialLoad"
             startObservingProfile(uid)
+            notificationRepository.startObserving(uid)
         } else {
             lastReloadCause = "InitialLoad"
             profileJob?.cancel()
             loadRealDocuments(null)
+            notificationRepository.stopObserving()
         }
     }
 
@@ -190,6 +195,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun startObservingProfile(uid: String) {
         profileJob?.cancel()
+        notificationRepository.startObserving(uid)
         profileJob = viewModelScope.launch {
             userService.observeUserProfile(uid).collect { profile ->
                 android.util.Log.d("PERF", "[PERF] Profile update received")
@@ -221,6 +227,40 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+
+        if (lastOpened != null && lastOpened.fileType != FileType.Video) {
+            viewModelScope.launch {
+                val db = com.pravor.notessharing.data.download.DownloadDataStoreManager(getApplication())
+                val isDownloaded = db.isDocumentDownloaded(lastOpened.id)
+                var localFileExists = false
+                if (isDownloaded) {
+                    val attachments = db.getDownloadedAttachments().filter { it.documentId == lastOpened.id }
+                    localFileExists = attachments.isNotEmpty() && attachments.all { java.io.File(it.localPath).exists() }
+                }
+
+                if (!localFileExists) {
+                    val existsOnServer = checkDocumentExistsInFirestore(lastOpened.id)
+                    if (!existsOnServer) {
+                        recentlyOpenedRepository.clearLastOpened()
+                        val continueRepo = com.pravor.notessharing.data.ContinueLearningRepository(getApplication())
+                        continueRepo.clearLastOpened()
+
+                        if (isDownloaded) {
+                            db.removeDownload(lastOpened.id)
+                        }
+
+                        _uiState.update { current ->
+                            if (current is HomeUiState.Success) {
+                                current.copy(content = current.content.copy(recentlyOpened = null))
+                            } else {
+                                current
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         lastReloadCause = if (isFirstLoad) "InitialLoad" else "NavigationReturn"
         loadRealDocuments()
     }
@@ -588,10 +628,58 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun markNotificationAsRead(notificationId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            notificationRepository.markAsRead(uid, notificationId)
+        }
+    }
+
+    fun markAllNotificationsAsRead() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            notificationRepository.markAllAsRead(uid)
+        }
+    }
+
+    fun deleteNotification(notificationId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            notificationRepository.delete(uid, notificationId)
+        }
+    }
+
+    fun clearAllNotifications() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            notificationRepository.clearAll(uid)
+        }
+    }
+
+    private suspend fun checkDocumentExistsInFirestore(documentId: String): Boolean {
+        val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+        val firestore = FirebaseFirestore.getInstance()
+        for (col in collections) {
+            try {
+                val snap = firestore.collection(col).document(documentId).get(com.google.firebase.firestore.Source.CACHE).await()
+                if (snap.exists()) return true
+            } catch (e: Exception) {
+                try {
+                    val snap = firestore.collection(col).document(documentId).get().await()
+                    if (snap.exists()) return true
+                } catch (e2: Exception) {
+                    // Try next collection
+                }
+            }
+        }
+        return false
+    }
+
     override fun onCleared() {
         super.onCleared()
         auth.removeAuthStateListener(authListener)
         profileJob?.cancel()
         upvoteRepository.observeVisibleDocuments("Home", emptyList())
+        notificationRepository.stopObserving()
     }
 }

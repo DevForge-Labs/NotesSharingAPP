@@ -41,6 +41,10 @@ class PdfViewingViewModel : ViewModel() {
                         _uiState.value = PdfViewingUiState.Success(localFile)
                         incrementViewsCount(documentId)
                         return@launch
+                    } else {
+                        db.removeDownload(documentId)
+                        _uiState.value = PdfViewingUiState.Error("This download is no longer available on your device.")
+                        return@launch
                     }
                 }
 

@@ -16,9 +16,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -41,18 +49,26 @@ sealed interface SmartBannerState {
 @Composable
 fun SmartBannerSlot(
     modifier: Modifier = Modifier,
-    state: SmartBannerState = SmartBannerState.GreetingMode
+    state: SmartBannerState = SmartBannerState.GreetingMode,
+    unreadCount: Int = 0,
+    onBellClick: () -> Unit = {}
 ) {
     when (state) {
         is SmartBannerState.GreetingMode -> {
-            PremiumGreetingBlock(modifier = modifier)
+            PremiumGreetingBlock(
+                modifier = modifier,
+                unreadCount = unreadCount,
+                onBellClick = onBellClick
+            )
         }
     }
 }
 
 @Composable
 private fun PremiumGreetingBlock(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    unreadCount: Int = 0,
+    onBellClick: () -> Unit = {}
 ) {
     val baseGreeting = "Good Morning"
 
@@ -146,16 +162,52 @@ private fun PremiumGreetingBlock(
                 .background(cardBrush)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text(
-                text = greeting,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp,
-                    letterSpacing = 0.15.sp,
-                    lineHeight = 26.sp
-                ),
-                color = Color(0xFFF5F7FA)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 20.sp,
+                        letterSpacing = 0.15.sp,
+                        lineHeight = 26.sp
+                    ),
+                    color = Color(0xFFF5F7FA),
+                    modifier = Modifier.weight(1f)
+                )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                IconButton(onClick = onBellClick) {
+                    BadgedBox(
+                        badge = {
+                            if (unreadCount > 0) {
+                                val badgeText = if (unreadCount > 99) "99+" else unreadCount.toString()
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ) {
+                                    Text(
+                                        text = badgeText,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color(0xFFF5F7FA)
+                        )
+                    }
+                }
+            }
             
             Spacer(modifier = Modifier.height(6.dp))
             

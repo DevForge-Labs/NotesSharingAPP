@@ -37,6 +37,10 @@ class ImageViewingViewModel : ViewModel() {
                     if (localFile.exists() && localFile.length() > 0) {
                         _uiState.value = ImageViewingUiState.Success(localFile)
                         return@launch
+                    } else {
+                        db.removeDownload(documentId)
+                        _uiState.value = ImageViewingUiState.Error("This download is no longer available on your device.")
+                        return@launch
                     }
                 }
 

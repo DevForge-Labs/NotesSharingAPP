@@ -53,7 +53,46 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
                 for (doc in docs) {
                     val detail = docRepository.getDocument(doc.documentId)
                     if (detail != null) {
-                        studyFiles.add(docDetailToStudyFile(detail, doc.downloadedAt))
+                        studyFiles.add(docDetailToStudyFile(detail, doc.downloadedAt, doc.localThumbnailPath))
+                    } else {
+                        // Check if the local files for this document actually exist on device
+                        val attachments = manager.getDownloadedAttachments().filter { it.documentId == doc.documentId }
+                        val pdfExists = attachments.isNotEmpty() && attachments.all { java.io.File(it.localPath).exists() }
+                        val thumbnailExists = !doc.localThumbnailPath.isNullOrBlank() && java.io.File(doc.localThumbnailPath).exists()
+                        
+                        if (pdfExists) {
+                            val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.ROOT).trim()) {
+                                "pyq", "pyqs" -> FileType.Pyq
+                                "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
+                                "assignment", "assignments" -> FileType.Notes
+                                "notes" -> FileType.Notes
+                                else -> FileType.Pdf
+                            }
+                            val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+                            val downloadDateStr = "Downloaded " + sdf.format(java.util.Date(doc.downloadedAt))
+                            
+                            studyFiles.add(
+                                StudyFile(
+                                    id = doc.documentId,
+                                    title = doc.title.ifBlank { "Archived Download" },
+                                    uploadDate = downloadDateStr,
+                                    fileType = fileTypeEnum,
+                                    downloads = doc.downloads,
+                                    upvotes = doc.upvotes,
+                                    thumbnailUrl = doc.thumbnailUrl,
+                                    subject = doc.subject.ifBlank { "General" },
+                                    documentType = doc.documentType,
+                                    examYear = doc.examYear,
+                                    examType = doc.examType,
+                                    sectionDisplay = doc.sectionDisplay,
+                                    availability = com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD,
+                                    localThumbnailPath = if (thumbnailExists) doc.localThumbnailPath else null
+                                )
+                            )
+                        } else {
+                            // Local PDF is missing -> remove the stale download
+                            manager.removeDownload(doc.documentId)
+                        }
                     }
                 }
                 downloadedDocs = studyFiles
@@ -131,7 +170,11 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun docDetailToStudyFile(detail: com.pravor.notessharing.model.DocumentDetail, downloadedAt: Long): StudyFile {
+    private fun docDetailToStudyFile(
+        detail: com.pravor.notessharing.model.DocumentDetail,
+        downloadedAt: Long,
+        localThumbnailPath: String?
+    ): StudyFile {
         val fileTypeEnum = when (detail.documentType.lowercase(java.util.Locale.ROOT).trim()) {
             "pyq", "pyqs" -> FileType.Pyq
             "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
@@ -155,7 +198,8 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
             documentType = detail.documentType,
             examYear = detail.examYear,
             examType = detail.examType,
-            sectionDisplay = detail.sectionDisplay
+            sectionDisplay = detail.sectionDisplay,
+            localThumbnailPath = localThumbnailPath
         )
     }
 

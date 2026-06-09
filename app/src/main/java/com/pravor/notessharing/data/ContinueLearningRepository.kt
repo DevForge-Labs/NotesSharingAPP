@@ -128,6 +128,10 @@ class ContinueLearningRepository(context: Context) {
         }
     }
 
+    fun clearLastOpened() {
+        preferences.edit().remove(KEY_LAST_OPENED).apply()
+    }
+
     companion object {
         private const val KEY_LAST_OPENED = "last_opened_learning_item"
     }

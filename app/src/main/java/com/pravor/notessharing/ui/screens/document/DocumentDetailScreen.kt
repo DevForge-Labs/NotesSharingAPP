@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
@@ -122,6 +123,7 @@ fun DocumentDetailRoute(
     }
 
     DocumentDetailScreen(
+        documentId = documentId,
         uiState = uiState,
         downloadState = downloadState,
         onBackClick = onBackClick,
@@ -137,6 +139,7 @@ fun DocumentDetailRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentDetailScreen(
+    documentId: String,
     uiState: DocumentDetailUiState,
     downloadState: com.pravor.notessharing.viewmodel.DownloadState,
     onBackClick: () -> Unit,
@@ -181,6 +184,10 @@ fun DocumentDetailScreen(
         docId.isNotEmpty() && bookmarks.any { it.id == docId }
     }
 
+    val isArchived = remember(uiState) {
+        (uiState as? DocumentDetailUiState.Success)?.isArchived ?: false
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -208,6 +215,7 @@ fun DocumentDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
+                        if (isArchived) return@IconButton
                         if (currentUid.isEmpty()) {
                             Toast.makeText(context, "Please sign in to bookmark documents", Toast.LENGTH_SHORT).show()
                             return@IconButton
@@ -243,9 +251,11 @@ fun DocumentDetailScreen(
                         }
                     }) {
                         Icon(
-                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = if (isBookmarked) "Unbookmark Document" else "Bookmark Document",
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                            imageVector = if (isBookmarked && !isArchived) Icons.Filled.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isBookmarked && !isArchived) "Unbookmark Document" else "Bookmark Document",
+                            tint = if (isArchived) Color(0xFF94A3B8).copy(alpha = 0.5f)
+                                   else if (isBookmarked) MaterialTheme.colorScheme.primary 
+                                   else MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
@@ -271,8 +281,42 @@ fun DocumentDetailScreen(
                 }
 
                 is DocumentDetailUiState.Error -> {
+                    val isDeleted = state.message.contains("not found", ignoreCase = true)
+                    if (isDeleted) {
+                        LaunchedEffect(documentId) {
+                            val recentRepo = RecentlyOpenedRepository(context)
+                            if (recentRepo.getLastOpened()?.id == documentId) {
+                                recentRepo.clearLastOpened()
+                            }
+                            val contRepo = com.pravor.notessharing.data.ContinueLearningRepository(context)
+                            if (contRepo.getLastOpened()?.id == documentId) {
+                                contRepo.clearLastOpened()
+                            }
+                            try {
+                                val downloadManager = com.pravor.notessharing.data.download.DownloadDataStoreManager(context)
+                                val attachments = downloadManager.getDownloadedAttachments()
+                                    .filter { it.documentId == documentId }
+                                attachments.forEach { attachment ->
+                                    try {
+                                        val file = java.io.File(attachment.localPath)
+                                        if (file.exists()) {
+                                            file.delete()
+                                        }
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
+                                }
+                                downloadManager.removeDownload(documentId)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+                        }
+                    }
                     com.pravor.notessharing.ui.components.states.DocumentErrorState(
-                        onRetry = onRetry
+                        onRetry = onRetry,
+                        title = if (isDeleted) "Not Available" else "Oops!",
+                        message = if (isDeleted) "This resource is no longer available." else state.message
                     )
                 }
 
@@ -312,7 +356,8 @@ fun DocumentDetailScreen(
                             } else {
                                 Toast.makeText(context, "Preview not supported yet", Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        },
+                        isArchived = state.isArchived
                     )
                 }
             }
@@ -387,7 +432,8 @@ fun DocumentDetailSuccessContent(
     onShareClick: (String) -> Unit,
     onUpvoteClick: (String) -> Unit,
     onShowRemoveUpvoteDialog: () -> Unit,
-    onAttachmentClick: (String) -> Unit
+    onAttachmentClick: (String) -> Unit,
+    isArchived: Boolean = false
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
@@ -400,6 +446,49 @@ fun DocumentDetailSuccessContent(
         contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp + bottomPadding),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        if (isArchived) {
+            item(key = "archived-warning-banner") {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF94A3B8).copy(alpha = 0.12f)
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF94A3B8).copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Archived",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Archived Download",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF64748B)
+                                )
+                            )
+                            Text(
+                                text = "This resource has been removed from NotesSharing but remains available on your device.",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = Color(0xFF64748B)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 3. DOCUMENT PREVIEW SECTION (Mixed adapters inside preview section handles horizontal/vertical margins)
         item(key = "preview-section") {
             AttachmentPreviewSection(
@@ -503,8 +592,12 @@ fun DocumentDetailSuccessContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     NotesSharingDownloadIndicator(
-                        downloadState = downloadState,
-                        onClick = onDownloadClick
+                        downloadState = if (isArchived) com.pravor.notessharing.viewmodel.DownloadState.Downloaded else downloadState,
+                        onClick = {
+                            if (!isArchived) {
+                                onDownloadClick()
+                            }
+                        }
                     )
 
                     // Vertical Divider
@@ -521,7 +614,8 @@ fun DocumentDetailSuccessContent(
                         initialUpvotes = doc.upvotes,
                         currentUid = currentUid,
                         onUpvoteClick = onUpvoteClick,
-                        onShowRemoveDialog = onShowRemoveUpvoteDialog
+                        onShowRemoveDialog = onShowRemoveUpvoteDialog,
+                        enabled = !isArchived
                     )
                 }
             }
@@ -579,7 +673,7 @@ fun DocumentDetailSuccessContent(
         }
 
         // 5. RELATED DOCUMENTS
-        if (relatedDocuments.isNotEmpty()) {
+        if (!isArchived && relatedDocuments.isNotEmpty()) {
             item(key = "related-section") {
                 RelatedDocumentsSection(
                     relatedDocuments = relatedDocuments,
@@ -596,7 +690,8 @@ fun UpvoteButtonSection(
     initialUpvotes: Int,
     currentUid: String,
     onUpvoteClick: (String) -> Unit,
-    onShowRemoveDialog: () -> Unit
+    onShowRemoveDialog: () -> Unit,
+    enabled: Boolean = true
 ) {
     val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
     val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
@@ -609,13 +704,19 @@ fun UpvoteButtonSection(
     }
 
     val context = LocalContext.current
-    val upvoteColor = if (isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
+    val upvoteColor = if (!enabled) {
+        Color(0xFF94A3B8)
+    } else if (isUpvoted) {
+        Color(0xFFFFB74D)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .clickable {
+            .clickable(enabled = enabled) {
                 if (currentUid.isEmpty()) {
                     Toast.makeText(context, "Please sign in to upvote", Toast.LENGTH_SHORT).show()
                     return@clickable

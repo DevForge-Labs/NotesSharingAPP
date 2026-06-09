@@ -94,6 +94,7 @@ fun VideoDetailRoute(
     }
 
     VideoDetailScreen(
+        videoId = videoId,
         uiState = uiState,
         onBackClick = onBackClick,
         onNavigateToVideoDetail = onNavigateToVideoDetail
@@ -103,6 +104,7 @@ fun VideoDetailRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoDetailScreen(
+    videoId: String,
     uiState: VideoDetailUiState,
     onBackClick: () -> Unit,
     onNavigateToVideoDetail: (String) -> Unit
@@ -214,9 +216,23 @@ fun VideoDetailScreen(
                     }
 
                     is VideoDetailUiState.Error -> {
+                        val isDeleted = state.message.contains("not found", ignoreCase = true)
+                        if (isDeleted) {
+                            LaunchedEffect(videoId) {
+                                val recentRepo = RecentlyOpenedRepository(context)
+                                if (recentRepo.getLastOpened()?.id == videoId) {
+                                    recentRepo.clearLastOpened()
+                                }
+                                val contRepo = com.pravor.notessharing.data.ContinueLearningRepository(context)
+                                if (contRepo.getLastOpened()?.id == videoId) {
+                                    contRepo.clearLastOpened()
+                                }
+                                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+                            }
+                        }
                         StatePanel(
-                            title = "Load Failed",
-                            message = state.message
+                            title = if (isDeleted) "Not Available" else "Load Failed",
+                            message = if (isDeleted) "This resource is no longer available." else state.message
                         )
                     }
 

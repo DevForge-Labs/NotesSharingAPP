@@ -59,6 +59,8 @@ fun HomeSuccessContent(
     myFilesUiState: MyFilesUiState,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
+    unreadNotificationsCount: Int = 0,
+    onBellClick: () -> Unit = {},
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -96,7 +98,10 @@ fun HomeSuccessContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "home-greeting", contentType = "greeting") {
-                SmartBannerSlot()
+                SmartBannerSlot(
+                    unreadCount = unreadNotificationsCount,
+                    onBellClick = onBellClick
+                )
             }
             if (content.recentlyOpened != null) {
                 item(key = "continue-title", contentType = "section") {
