@@ -37,7 +37,11 @@ fun Map<String, Any>.toVideoDetail(id: String): VideoDetail {
         description = this["description"] as? String ?: "",
         branch = this["branch"] as? String ?: "",
         semester = this["semester"] as? String ?: "",
-        subject = this["subject"] as? String ?: "",
+        subject = run {
+            val rawDisplaySubject = this["displaySubject"] as? String
+            val rawSubject = this["subject"] as? String ?: ""
+            if (!rawDisplaySubject.isNullOrBlank()) rawDisplaySubject else rawSubject
+        },
         uploaderId = this["uploaderId"] as? String ?: "",
         uploaderName = this["uploaderName"] as? String ?: "Anonymous",
         uploaderPhotoUrl = this["uploaderPhotoUrl"] as? String ?: "",

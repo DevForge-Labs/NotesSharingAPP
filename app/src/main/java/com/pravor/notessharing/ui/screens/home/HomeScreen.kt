@@ -11,6 +11,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -109,6 +112,7 @@ fun HomeRoute(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
     val bookmarkUiState by bookmarkViewModel.uiState.collectAsStateWithLifecycle()
     val activeDownloadsCount by com.pravor.notessharing.data.download.DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
@@ -138,22 +142,6 @@ fun HomeRoute(
                         .update("fcmToken", token)
                 }
             }
-
-        //Notification test...uncomment to view notification toggle
-
-//        Firebase.functions
-//            .getHttpsCallable("sendTestNotification")
-//            .call(
-//                mapOf(
-//                    "uid" to FirebaseAuth.getInstance().currentUser!!.uid
-//                )
-//            )
-//            .addOnSuccessListener {
-//                android.util.Log.d("NOTIFICATION_TEST", "Function success")
-//            }
-//            .addOnFailureListener {
-//                android.util.Log.e("NOTIFICATION_TEST", "Function failed", it)
-//            }
     }
 
     val bookmarksCount = when (val state = bookmarkUiState) {
@@ -165,6 +153,8 @@ fun HomeRoute(
  
     HomeScreen(
         uiState = uiState,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
         myFilesUiState = myFilesUiState,
         bookmarksCount = bookmarksCount,
         activeDownloadsCount = activeDownloadsCount,
@@ -192,6 +182,8 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     myFilesUiState: MyFilesUiState,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
@@ -289,56 +281,87 @@ fun HomeScreen(
         }
     }
  
+    val pullToRefreshState = rememberPullToRefreshState()
+ 
     Box(modifier = modifier.fillMaxSize()) {
-        Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
-            when (val state = uiState) {
-                HomeUiState.Loading -> KnowledgeNetworkLoading()
-                HomeUiState.Empty -> StatePanel("No notes yet", "Saved study resources will appear here", modifier = Modifier.padding(top = 96.dp))
-                is HomeUiState.Error -> StatePanel("Something went wrong", state.message, modifier = Modifier.padding(top = 96.dp))
-                is HomeUiState.Success -> HomeSuccessContent(
-                    content = state.content,
-                    myFilesUiState = myFilesUiState,
-                    bookmarksCount = bookmarksCount,
-                    activeDownloadsCount = activeDownloadsCount,
-                    unreadNotificationsCount = unreadNotificationsCount,
-                    onBellClick = { showBottomSheet = true },
-                    onUpvoteClick = { itemId ->
-                        val isCurrentlyUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] == true
-                        if (isCurrentlyUpvoted) {
-                            pendingRemoveUpvoteId = itemId
-                        } else {
-                            onUpvoteClick(itemId)
-                        }
-                    },
-                    onBookmarkClick = { itemId ->
-                        val isCurrentlySaved = state.content.feedItems.find { it.id == itemId }?.isSaved == true
-                        if (isCurrentlySaved) {
-                            pendingRemoveBookmarkId = itemId
-                        } else {
-                            toastMessage = "Saved to bookmarks"
-                            toastIcon = Icons.Default.Bookmark
-                            onBookmarkClick(itemId)
-                        }
-                    },
-                    onMyUploadsClick = onMyUploadsClick,
-                    onMyBookmarksClick = onMyBookmarksClick,
-                    onMyDownloadsClick = onMyDownloadsClick,
-                    onViewAllLibraryClick = onViewAllLibraryClick,
-                    onSeeMoreClick = onSeeMoreClick,
-                    onDocumentClick = { docId ->
-                        val feedItem = state.content.feedItems.find { it.id == docId } ?: state.content.recentlyOpened?.takeIf { it.id == docId }
-                        val savedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.savedFiles?.find { it.id == docId }
-                        val uploadedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.uploadedFiles?.find { it.id == docId }
-                        val fileType = feedItem?.fileType ?: savedFile?.fileType ?: uploadedFile?.fileType
-                        
-                        if (fileType == com.pravor.notessharing.model.FileType.Video) {
-                            onVideoClick(docId)
-                        } else {
-                            onDocumentClick(docId)
-                        }
-                    },
-                    listState = feedListState
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
+                when (val state = uiState) {
+                    HomeUiState.Loading -> KnowledgeNetworkLoading()
+                    HomeUiState.Empty -> StatePanel("No notes yet", "Saved study resources will appear here", modifier = Modifier.padding(top = 96.dp))
+                    is HomeUiState.Error -> StatePanel("Something went wrong", state.message, modifier = Modifier.padding(top = 96.dp))
+                    is HomeUiState.Success -> HomeSuccessContent(
+                        content = state.content,
+                        myFilesUiState = myFilesUiState,
+                        bookmarksCount = bookmarksCount,
+                        activeDownloadsCount = activeDownloadsCount,
+                        unreadNotificationsCount = unreadNotificationsCount,
+                        onBellClick = { showBottomSheet = true },
+                        onUpvoteClick = { itemId ->
+                            val isCurrentlyUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] == true
+                            if (isCurrentlyUpvoted) {
+                                pendingRemoveUpvoteId = itemId
+                            } else {
+                                onUpvoteClick(itemId)
+                            }
+                        },
+                        onBookmarkClick = { itemId ->
+                            val isCurrentlySaved = state.content.feedItems.find { it.id == itemId }?.isSaved == true
+                            if (isCurrentlySaved) {
+                                pendingRemoveBookmarkId = itemId
+                            } else {
+                                toastMessage = "Saved to bookmarks"
+                                toastIcon = Icons.Default.Bookmark
+                                onBookmarkClick(itemId)
+                            }
+                        },
+                        onMyUploadsClick = onMyUploadsClick,
+                        onMyBookmarksClick = onMyBookmarksClick,
+                        onMyDownloadsClick = onMyDownloadsClick,
+                        onViewAllLibraryClick = onViewAllLibraryClick,
+                        onSeeMoreClick = onSeeMoreClick,
+                        onDocumentClick = { docId ->
+                            val feedItem = state.content.feedItems.find { it.id == docId } ?: state.content.recentlyOpened?.takeIf { it.id == docId }
+                            val savedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.savedFiles?.find { it.id == docId }
+                            val uploadedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.uploadedFiles?.find { it.id == docId }
+                            val fileType = feedItem?.fileType ?: savedFile?.fileType ?: uploadedFile?.fileType
+                            
+                            if (fileType == com.pravor.notessharing.model.FileType.Video) {
+                                onVideoClick(docId)
+                            } else {
+                                onDocumentClick(docId)
+                            }
+                        },
+                        listState = feedListState
+                    )
+                }
+            }
+
+            // Helper text overlay when user pulls down
+            androidx.compose.animation.AnimatedVisibility(
+                visible = pullToRefreshState.distanceFraction > 0.1f && !isRefreshing,
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    tonalElevation = 4.dp
+                ) {
+                    Text(
+                        text = "Pull down to refresh feed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
 
@@ -861,6 +884,8 @@ private fun HomePreview() {
             uiState = HomeUiState.Success(
                 HomeContent(DummyData.categories.first(), DummyData.categories, DummyData.feedItems)
             ),
+            isRefreshing = false,
+            onRefresh = {},
             myFilesUiState = MyFilesUiState.Success(
                 com.pravor.notessharing.state.MyFilesContent(emptyList(), DummyData.uploadedFiles)
             ),

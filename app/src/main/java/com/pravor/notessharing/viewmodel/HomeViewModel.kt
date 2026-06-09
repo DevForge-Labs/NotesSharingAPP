@@ -39,6 +39,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+ 
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     private val userService = com.pravor.notessharing.firebase.FirestoreUserService()
@@ -265,192 +268,201 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         loadRealDocuments()
     }
 
-    fun loadRealDocuments(forcedSemester: String? = null) {
+    fun loadRealDocuments(forcedSemester: String? = null, isPullToRefresh: Boolean = false) {
         val stackTrace = Throwable().stackTrace
         val caller = stackTrace.getOrNull(1)?.let { "${it.className}.${it.methodName}:${it.lineNumber}" } ?: "unknown"
         val stackSource = stackTrace.drop(1).take(5).joinToString(" -> ") { "${it.className}.${it.methodName}:${it.lineNumber}" }
 
         viewModelScope.launch {
-            val startTime = System.currentTimeMillis()
-            android.util.Log.d("PERF", "[PERF] Home feed load START thread=${Thread.currentThread().name}")
-            android.util.Log.d("PERF", "[PERF] Feed reload trigger source=$lastReloadCause")
+            if (isPullToRefresh) {
+                _isRefreshing.value = true
+            }
             try {
-                val semester = forcedSemester ?: run {
-                    val currentUid = auth.currentUser?.uid
-                    if (currentUid != null) {
-                        userService.getUserProfile(currentUid)?.semester
-                    } else {
-                        null
-                    }
-                }
-
-                val isNecessary = when (lastReloadCause) {
-                    "NavigationReturn" -> {
-                        val currentState = _uiState.value
-                        val hasFeedItems = currentState is HomeUiState.Success && currentState.content.feedItems.isNotEmpty()
-                        !hasFeedItems
-                    }
-                    else -> true
-                }
-
-                android.util.Log.d("PERF", "[PERF] Home reload caller=$caller")
-                android.util.Log.d("PERF", "[PERF] Home reload reason=lastReloadCause=$lastReloadCause, forcedSemester=$semester, necessary=$isNecessary")
-                android.util.Log.d("PERF", "[PERF] Home reload stackSource=$stackSource")
-
-                if (lastReloadCause == "NavigationReturn" && !isNecessary) {
-                    android.util.Log.d("PERF", "[PERF] Home reload skipped reason=NavigationReturn unnecessary=true")
-                    _uiState.update { current ->
-                        if (current is HomeUiState.Success) {
-                            current.copy(content = current.content.copy(isLoadingFeed = false))
+                val startTime = System.currentTimeMillis()
+                android.util.Log.d("PERF", "[PERF] Home feed load START thread=${Thread.currentThread().name}")
+                android.util.Log.d("PERF", "[PERF] Feed reload trigger source=$lastReloadCause")
+                try {
+                    val semester = forcedSemester ?: run {
+                        val currentUid = auth.currentUser?.uid
+                        if (currentUid != null) {
+                            userService.getUserProfile(currentUid)?.semester
                         } else {
-                            current
+                            null
                         }
                     }
-                    return@launch
-                }
 
-                val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
+                    val isNecessary = when (lastReloadCause) {
+                        "NavigationReturn" -> {
+                            val currentState = _uiState.value
+                            val hasFeedItems = currentState is HomeUiState.Success && currentState.content.feedItems.isNotEmpty()
+                            !hasFeedItems
+                        }
+                        else -> true
+                    }
 
-                val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
-                val allDocs = coroutineScope {
-                    val deferreds = collections.map { col ->
-                        async {
-                            try {
-                                val firestoreQueryStartTime = System.currentTimeMillis()
-                                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
-                                val documents = if (hasSemester) {
-                                    firestore.collection(col)
-                                        .whereEqualTo("semester", semester)
-                                        .get()
-                                        .await()
-                                        .documents
-                                } else {
-                                    firestore.collection(col)
-                                        .get()
-                                        .await()
-                                        .documents
-                                }
-                                val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${documents.size} thread=${Thread.currentThread().name}")
-                                documents
-                            } catch (e: Exception) {
-                                emptyList()
+                    android.util.Log.d("PERF", "[PERF] Home reload caller=$caller")
+                    android.util.Log.d("PERF", "[PERF] Home reload reason=lastReloadCause=$lastReloadCause, forcedSemester=$semester, necessary=$isNecessary")
+                    android.util.Log.d("PERF", "[PERF] Home reload stackSource=$stackSource")
+
+                    if (lastReloadCause == "NavigationReturn" && !isNecessary) {
+                        android.util.Log.d("PERF", "[PERF] Home reload skipped reason=NavigationReturn unnecessary=true")
+                        _uiState.update { current ->
+                            if (current is HomeUiState.Success) {
+                                current.copy(content = current.content.copy(isLoadingFeed = false))
+                            } else {
+                                current
                             }
                         }
+                        return@launch
                     }
-                    deferreds.awaitAll().flatten()
-                }
-                
-                val currentUid = auth.currentUser?.uid
-                if (currentUid != null) {
-                    bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
-                    upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
-                }
-                val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
-                
-                val feedAssemblyStartTime = System.currentTimeMillis()
-                android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Feed assembly thread=${Thread.currentThread().name}")
-                val realItems = allDocs.mapNotNull { doc ->
-                    val data = doc.data ?: return@mapNotNull null
-                    val item = documentToFeedItem(data)
-                    val timestamp = data["uploadedAt"] as? Long ?: (data["uploadTimestamp"] as? Long ?: 0L)
-                    item to timestamp
-                }.sortedWith(
-                    compareByDescending<Pair<FeedItem, Long>> { it.first.upvotes }
-                        .thenByDescending { it.second }
-                ).map { it.first }
-                
-                val mergedFeedItems = if (hasSemester) {
-                    realItems.distinctBy { it.id }
-                } else {
-                    (realItems + DummyData.feedItems).distinctBy { it.id }
-                }
-                
-                val finalFeedItems = mergedFeedItems.map { item ->
-                    item.copy(isSaved = bookmarkedIds.contains(item.id))
-                }
-                val feedAssemblyDuration = System.currentTimeMillis() - feedAssemblyStartTime
-                android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Feed assembly duration=${feedAssemblyDuration}ms thread=${Thread.currentThread().name}")
-                
-                _uiState.update { current ->
-                    val lastOpened = recentlyOpenedRepository.getLastOpened()
-                    if (current is HomeUiState.Success) {
-                        current.copy(content = current.content.copy(
-                            feedItems = finalFeedItems,
-                            recentlyOpened = lastOpened,
-                            isLoadingFeed = false
-                        ))
+
+                    val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
+
+                    val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+                    val allDocs = coroutineScope {
+                        val deferreds = collections.map { col ->
+                            async {
+                                try {
+                                    val firestoreQueryStartTime = System.currentTimeMillis()
+                                    android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
+                                    val documents = if (hasSemester) {
+                                        firestore.collection(col)
+                                            .whereEqualTo("semester", semester)
+                                            .get()
+                                            .await()
+                                            .documents
+                                    } else {
+                                        firestore.collection(col)
+                                            .get()
+                                            .await()
+                                            .documents
+                                    }
+                                    val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                                    android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${documents.size} thread=${Thread.currentThread().name}")
+                                    documents
+                                } catch (e: Exception) {
+                                    emptyList()
+                                }
+                            }
+                        }
+                        deferreds.awaitAll().flatten()
+                    }
+                    
+                    val currentUid = auth.currentUser?.uid
+                    if (currentUid != null) {
+                        bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                        upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
+                    }
+                    val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+                    
+                    val feedAssemblyStartTime = System.currentTimeMillis()
+                    android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Feed assembly thread=${Thread.currentThread().name}")
+                    val realItems = allDocs.mapNotNull { doc ->
+                        val data = doc.data ?: return@mapNotNull null
+                        val item = documentToFeedItem(data)
+                        val timestamp = data["uploadedAt"] as? Long ?: (data["uploadTimestamp"] as? Long ?: 0L)
+                        item to timestamp
+                    }.sortedWith(
+                        compareByDescending<Pair<FeedItem, Long>> { it.first.upvotes }
+                            .thenByDescending { it.second }
+                    ).map { it.first }
+                    
+                    val mergedFeedItems = if (hasSemester) {
+                        realItems.distinctBy { it.id }
                     } else {
-                        HomeUiState.Success(
-                            HomeContent(
-                                selectedCategory = Category.Notes,
-                                categories = DummyData.categories,
+                        (realItems + DummyData.feedItems).distinctBy { it.id }
+                    }
+                    
+                    val finalFeedItems = mergedFeedItems.map { item ->
+                        item.copy(isSaved = bookmarkedIds.contains(item.id))
+                    }
+                    val feedAssemblyDuration = System.currentTimeMillis() - feedAssemblyStartTime
+                    android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Feed assembly duration=${feedAssemblyDuration}ms thread=${Thread.currentThread().name}")
+                    
+                    _uiState.update { current ->
+                        val lastOpened = recentlyOpenedRepository.getLastOpened()
+                        if (current is HomeUiState.Success) {
+                            current.copy(content = current.content.copy(
                                 feedItems = finalFeedItems,
                                 recentlyOpened = lastOpened,
                                 isLoadingFeed = false
+                            ))
+                        } else {
+                            HomeUiState.Success(
+                                HomeContent(
+                                    selectedCategory = Category.Notes,
+                                    categories = DummyData.categories,
+                                    feedItems = finalFeedItems,
+                                    recentlyOpened = lastOpened,
+                                    isLoadingFeed = false
+                                )
                             )
-                        )
+                        }
                     }
-                }
-                
-                val duration = System.currentTimeMillis() - startTime
-                android.util.Log.d("PERF", "[PERF] Home feed load END - duration=$duration ms thread=${Thread.currentThread().name}")
-                android.util.Log.d("PERF", "[PERF] Feed item count=${finalFeedItems.size}")
-                if (isFirstLoad) {
-                    isFirstLoad = false
-                    val startupDuration = System.currentTimeMillis() - startupStartTime
-                    android.util.Log.d("PERF", "[PERF] Home startup END duration=${startupDuration}ms thread=${Thread.currentThread().name}")
-                }
-            } catch (e: Exception) {
-                val semester = forcedSemester ?: run {
+                    
+                    val duration = System.currentTimeMillis() - startTime
+                    android.util.Log.d("PERF", "[PERF] Home feed load END - duration=$duration ms thread=${Thread.currentThread().name}")
+                    android.util.Log.d("PERF", "[PERF] Feed item count=${finalFeedItems.size}")
+                    if (isFirstLoad) {
+                        isFirstLoad = false
+                        val startupDuration = System.currentTimeMillis() - startupStartTime
+                        android.util.Log.d("PERF", "[PERF] Home startup END duration=${startupDuration}ms thread=${Thread.currentThread().name}")
+                    }
+                } catch (e: Exception) {
+                    val semester = forcedSemester ?: run {
+                        val currentUid = auth.currentUser?.uid
+                        if (currentUid != null) {
+                            userService.getUserProfile(currentUid)?.semester
+                        } else {
+                            null
+                        }
+                    }
+                    val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
+                    
                     val currentUid = auth.currentUser?.uid
                     if (currentUid != null) {
-                        userService.getUserProfile(currentUid)?.semester
-                    } else {
-                        null
+                        bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                        upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
                     }
-                }
-                val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
-                
-                val currentUid = auth.currentUser?.uid
-                if (currentUid != null) {
-                    bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
-                    upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
-                }
-                val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
-                
-                _uiState.update { current ->
-                    val lastOpened = recentlyOpenedRepository.getLastOpened()
-                    val fallbackItems = if (hasSemester) emptyList() else DummyData.feedItems.map { item ->
-                        item.copy(isSaved = bookmarkedIds.contains(item.id))
-                    }
-                    if (current is HomeUiState.Success) {
-                        current.copy(content = current.content.copy(
-                            feedItems = fallbackItems,
-                            recentlyOpened = lastOpened,
-                            isLoadingFeed = false
-                        ))
-                    } else {
-                        HomeUiState.Success(
-                            HomeContent(
-                                selectedCategory = Category.Notes,
-                                categories = DummyData.categories,
+                    val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+                    
+                    _uiState.update { current ->
+                        val lastOpened = recentlyOpenedRepository.getLastOpened()
+                        val fallbackItems = if (hasSemester) emptyList() else DummyData.feedItems.map { item ->
+                            item.copy(isSaved = bookmarkedIds.contains(item.id))
+                        }
+                        if (current is HomeUiState.Success) {
+                            current.copy(content = current.content.copy(
                                 feedItems = fallbackItems,
                                 recentlyOpened = lastOpened,
                                 isLoadingFeed = false
+                            ))
+                        } else {
+                            HomeUiState.Success(
+                                HomeContent(
+                                    selectedCategory = Category.Notes,
+                                    categories = DummyData.categories,
+                                    feedItems = fallbackItems,
+                                    recentlyOpened = lastOpened,
+                                    isLoadingFeed = false
+                                )
                             )
-                        )
+                        }
+                    }
+
+                    val duration = System.currentTimeMillis() - startTime
+                    android.util.Log.d("PERF", "[PERF] Home feed load END - duration=$duration ms thread=${Thread.currentThread().name}")
+                    val count = (_uiState.value as? HomeUiState.Success)?.content?.feedItems?.size ?: 0
+                    android.util.Log.d("PERF", "[PERF] Feed item count=$count")
+                    if (isFirstLoad) {
+                        isFirstLoad = false
+                        val startupDuration = System.currentTimeMillis() - startupStartTime
+                        android.util.Log.d("PERF", "[PERF] Home startup END duration=${startupDuration}ms thread=${Thread.currentThread().name}")
                     }
                 }
-
-                val duration = System.currentTimeMillis() - startTime
-                android.util.Log.d("PERF", "[PERF] Home feed load END - duration=$duration ms thread=${Thread.currentThread().name}")
-                val count = (_uiState.value as? HomeUiState.Success)?.content?.feedItems?.size ?: 0
-                android.util.Log.d("PERF", "[PERF] Feed item count=$count")
-                if (isFirstLoad) {
-                    isFirstLoad = false
-                    val startupDuration = System.currentTimeMillis() - startupStartTime
-                    android.util.Log.d("PERF", "[PERF] Home startup END duration=${startupDuration}ms thread=${Thread.currentThread().name}")
+            } finally {
+                if (isPullToRefresh) {
+                    _isRefreshing.value = false
                 }
             }
         }
@@ -480,7 +492,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> FileType.Pdf
         }
         
-        val subject = doc["subject"] as? String ?: ""
+        val rawDisplaySubject = doc["displaySubject"] as? String
+        val rawSubject = doc["subject"] as? String ?: ""
+        val subject = if (!rawDisplaySubject.isNullOrBlank()) rawDisplaySubject else rawSubject
         val displayTitle = doc["title"] as? String ?: ""
 
         val description = doc["description"] as? String ?: ""
@@ -500,7 +514,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         val documentTypeField = doc["documentType"] as? String
         val typeField = doc["type"] as? String
-        val subjectField = doc["subject"] as? String
+        val subjectField = subject
         val examYearField = (doc["examYear"] ?: doc["year"])?.toString()
         val examTypeField = doc["examType"] as? String
         val sectionField = doc["section"] as? String
