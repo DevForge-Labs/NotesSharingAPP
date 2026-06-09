@@ -53,11 +53,12 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
         val docId = remoteMessage.data["document_id"]
         val videoId = remoteMessage.data["video_id"]
         val deepLink = remoteMessage.data["deepLink"]
+        val notificationId = remoteMessage.data["notificationId"] ?: remoteMessage.data["notification_id"]
 
-        Log.d("FCM_SERVICE", "Parsed fields - Title: '$title', Body: '$body', docId: '$docId', videoId: '$videoId', deepLink: '$deepLink'")
+        Log.d("FCM_SERVICE", "Parsed fields - Title: '$title', Body: '$body', docId: '$docId', videoId: '$videoId', deepLink: '$deepLink', notificationId: '$notificationId'")
 
         // 3. Display the notification
-        showNotification(title, body, docId, videoId, deepLink)
+        showNotification(title, body, docId, videoId, deepLink, notificationId)
     }
 
     private fun showNotification(
@@ -65,7 +66,8 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
         body: String,
         docId: String?,
         videoId: String?,
-        deepLink: String?
+        deepLink: String?,
+        notificationId: String?
     ) {
         val channelId = "general_notifications"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -95,6 +97,9 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
             if (!deepLink.isNullOrBlank()) {
                 putExtra("deepLink", deepLink)
             }
+            if (!notificationId.isNullOrBlank()) {
+                putExtra("notification_id", notificationId)
+            }
         }
 
         // Add FLAG_IMMUTABLE for compatibility with Android 12+
@@ -102,7 +107,7 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
             this,
             System.currentTimeMillis().toInt(), // Unique request code to prevent overwriting
             intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val builder = NotificationCompat.Builder(this, channelId)
@@ -113,7 +118,12 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
-        Log.d("FCM_SERVICE", "Displaying system notification: ID = ${System.currentTimeMillis().toInt()}")
-        notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
+        val systemNotificationId = if (!notificationId.isNullOrBlank()) {
+            notificationId.hashCode()
+        } else {
+            System.currentTimeMillis().toInt()
+        }
+        Log.d("FCM_SERVICE", "Displaying system notification: ID = $systemNotificationId (from raw ID: '$notificationId')")
+        notificationManager.notify(systemNotificationId, builder.build())
     }
 }

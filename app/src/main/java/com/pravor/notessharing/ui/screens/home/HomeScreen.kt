@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.pravor.notessharing.ui.screens.home
 
 import android.annotation.SuppressLint
@@ -55,7 +56,40 @@ import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.DummyData
 import com.pravor.notessharing.viewmodel.HomeViewModel
 import com.pravor.notessharing.viewmodel.MyFilesViewModel
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.background
+import com.pravor.notessharing.model.getRelativeTime
+import com.pravor.notessharing.model.Notification
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material.icons.filled.Delete
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 
 @Composable
@@ -67,6 +101,8 @@ fun HomeRoute(
     onSeeMoreClick: () -> Unit = {},
     onDocumentClick: (String) -> Unit = {},
     onVideoClick: (String) -> Unit = {},
+    pendingNotificationId: String? = null,
+    onClearPendingNotificationId: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
     myFilesViewModel: MyFilesViewModel = viewModel(),
     bookmarkViewModel: com.pravor.notessharing.bookmarks.BookmarkViewModel = viewModel()
@@ -124,21 +160,31 @@ fun HomeRoute(
         is com.pravor.notessharing.bookmarks.BookmarkUiState.Success -> state.bookmarks.size
         else -> 0
     }
-
+    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+    val unreadNotificationsCount by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
+ 
     HomeScreen(
         uiState = uiState,
         myFilesUiState = myFilesUiState,
         bookmarksCount = bookmarksCount,
         activeDownloadsCount = activeDownloadsCount,
+        notifications = notifications,
+        unreadNotificationsCount = unreadNotificationsCount,
+        onMarkNotificationRead = viewModel::markNotificationAsRead,
+        onMarkAllNotificationsRead = viewModel::markAllNotificationsAsRead,
+        onDeleteNotification = viewModel::deleteNotification,
+        onClearAllNotifications = viewModel::clearAllNotifications,
         onUpvoteClick = viewModel::toggleUpvote,
         onBookmarkClick = viewModel::toggleSaved,
         onMyUploadsClick = onMyUploadsClick,
         onMyBookmarksClick = onMyBookmarksClick,
         onMyDownloadsClick = onMyDownloadsClick,
-        onViewAllLibraryClick = onViewAllLibraryClick,
+        onViewAllLibraryClick = {},
         onSeeMoreClick = onSeeMoreClick,
         onDocumentClick = onDocumentClick,
-        onVideoClick = onVideoClick
+        onVideoClick = onVideoClick,
+        pendingNotificationId = pendingNotificationId,
+        onClearPendingNotificationId = onClearPendingNotificationId
     )
 }
 
@@ -149,6 +195,12 @@ fun HomeScreen(
     myFilesUiState: MyFilesUiState,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
+    notifications: List<com.pravor.notessharing.model.Notification>,
+    unreadNotificationsCount: Int,
+    onMarkNotificationRead: (String) -> Unit,
+    onMarkAllNotificationsRead: () -> Unit,
+    onDeleteNotification: (String) -> Unit,
+    onClearAllNotifications: () -> Unit,
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
@@ -158,6 +210,8 @@ fun HomeScreen(
     onSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
+    pendingNotificationId: String? = null,
+    onClearPendingNotificationId: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val recompositionCount = remember { AtomicInteger(0) }
@@ -174,6 +228,32 @@ fun HomeScreen(
     var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
  
     val feedListState = rememberLazyListState()
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+ 
+    var highlightedNotificationId by remember { mutableStateOf<String?>(null) }
+    var animatedHighlightId by remember { mutableStateOf<String?>(null) }
+    var dismissedNotificationIds by remember { mutableStateOf(setOf<String>()) }
+    val visibleNotifications = remember(notifications, dismissedNotificationIds) {
+        notifications.filter { it.id !in dismissedNotificationIds }
+    }
+    
+    LaunchedEffect(showBottomSheet) {
+        if (!showBottomSheet) {
+            dismissedNotificationIds = emptySet()
+            highlightedNotificationId = null
+            animatedHighlightId = null
+        }
+    }
+    var showClearAllConfirmation by remember { mutableStateOf(false) }
+ 
+    LaunchedEffect(pendingNotificationId) {
+        if (!pendingNotificationId.isNullOrBlank()) {
+            showBottomSheet = true
+            highlightedNotificationId = pendingNotificationId
+            onClearPendingNotificationId()
+        }
+    }
 
     LaunchedEffect(feedListState) {
         androidx.compose.runtime.snapshotFlow {
@@ -220,6 +300,8 @@ fun HomeScreen(
                     myFilesUiState = myFilesUiState,
                     bookmarksCount = bookmarksCount,
                     activeDownloadsCount = activeDownloadsCount,
+                    unreadNotificationsCount = unreadNotificationsCount,
+                    onBellClick = { showBottomSheet = true },
                     onUpvoteClick = { itemId ->
                         val isCurrentlyUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] == true
                         if (isCurrentlyUpvoted) {
@@ -387,6 +469,387 @@ fun HomeScreen(
                 }
             )
         }
+
+        if (showClearAllConfirmation) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showClearAllConfirmation = false },
+                title = { Text(text = "Clear all notifications?") },
+                text = { Text(text = "This will permanently remove all notifications.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onClearAllNotifications()
+                            showClearAllConfirmation = false
+                        }
+                    ) {
+                        Text("Clear All", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showClearAllConfirmation = false }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showBottomSheet = false
+                    highlightedNotificationId = null
+                },
+                sheetState = sheetState,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                containerColor = Color(0xFF0F172A),
+                dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF334155)) }
+            ) {
+                Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.75f)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(horizontal = 20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Notifications",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 22.sp
+                                ),
+                                color = Color.White
+                            )
+                            
+                            if (unreadNotificationsCount > 0) {
+                                TextButton(onClick = onMarkAllNotificationsRead) {
+                                    Text(
+                                        text = "Mark all read",
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        if (visibleNotifications.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .navigationBarsPadding(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(horizontal = 24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = Color(0xFF334155),
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                    
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    
+                                    Text(
+                                        text = "No notifications yet",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    
+                                    Text(
+                                        text = "You'll see updates about notes,\nassignments, PYQs, videos and resources here.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF94A3B8),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        } else {
+                            val notificationsListState = rememberLazyListState()
+                            
+                            LaunchedEffect(showBottomSheet, highlightedNotificationId, visibleNotifications) {
+                                if (showBottomSheet && !highlightedNotificationId.isNullOrBlank() && visibleNotifications.isNotEmpty()) {
+                                    val index = visibleNotifications.indexOfFirst { it.id == highlightedNotificationId }
+                                    if (index >= 0) {
+                                        val viewportHeight = notificationsListState.layoutInfo.viewportEndOffset
+                                        val offset = if (viewportHeight > 0) -(viewportHeight / 3) else -300
+                                        notificationsListState.animateScrollToItem(index, offset)
+                                        animatedHighlightId = highlightedNotificationId
+                                        val targetNotification = visibleNotifications[index]
+                                        if (!targetNotification.read) {
+                                            onMarkNotificationRead(targetNotification.id)
+                                        }
+                                    }
+                                }
+                            }
+
+                            LazyColumn(
+                                state = notificationsListState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(bottom = 8.dp)
+                            ) {
+                                items(visibleNotifications, key = { it.id }) { notification ->
+                                    val dismissState = rememberSwipeToDismissBoxState(
+                                        confirmValueChange = { value ->
+                                            if (value == SwipeToDismissBoxValue.StartToEnd || value == SwipeToDismissBoxValue.EndToStart) {
+                                                dismissedNotificationIds = dismissedNotificationIds + notification.id
+                                                onDeleteNotification(notification.id)
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                    )
+
+                                    SwipeToDismissBox(
+                                        state = dismissState,
+                                        modifier = Modifier.animateItem(),
+                                        backgroundContent = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(
+                                                        color = Color(0xFF334155).copy(alpha = 0.4f),
+                                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                                                    )
+                                            )
+                                        },
+                                        content = {
+                                            NotificationItemRow(
+                                                notification = notification,
+                                                isHighlighted = notification.id == animatedHighlightId,
+                                                onMarkRead = { onMarkNotificationRead(notification.id) },
+                                                onNavigate = {
+                                                    showBottomSheet = false
+                                                    val targetType = notification.type ?: ""
+                                                    if (targetType.contains("video", ignoreCase = true)) {
+                                                        onVideoClick(notification.targetId ?: "")
+                                                    } else {
+                                                        onDocumentClick(notification.targetId ?: "")
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .navigationBarsPadding()
+                                    .padding(top = 12.dp, bottom = 24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        showClearAllConfirmation = true
+                                    }
+                                ) {
+                                    Text(
+                                        text = "Clear All Notifications",
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF94A3B8)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationItemRow(
+    notification: com.pravor.notessharing.model.Notification,
+    isHighlighted: Boolean = false,
+    onMarkRead: () -> Unit,
+    onNavigate: () -> Unit
+) {
+    val isLong = notification.message.contains("\n") || notification.message.length > 55
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    val highlightAlpha = remember { Animatable(if (isHighlighted) 1f else 0f) }
+    
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            highlightAlpha.snapTo(1f)
+            kotlinx.coroutines.delay(800)
+            highlightAlpha.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 2200, easing = androidx.compose.animation.core.LinearOutSlowInEasing)
+            )
+        }
+    }
+    
+    val highlightColor = MaterialTheme.colorScheme.primary
+    val borderStroke = if (highlightAlpha.value > 0f) {
+        BorderStroke(
+            width = 2.dp,
+            color = highlightColor.copy(alpha = highlightAlpha.value)
+        )
+    } else {
+        if (notification.read) BorderStroke(1.dp, Color(0xFF1E293B)) else BorderStroke(1.dp, Color(0xFF334155))
+    }
+    
+    val baseColor = if (notification.read) Color.Transparent else Color(0xFF1E293B)
+    val finalContainerColor = if (highlightAlpha.value > 0f) {
+        lerp(
+            start = baseColor,
+            stop = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+            fraction = highlightAlpha.value
+        )
+    } else {
+        baseColor
+    }
+
+    Card(
+        onClick = {
+            if (isLong) {
+                isExpanded = !isExpanded
+            } else {
+                onMarkRead()
+                if (!notification.targetId.isNullOrBlank()) {
+                    onNavigate()
+                }
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = finalContainerColor
+        ),
+        border = borderStroke
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            if (!notification.read) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+                        .align(Alignment.CenterVertically)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            } else {
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = notification.title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = if (notification.read) FontWeight.Medium else FontWeight.Bold,
+                        fontSize = 15.sp
+                    ),
+                    color = if (notification.read) Color(0xFF94A3B8) else Color.White
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = notification.message,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.sp
+                    ),
+                    color = if (notification.read) Color(0xFF64748B) else Color(0xFFCBD5E1),
+                    maxLines = if (isLong && !isExpanded) 1 else Int.MAX_VALUE,
+                    overflow = if (isLong && !isExpanded) TextOverflow.Ellipsis else TextOverflow.Clip
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = com.pravor.notessharing.model.getRelativeTime(notification.createdAt),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 11.sp
+                        ),
+                        color = Color(0xFF64748B)
+                    )
+                    
+                    if (isLong && isExpanded) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (!notification.read) {
+                                TextButton(
+                                    onClick = onMarkRead,
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text(
+                                        text = "Mark as Read",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    )
+                                }
+                            }
+                            if (!notification.targetId.isNullOrBlank()) {
+                                TextButton(
+                                    onClick = {
+                                        onMarkRead()
+                                        onNavigate()
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text(
+                                        text = "Open Resource",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -403,6 +866,12 @@ private fun HomePreview() {
             ),
             bookmarksCount = 5,
             activeDownloadsCount = 0,
+            notifications = emptyList(),
+            unreadNotificationsCount = 0,
+            onMarkNotificationRead = {},
+            onMarkAllNotificationsRead = {},
+            onDeleteNotification = {},
+            onClearAllNotifications = {},
             onUpvoteClick = {},
             onBookmarkClick = {},
             onMyUploadsClick = {},

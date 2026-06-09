@@ -86,8 +86,26 @@ object DownloadService {
                     // Ignore cache prefetch error
                 }
 
+                // Download thumbnail if present
+                var localThumbnailPath: String? = null
+                if (!document.thumbnailUrl.isNullOrBlank()) {
+                    try {
+                        val thumbExt = document.thumbnailUrl.substringBefore("?").substringAfterLast(".", "jpg")
+                        val thumbSanitizedExt = if (thumbExt.length in 2..4) thumbExt else "jpg"
+                        val thumbFile = File(docDir, "thumbnail.$thumbSanitizedExt")
+                        downloadFile(document.thumbnailUrl, thumbFile) { _, _ -> }
+                        if (thumbFile.exists() && thumbFile.length() > 0) {
+                            localThumbnailPath = thumbFile.absolutePath
+                        }
+                    } catch (thumbEx: Exception) {
+                        android.util.Log.e("DownloadService", "Failed to download thumbnail: ${thumbEx.message}", thumbEx)
+                    }
+                }
+
                 // Save to DataStore on success
-                manager.addDownload(document.id, attachments)
+                val uploaderLevel = com.pravor.notessharing.data.DocumentDetailRepository()
+                    .getUploaderContributorLevel(document.uploaderId) ?: "Bronze Contributor"
+                manager.addDownload(document, uploaderLevel, attachments, localThumbnailPath)
 
             } catch (e: Exception) {
                 // Cleanup on failure

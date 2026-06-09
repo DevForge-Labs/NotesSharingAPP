@@ -802,9 +802,21 @@ fun StudyHubShelfCard(
                     )
                 }
 
-                if (!file.thumbnailUrl.isNullOrBlank()) {
+                val imageModel = remember(file.thumbnailUrl, file.localThumbnailPath, file.availability) {
+                    if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) {
+                        file.localThumbnailPath?.let { java.io.File(it) }
+                    } else {
+                        if (!file.localThumbnailPath.isNullOrBlank()) {
+                            java.io.File(file.localThumbnailPath)
+                        } else {
+                            file.thumbnailUrl
+                        }
+                    }
+                }
+
+                if (imageModel != null) {
                     AsyncImage(
-                        model = file.thumbnailUrl,
+                        model = imageModel,
                         contentDescription = file.title,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -867,6 +879,23 @@ fun StudyHubShelfCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFF94A3B8).copy(alpha = 0.12f),
+                            border = BorderStroke(0.5.dp, Color(0xFF94A3B8).copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "ARCHIVED",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = Color(0xFF94A3B8),
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
                     // Subject Chip
                     val subjectText = file.subject?.trim()?.ifBlank { null } ?: "General"
                     Surface(
@@ -906,9 +935,9 @@ fun StudyHubShelfCard(
 
                 // Upload Date
                 Text(
-                    text = file.uploadDate,
+                    text = if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) "Removed from platform" else file.uploadDate,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    color = if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

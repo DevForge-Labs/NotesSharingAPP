@@ -25,7 +25,8 @@ sealed interface DocumentDetailUiState {
     data class Success(
         val document: DocumentDetail,
         val contributorLevel: String,
-        val relatedDocuments: List<DocumentDetail>
+        val relatedDocuments: List<DocumentDetail>,
+        val isArchived: Boolean = false
     ) : DocumentDetailUiState
 }
 
@@ -113,21 +114,68 @@ class DocumentDetailViewModel(
             // Check if document is downloaded
             val isDownloadedLocally = db.isDocumentDownloaded(documentId)
             if (isDownloadedLocally) {
-                try {
-                    val docDetail = fetchFromFirestore(documentId)
-                    if (docDetail != null) {
-                        val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
-                        val relatedDocs = repository.getRelatedDocuments(docDetail)
-                        observeUpvotes(docDetail.id, docDetail.documentType)
-                        _uiState.value = DocumentDetailUiState.Success(
-                            document = docDetail,
-                            contributorLevel = contributorLevel,
-                            relatedDocuments = relatedDocs
-                        )
-                        return@launch
+                val attachments = db.getDownloadedAttachments().filter { it.documentId == documentId }
+                val allFilesExist = attachments.isNotEmpty() && attachments.all { java.io.File(it.localPath).exists() }
+                
+                if (allFilesExist) {
+                    try {
+                        val docDetail = fetchFromFirestore(documentId)
+                        if (docDetail != null) {
+                            val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
+                            val relatedDocs = repository.getRelatedDocuments(docDetail)
+                            observeUpvotes(docDetail.id, docDetail.documentType)
+                            _uiState.value = DocumentDetailUiState.Success(
+                                document = docDetail,
+                                contributorLevel = contributorLevel,
+                                relatedDocuments = relatedDocs,
+                                isArchived = false
+                            )
+                            return@launch
+                        } else {
+                            // Document missing from Firestore, but local file exists! Resolve from local DataStore metadata
+                            val downloadedDocsList = db.getDownloadedDocuments()
+                            val localDoc = downloadedDocsList.find { it.documentId == documentId }
+                            if (localDoc != null) {
+                                val archivedDocDetail = com.pravor.notessharing.model.DocumentDetail(
+                                    id = documentId,
+                                    title = localDoc.title.ifBlank { "Archived Download" },
+                                    description = "This resource has been removed from the platform but remains available on your device.",
+                                    branch = "",
+                                    semester = "",
+                                    subject = localDoc.subject.ifBlank { "General" },
+                                    documentType = localDoc.documentType,
+                                    uploaderId = "",
+                                    uploaderName = localDoc.uploaderName,
+                                    uploaderPhotoUrl = "",
+                                    uploadedAt = localDoc.downloadedAt,
+                                    downloads = localDoc.downloads,
+                                    upvotes = localDoc.upvotes,
+                                    bookmarks = 0,
+                                    fileUrls = localDoc.fileUrls,
+                                    fileSize = 0,
+                                    fileExtension = "",
+                                    fileType = "pdf",
+                                    attachmentCount = localDoc.fileUrls.size,
+                                    thumbnailUrl = localDoc.localThumbnailPath ?: localDoc.thumbnailUrl,
+                                    thumbnailUrls = if (!localDoc.localThumbnailPath.isNullOrBlank()) listOf(localDoc.localThumbnailPath) else emptyList()
+                                )
+                                _uiState.value = DocumentDetailUiState.Success(
+                                    document = archivedDocDetail,
+                                    contributorLevel = localDoc.uploaderContributorLevel,
+                                    relatedDocuments = emptyList(),
+                                    isArchived = true
+                                )
+                                return@launch
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Fail silently, fall back to standard flow
                     }
-                } catch (e: Exception) {
-                    // Fail silently, fall back to standard flow
+                } else {
+                    // Local file missing - clean up DataStore gracefully and show error
+                    db.removeDownload(documentId)
+                    _uiState.value = DocumentDetailUiState.Error("This download is no longer available on your device.")
+                    return@launch
                 }
             }
 
@@ -140,7 +188,8 @@ class DocumentDetailViewModel(
                     _uiState.value = DocumentDetailUiState.Success(
                         document = docDetail,
                         contributorLevel = contributorLevel,
-                        relatedDocuments = relatedDocs
+                        relatedDocuments = relatedDocs,
+                        isArchived = false
                     )
                 } else {
                     _uiState.value = DocumentDetailUiState.Error("Document details not found.")

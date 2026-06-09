@@ -35,6 +35,11 @@ data class FeedItem(
     val youtubeThumbnailUrl: String? = null
 )
 
+enum class ResourceAvailability {
+    ACTIVE,
+    ARCHIVED_DOWNLOAD
+}
+
 @Immutable
 data class StudyFile(
     val id: String,
@@ -48,7 +53,9 @@ data class StudyFile(
     val documentType: String? = null,
     val examYear: String? = null,
     val examType: String? = null,
-    val sectionDisplay: String? = null
+    val sectionDisplay: String? = null,
+    val availability: ResourceAvailability = ResourceAvailability.ACTIVE,
+    val localThumbnailPath: String? = null
 )
 
 @Immutable

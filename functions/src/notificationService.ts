@@ -1,7 +1,7 @@
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { getMessaging } from "firebase-admin/messaging";
 import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as crypto from "crypto";
 
 export interface NotificationInput {
   title: string;
@@ -11,20 +11,7 @@ export interface NotificationInput {
   deepLink?: string;
 }
 
-/**
- * Safely sanitizes the payload data object.
- * FCM requires all values in the data dictionary to be strings.
- */
-function sanitizeData(data?: Record<string, any>): Record<string, string> | undefined {
-  if (!data) return undefined;
-  const sanitized: Record<string, string> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && value !== null) {
-      sanitized[key] = typeof value === "object" ? JSON.stringify(value) : String(value);
-    }
-  }
-  return sanitized;
-}
+
 
 /**
  * Splits an array into smaller chunks of a specified size.
@@ -46,6 +33,15 @@ export async function createNotification(
   notification: NotificationInput
 ): Promise<FirebaseFirestore.DocumentReference> {
   const db = getFirestore();
+
+  // Generate unique ID for deduplication if not explicitly provided
+  let uniqueId = notification.data?.notificationId || notification.data?.notification_id;
+  if (!uniqueId) {
+    uniqueId = crypto.createHash("md5")
+      .update(`${notification.title}_${notification.body}_${notification.type}_${notification.deepLink || ""}`)
+      .digest("hex");
+  }
+
   const notificationData = {
     title: notification.title,
     body: notification.body,
@@ -56,8 +52,9 @@ export async function createNotification(
     ...(notification.deepLink ? { deepLink: notification.deepLink } : {}),
   };
 
-  const docRef = await db.collection("users").doc(uid).collection("notifications").add(notificationData);
-  logger.info(`Notification document created for user ${uid} with ID: ${docRef.id}`);
+  const docRef = db.collection("users").doc(uid).collection("notifications").doc(uniqueId);
+  await docRef.set(notificationData, { merge: true });
+  logger.info(`Notification document created/merged for user ${uid} with ID: ${uniqueId}`);
   return docRef;
 }
 
@@ -73,10 +70,18 @@ export async function createNotificationsForUsers(
   const db = getFirestore();
   const chunks = chunkArray(uids, 500);
 
+  let baseUniqueId = notification.data?.notificationId || notification.data?.notification_id;
+  if (!baseUniqueId) {
+    baseUniqueId = crypto.createHash("md5")
+      .update(`${notification.title}_${notification.body}_${notification.type}_${notification.deepLink || ""}`)
+      .digest("hex");
+  }
+
   for (const chunk of chunks) {
     const batch = db.batch();
     for (const uid of chunk) {
-      const docRef = db.collection("users").doc(uid).collection("notifications").doc();
+      const uniqueId = `${uid}_${baseUniqueId}`;
+      const docRef = db.collection("users").doc(uid).collection("notifications").doc(uniqueId);
       batch.set(docRef, {
         title: notification.title,
         body: notification.body,
@@ -85,10 +90,10 @@ export async function createNotificationsForUsers(
         read: false,
         ...(notification.data ? { data: notification.data } : {}),
         ...(notification.deepLink ? { deepLink: notification.deepLink } : {}),
-      });
+      }, { merge: true });
     }
     await batch.commit();
-    logger.info(`Batch-created notification documents for ${chunk.length} users.`);
+    logger.info(`Batch-created/merged notification documents for ${chunk.length} users.`);
   }
 }
 
@@ -104,42 +109,13 @@ export async function sendNotificationToUser(
   type = "general",
   deepLink?: string
 ): Promise<boolean> {
-  // 1. Database persistence (Source of truth)
+  // Database persistence is our source of truth.
+  // The Firestore trigger onNotificationCreated will handle the FCM push.
   try {
     await createNotification(uid, { title, body, type, data, deepLink });
-  } catch (dbError) {
-    logger.error(`Database write failed for user ${uid} notification, proceeding with FCM:`, dbError);
-  }
-
-  // 2. Fetch FCM Token and send push
-  try {
-    const db = getFirestore();
-    const userDoc = await db.collection("users").doc(uid).get();
-    if (!userDoc.exists) {
-      logger.warn(`User ${uid} not found in Firestore. Skipping push notification.`);
-      return false;
-    }
-
-    const token = userDoc.data()?.fcmToken;
-    if (!token) {
-      logger.info(`User ${uid} does not have an fcmToken. Skipping push notification.`);
-      return false;
-    }
-
-    const message = {
-      token,
-      notification: {
-        title,
-        body,
-      },
-      data: sanitizeData(data),
-    };
-
-    const response = await getMessaging().send(message);
-    logger.info(`FCM notification successfully sent to user ${uid}. MessageID: ${response}`);
     return true;
-  } catch (fcmError) {
-    logger.error(`Failed to deliver push notification to user ${uid}:`, fcmError);
+  } catch (dbError) {
+    logger.error(`Database write failed for user ${uid} notification:`, dbError);
     return false;
   }
 }
@@ -161,81 +137,14 @@ export async function sendNotificationToUsers(
     return { successCount: 0, failureCount: 0 };
   }
 
-  // 1. Database persistence (Source of truth)
+  // Database persistence is our source of truth.
+  // The Firestore trigger onNotificationCreated will handle the FCM push for each user.
   try {
     await createNotificationsForUsers(uids, { title, body, type, data, deepLink });
+    return { successCount: uids.length, failureCount: 0 };
   } catch (dbError) {
-    logger.error("Database batch write failed for multiple user notifications, proceeding with FCM:", dbError);
-  }
-
-  // 2. Multicast FCM push
-  try {
-    const db = getFirestore();
-    const tokens: string[] = [];
-
-    // Fetch user documents in chunks of 1000 (limit of db.getAll)
-    const userRefs = uids.map((uid) => db.collection("users").doc(uid));
-    const refChunks = chunkArray(userRefs, 1000);
-    const userDocs: FirebaseFirestore.DocumentSnapshot[] = [];
-
-    for (const chunk of refChunks) {
-      const docs = await db.getAll(...chunk);
-      userDocs.push(...docs);
-    }
-
-    for (const doc of userDocs) {
-      if (doc.exists) {
-        const token = doc.data()?.fcmToken;
-        if (token) {
-          tokens.push(token);
-        } else {
-          logger.info(`User ${doc.id} does not have an fcmToken. Skipping push.`);
-        }
-      } else {
-        logger.warn(`User document ${doc.id} not found in Firestore. Skipping push.`);
-      }
-    }
-
-    if (tokens.length === 0) {
-      logger.info("No valid FCM tokens resolved. Skipping FCM multicast.");
-      return { successCount: 0, failureCount: 0 };
-    }
-
-    // Send in chunks of 500 (FCM multicast limit)
-    const tokenChunks = chunkArray(tokens, 500);
-    let totalSuccess = 0;
-    let totalFailure = 0;
-
-    const messaging = getMessaging();
-    const sanitizedData = sanitizeData(data);
-
-    for (const chunk of tokenChunks) {
-      const response = await messaging.sendEachForMulticast({
-        tokens: chunk,
-        notification: {
-          title,
-          body,
-        },
-        data: sanitizedData,
-      });
-
-      totalSuccess += response.successCount;
-      totalFailure += response.failureCount;
-
-      logger.info(`FCM multicast chunk status: Success: ${response.successCount}, Failure: ${response.failureCount}`);
-
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          logger.error(`FCM deliver failed for token ${chunk[idx]}:`, resp.error);
-        }
-      });
-    }
-
-    return { successCount: totalSuccess, failureCount: totalFailure };
-  } catch (error) {
-    logger.error("Error in sendNotificationToUsers:", error);
-    // Don't fail the entire process if multicast compilation crashes
-    return { successCount: 0, failureCount: 0 };
+    logger.error("Database batch write failed for multiple user notifications:", dbError);
+    return { successCount: 0, failureCount: uids.length };
   }
 }
 

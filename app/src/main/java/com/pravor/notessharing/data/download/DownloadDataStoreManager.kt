@@ -39,15 +39,38 @@ class DownloadDataStoreManager(private val context: Context) {
         return downloadedAttachmentsFlow.first()
     }
 
-    suspend fun addDownload(documentId: String, attachments: List<DownloadedAttachment>) {
+    suspend fun addDownload(
+        document: com.pravor.notessharing.model.DocumentDetail,
+        contributorLevel: String,
+        attachments: List<DownloadedAttachment>,
+        localThumbnailPath: String? = null
+    ) {
         context.dataStore.edit { preferences ->
             val docs = parseDownloadedDocuments(preferences[DOWNLOADED_DOCUMENTS_KEY] ?: "[]").toMutableList()
-            docs.removeAll { it.documentId == documentId }
-            docs.add(DownloadedDocument(documentId, System.currentTimeMillis()))
+            docs.removeAll { it.documentId == document.id }
+            docs.add(
+                DownloadedDocument(
+                    documentId = document.id,
+                    downloadedAt = System.currentTimeMillis(),
+                    title = document.title,
+                    subject = document.subject,
+                    uploaderName = document.uploaderName,
+                    uploaderContributorLevel = contributorLevel,
+                    documentType = document.documentType,
+                    fileUrls = document.fileUrls,
+                    thumbnailUrl = document.thumbnailUrl,
+                    examYear = document.examYear,
+                    examType = document.examType,
+                    sectionDisplay = document.sectionDisplay,
+                    upvotes = document.upvotes,
+                    downloads = document.downloads,
+                    localThumbnailPath = localThumbnailPath
+                )
+            )
             preferences[DOWNLOADED_DOCUMENTS_KEY] = serializeDownloadedDocuments(docs)
 
             val atts = parseDownloadedAttachments(preferences[DOWNLOADED_ATTACHMENTS_KEY] ?: "[]").toMutableList()
-            atts.removeAll { it.documentId == documentId }
+            atts.removeAll { it.documentId == document.id }
             atts.addAll(attachments)
             preferences[DOWNLOADED_ATTACHMENTS_KEY] = serializeDownloadedAttachments(atts)
         }
@@ -96,10 +119,32 @@ class DownloadDataStoreManager(private val context: Context) {
             val jsonArray = JSONArray(jsonStr)
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
+                
+                val fileUrlsArray = obj.optJSONArray("fileUrls")
+                val fileUrlsList = mutableListOf<String>()
+                if (fileUrlsArray != null) {
+                    for (j in 0 until fileUrlsArray.length()) {
+                        fileUrlsList.add(fileUrlsArray.getString(j))
+                    }
+                }
+
                 list.add(
                     DownloadedDocument(
                         documentId = obj.getString("documentId"),
-                        downloadedAt = obj.getLong("downloadedAt")
+                        downloadedAt = obj.getLong("downloadedAt"),
+                        title = obj.optString("title", ""),
+                        subject = obj.optString("subject", ""),
+                        uploaderName = obj.optString("uploaderName", "Anonymous"),
+                        uploaderContributorLevel = obj.optString("uploaderContributorLevel", "Bronze Contributor"),
+                        documentType = obj.optString("documentType", "Notes"),
+                        fileUrls = fileUrlsList,
+                        thumbnailUrl = obj.optString("thumbnailUrl", "").ifEmpty { null },
+                        examYear = obj.optString("examYear", "").ifEmpty { null },
+                        examType = obj.optString("examType", "").ifEmpty { null },
+                        sectionDisplay = obj.optString("sectionDisplay", "").ifEmpty { null },
+                        upvotes = obj.optInt("upvotes", 0),
+                        downloads = obj.optInt("downloads", 0),
+                        localThumbnailPath = obj.optString("localThumbnailPath", "").ifEmpty { null }
                     )
                 )
             }
@@ -115,6 +160,24 @@ class DownloadDataStoreManager(private val context: Context) {
             val obj = JSONObject()
             obj.put("documentId", item.documentId)
             obj.put("downloadedAt", item.downloadedAt)
+            obj.put("title", item.title)
+            obj.put("subject", item.subject)
+            obj.put("uploaderName", item.uploaderName)
+            obj.put("uploaderContributorLevel", item.uploaderContributorLevel)
+            obj.put("documentType", item.documentType)
+            
+            val fileUrlsArray = JSONArray()
+            item.fileUrls.forEach { fileUrlsArray.put(it) }
+            obj.put("fileUrls", fileUrlsArray)
+            
+            obj.put("thumbnailUrl", item.thumbnailUrl ?: "")
+            obj.put("examYear", item.examYear ?: "")
+            obj.put("examType", item.examType ?: "")
+            obj.put("sectionDisplay", item.sectionDisplay ?: "")
+            obj.put("upvotes", item.upvotes)
+            obj.put("downloads", item.downloads)
+            obj.put("localThumbnailPath", item.localThumbnailPath ?: "")
+            
             jsonArray.put(obj)
         }
         return jsonArray.toString()
