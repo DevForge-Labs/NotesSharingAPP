@@ -84,11 +84,11 @@ export const onNotificationCreated = onDocumentCreated({
 
     const message = {
       token,
-      notification: {
+      data: {
+        ...sanitizedData,
         title,
         body,
       },
-      data: sanitizedData,
     };
 
     const response = await getMessaging().send(message);

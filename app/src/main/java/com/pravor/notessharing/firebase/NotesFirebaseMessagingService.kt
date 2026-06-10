@@ -54,11 +54,12 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
         val videoId = remoteMessage.data["video_id"]
         val deepLink = remoteMessage.data["deepLink"]
         val notificationId = remoteMessage.data["notificationId"] ?: remoteMessage.data["notification_id"]
+        val type = remoteMessage.data["type"] ?: remoteMessage.data["targetType"]
 
-        Log.d("FCM_SERVICE", "Parsed fields - Title: '$title', Body: '$body', docId: '$docId', videoId: '$videoId', deepLink: '$deepLink', notificationId: '$notificationId'")
+        Log.d("FCM_SERVICE", "Parsed fields - Title: '$title', Body: '$body', docId: '$docId', videoId: '$videoId', deepLink: '$deepLink', notificationId: '$notificationId', type: '$type'")
 
         // 3. Display the notification
-        showNotification(title, body, docId, videoId, deepLink, notificationId)
+        showNotification(title, body, docId, videoId, deepLink, notificationId, type)
     }
 
     private fun showNotification(
@@ -67,7 +68,8 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
         docId: String?,
         videoId: String?,
         deepLink: String?,
-        notificationId: String?
+        notificationId: String?,
+        type: String?
     ) {
         val channelId = "general_notifications"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -123,7 +125,14 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
         } else {
             System.currentTimeMillis().toInt()
         }
-        Log.d("FCM_SERVICE", "Displaying system notification: ID = $systemNotificationId (from raw ID: '$notificationId')")
-        notificationManager.notify(systemNotificationId, builder.build())
+
+        val category = com.pravor.notessharing.data.NotificationCategoryResolver.resolve(type, title, body)
+        val notificationPrefs = com.pravor.notessharing.data.NotificationPreferences(this)
+        if (notificationPrefs.shouldShowSystemNotification(category)) {
+            Log.d("FCM_SERVICE", "Displaying system notification: ID = $systemNotificationId (from raw ID: '$notificationId'), Category: $category")
+            notificationManager.notify(systemNotificationId, builder.build())
+        } else {
+            Log.d("FCM_SERVICE", "Skipping system notification display due to preferences. Category: $category")
+        }
     }
 }

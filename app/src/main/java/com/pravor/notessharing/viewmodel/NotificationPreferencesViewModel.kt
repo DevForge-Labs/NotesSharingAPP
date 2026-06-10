@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 data class NotificationPreferencesUiState(
+    val masterEnabled: Boolean = true,
     val downloads: Boolean = true,
     val personal: Boolean = true,
     val contentAlerts: Boolean = true,
@@ -18,9 +19,6 @@ data class NotificationPreferencesUiState(
     val trendingResources: Boolean = true,
     val showDisableConfirmationDialog: Boolean = false
 ) {
-    val masterEnabled: Boolean
-        get() = downloads && personal && contentAlerts && announcements && weeklyDigest && examAlerts && trendingResources
-
     val enabledCount: Int
         get() = listOf(
             downloads, personal, contentAlerts, announcements,
@@ -42,7 +40,8 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
     private fun loadPreferences() {
         _uiState.update {
             it.copy(
-                downloads = sharedPrefs.getBoolean("notifications_enabled", true),
+                masterEnabled = sharedPrefs.getBoolean("notifications_enabled", true),
+                downloads = sharedPrefs.getBoolean("downloads_enabled", true),
                 personal = sharedPrefs.getBoolean("pref_notifications_personal", true),
                 contentAlerts = sharedPrefs.getBoolean("pref_notifications_content_alerts", true),
                 announcements = sharedPrefs.getBoolean("pref_notifications_announcements", true),
@@ -56,7 +55,7 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
     fun toggleCategory(categoryKey: String, enabled: Boolean) {
         sharedPrefs.edit().putBoolean(categoryKey, enabled).apply()
         when (categoryKey) {
-            "notifications_enabled" -> _uiState.update { it.copy(downloads = enabled) }
+            "downloads_enabled" -> _uiState.update { it.copy(downloads = enabled) }
             "pref_notifications_personal" -> _uiState.update { it.copy(personal = enabled) }
             "pref_notifications_content_alerts" -> _uiState.update { it.copy(contentAlerts = enabled) }
             "pref_notifications_announcements" -> _uiState.update { it.copy(announcements = enabled) }
@@ -89,6 +88,7 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
     private fun setAllCategories(enabled: Boolean) {
         sharedPrefs.edit().apply {
             putBoolean("notifications_enabled", enabled)
+            putBoolean("downloads_enabled", enabled)
             putBoolean("pref_notifications_personal", enabled)
             putBoolean("pref_notifications_content_alerts", enabled)
             putBoolean("pref_notifications_announcements", enabled)
@@ -99,6 +99,7 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
 
         _uiState.update {
             it.copy(
+                masterEnabled = enabled,
                 downloads = enabled,
                 personal = enabled,
                 contentAlerts = enabled,
