@@ -148,12 +148,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { current ->
                     if (current is HomeUiState.Success) {
                         val updatedFeed = current.content.feedItems.map { item ->
-                            val count = downloadCountsMap[item.id] ?: item.downloads
-                            item.copy(downloads = count)
+                            val count = downloadCountsMap[item.id] ?: item.downloadsCount
+                            item.copy(downloadsCount = count)
                         }
                         val updatedRecentlyOpened = current.content.recentlyOpened?.let { item ->
-                            val count = downloadCountsMap[item.id] ?: item.downloads
-                            item.copy(downloads = count)
+                            val count = downloadCountsMap[item.id] ?: item.downloadsCount
+                            item.copy(downloadsCount = count)
                         }
                         current.copy(content = current.content.copy(
                             feedItems = updatedFeed,
@@ -360,7 +360,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val realItems = allDocs.mapNotNull { doc ->
                         val data = doc.data ?: return@mapNotNull null
                         val item = documentToFeedItem(data)
-                        val timestamp = data["uploadedAt"] as? Long ?: (data["uploadTimestamp"] as? Long ?: 0L)
+                        val timestamp = data["uploadedAt"] as? Long ?: 0L
                         item to timestamp
                     }.sortedWith(
                         compareByDescending<Pair<FeedItem, Long>> { it.first.upvotes }
@@ -478,9 +478,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             .joinToString("")
             .ifBlank { "AN" }
         
-        val uploadTimestamp = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
+        val uploadedAt = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
         val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-        val uploadDate = sdf.format(java.util.Date(uploadTimestamp))
+        val uploadDate = sdf.format(java.util.Date(uploadedAt))
         
         val docType = doc["documentType"] as? String ?: (doc["type"] as? String ?: "Notes")
         val fileType = when (docType) {
@@ -501,7 +501,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         
         val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
-        val downloads = (doc["downloads"] as? Long ?: (doc["downloadsCount"] as? Long ?: 0L)).toInt()
+        val downloadsCount = (doc["downloadsCount"] as? Long ?: (doc["downloads"] as? Long ?: 0L)).toInt()
         val bookmarks = (doc["bookmarks"] as? Long ?: 0L).toInt()
 
         val youtubeUrl = doc["youtubeUrl"] as? String
@@ -536,7 +536,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             fileType = fileType,
             upvotes = resolvedUpvotes,
             comments = 0,
-            downloads = downloads,
+            downloadsCount = downloadsCount,
             isUpvoted = resolvedIsUpvoted,
             isSaved = false,
             bookmarksCount = bookmarks,

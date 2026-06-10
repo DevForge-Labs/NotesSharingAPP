@@ -77,7 +77,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
                                     title = doc.title.ifBlank { "Archived Download" },
                                     uploadDate = downloadDateStr,
                                     fileType = fileTypeEnum,
-                                    downloads = doc.downloads,
+                                    downloadsCount = doc.downloadsCount,
                                     upvotes = doc.upvotes,
                                     thumbnailUrl = doc.thumbnailUrl,
                                     subject = doc.subject.ifBlank { "General" },
@@ -191,7 +191,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
             title = detail.title,
             uploadDate = downloadDateStr,
             fileType = fileTypeEnum,
-            downloads = detail.downloads,
+            downloadsCount = detail.downloadsCount,
             upvotes = detail.upvotes,
             thumbnailUrl = detail.thumbnailUrl,
             subject = detail.subject,
@@ -206,9 +206,9 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
     private fun documentToStudyFile(doc: Map<String, Any>): StudyFile {
         val id = doc["documentId"] as? String ?: ""
         val title = doc["title"] as? String ?: ""
-        val uploadTimestamp = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
+        val uploadedAt = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
         val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-        val uploadDate = "Uploaded " + sdf.format(java.util.Date(uploadTimestamp))
+        val uploadDate = "Uploaded " + sdf.format(java.util.Date(uploadedAt))
         
         val docType = doc["documentType"] as? String ?: (doc["type"] as? String ?: "Notes")
         val fileType = when (docType) {
@@ -221,7 +221,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
         }
         
         val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
-        val downloads = (doc["downloads"] as? Long ?: (doc["downloadsCount"] as? Long ?: 0L)).toInt()
+        val downloadsCount = (doc["downloadsCount"] as? Long ?: (doc["downloads"] as? Long ?: 0L)).toInt()
         
         val thumbnailUrl = doc["thumbnailUrl"] as? String
         val subject = doc["subject"] as? String
@@ -234,7 +234,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
             title = title,
             uploadDate = uploadDate,
             fileType = fileType,
-            downloads = downloads,
+            downloadsCount = downloadsCount,
             upvotes = upvotes,
             thumbnailUrl = thumbnailUrl,
             subject = subject,

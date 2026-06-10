@@ -39,7 +39,7 @@ fun DiscoverFeedItem(item: DiscoverFeedItem, onClick: () -> Unit = {}) {
             is DiscoverFeedItem.Note -> DiscoverRow(
                 marker = "N",
                 title = item.title,
-                subtitle = "${item.subject} | ${item.downloads} downloads",
+                subtitle = "${item.subject} | ${item.downloadsCount} downloads",
                 icon = Icons.Default.BookmarkBorder
             )
             is DiscoverFeedItem.Video -> DiscoverRow(

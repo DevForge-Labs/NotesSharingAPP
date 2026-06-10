@@ -118,6 +118,10 @@ fun MyBookmarksScreen(
                         val detail = videoRepository.getVideo(file.id)
                         if (detail != null) {
                             videoDetailsMap = videoDetailsMap + (file.id to detail)
+                        } else {
+                            // Video no longer exists in Firestore!
+                            // Automatically remove the stale bookmark record
+                            viewModel.removeBookmark(file.id)
                         }
                     }
                 }

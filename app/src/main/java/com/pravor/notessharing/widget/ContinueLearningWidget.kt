@@ -123,7 +123,7 @@ class ContinueLearningWidget : GlanceAppWidget() {
                         fileType = fileTypeVal,
                         upvotes = 0,
                         comments = 0,
-                        downloads = 0,
+                        downloadsCount = 0,
                         isUpvoted = false,
                         isSaved = false,
                         bookmarksCount = 0,

@@ -148,7 +148,7 @@ class DocumentDetailViewModel(
                                     uploaderName = localDoc.uploaderName,
                                     uploaderPhotoUrl = "",
                                     uploadedAt = localDoc.downloadedAt,
-                                    downloads = localDoc.downloads,
+                                    downloadsCount = localDoc.downloadsCount,
                                     upvotes = localDoc.upvotes,
                                     bookmarks = 0,
                                     fileUrls = localDoc.fileUrls,

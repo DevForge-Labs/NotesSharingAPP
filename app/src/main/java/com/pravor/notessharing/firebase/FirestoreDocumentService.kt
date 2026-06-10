@@ -20,7 +20,6 @@ class FirestoreDocumentService {
         val documentRef = firestore.collection(collection).document(documentId)
         documentRef.update(
             mapOf(
-                "downloads" to FieldValue.increment(1),
                 "downloadsCount" to FieldValue.increment(1)
             )
         ).await()

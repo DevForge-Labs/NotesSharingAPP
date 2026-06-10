@@ -326,7 +326,7 @@ fun TrendingNoteCard(
 
             // 4. STATS ROW
             Row(verticalAlignment = Alignment.CenterVertically) {
-                SmallMetric(Icons.Default.Download, note.downloads.toString())
+                SmallMetric(Icons.Default.Download, note.downloadsCount.toString())
                 Spacer(Modifier.width(10.dp))
                 SmallMetric(Icons.Default.ThumbUp, note.upvotes.toString())
                 Spacer(Modifier.weight(1f))

@@ -102,7 +102,7 @@ class TrendingFeedRepository(private val context: Context) {
             put("id", note.id)
             put("title", note.title)
             put("subject", note.subject)
-            put("downloads", note.downloads)
+            put("downloadsCount", note.downloadsCount)
             put("rating", note.rating)
             put("upvotes", note.upvotes)
             put("isBookmarked", note.isBookmarked)
@@ -127,7 +127,7 @@ class TrendingFeedRepository(private val context: Context) {
             id = obj.getString("id"),
             title = obj.getString("title"),
             subject = obj.getString("subject"),
-            downloads = obj.getInt("downloads"),
+            downloadsCount = obj.getInt("downloadsCount"),
             rating = obj.getDouble("rating"),
             upvotes = obj.getInt("upvotes"),
             isBookmarked = obj.getBoolean("isBookmarked"),
@@ -279,7 +279,7 @@ class TrendingFeedRepository(private val context: Context) {
         val sortingStartTime = System.currentTimeMillis()
         // Sort all candidates by upvotes descending
         allCandidates.sortByDescending { (doc, _) ->
-            doc.getLong("upvotes") ?: doc.getLong("likesCount") ?: 0L
+            doc.getLong("upvotes") ?: 0L
         }
 
         // Take the top PAGE_SIZE (10)
@@ -342,8 +342,8 @@ class TrendingFeedRepository(private val context: Context) {
             val id = doc.id
             val title = data["title"] as? String ?: "Untitled Document"
             val subject = data["subject"] as? String ?: "General"
-            val downloads = (data["downloads"] as? Long ?: 0L).toInt()
-            val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
+            val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
+            val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
             val thumbnailUrl = data["thumbnailUrl"] as? String
             val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
             val thumbnailType = data["thumbnailType"] as? String
@@ -373,7 +373,7 @@ class TrendingFeedRepository(private val context: Context) {
                 id = id,
                 title = title,
                 subject = subject,
-                downloads = downloads,
+                downloadsCount = downloadsCount,
                 rating = 4.5,
                 upvotes = upvotes,
                 isBookmarked = false,

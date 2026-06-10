@@ -41,7 +41,7 @@ fun RelatedDocumentsSection(
                     id = relatedDoc.id,
                     title = relatedDoc.title,
                     subject = relatedDoc.subject,
-                    downloads = relatedDoc.downloads,
+                    downloadsCount = relatedDoc.downloadsCount,
                     rating = 4.5,
                     upvotes = relatedDoc.upvotes,
                     isBookmarked = false,

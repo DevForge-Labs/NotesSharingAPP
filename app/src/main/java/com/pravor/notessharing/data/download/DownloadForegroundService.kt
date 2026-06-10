@@ -78,7 +78,7 @@ class DownloadForegroundService : Service() {
                 uploaderName = "",
                 uploaderPhotoUrl = "",
                 uploadedAt = 0L,
-                downloads = 0,
+                downloadsCount = 0,
                 upvotes = 0,
                 bookmarks = 0,
                 fileUrls = fileUrls,
@@ -243,7 +243,7 @@ class DownloadForegroundService : Service() {
                     firestoreService.incrementDownloadCount(collection, docId)
                     Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "Firestore download count incremented successfully for docId=$docId")
                     
-                    val newCount = document.downloads + 1
+                    val newCount = document.downloadsCount + 1
                     DownloadCountTracker.updateDownloadCount(docId, newCount)
                 } catch (e: Exception) {
                     Log.e("DOWNLOAD_NOTIFICATION_DEBUG", "Failed to increment download count in Firestore for docId=$docId: ${e.message}", e)
