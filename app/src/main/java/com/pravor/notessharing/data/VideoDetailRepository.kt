@@ -186,7 +186,7 @@ class VideoDetailRepository {
                 youtubeUrl = "https://www.youtube.com/watch?v=$youtubeVideoId",
                 youtubeVideoId = youtubeVideoId,
                 upvotes = 350 + (id.hashCode() % 150),
-                downloads = 45,
+                downloadsCount = 45,
                 bookmarks = 0,
                 thumbnailUrl = null,
                 youtubeThumbnailUrl = "https://img.youtube.com/vi/$youtubeVideoId/hqdefault.jpg"
@@ -210,7 +210,7 @@ class VideoDetailRepository {
                 youtubeUrl = "https://www.youtube.com/watch?v=wp4Hli1sOQc",
                 youtubeVideoId = "wp4Hli1sOQc",
                 upvotes = feedVideo.upvotes,
-                downloads = feedVideo.downloads,
+                downloadsCount = feedVideo.downloadsCount,
                 bookmarks = if (feedVideo.isSaved) 1 else 0,
                 thumbnailUrl = null,
                 youtubeThumbnailUrl = "https://img.youtube.com/vi/wp4Hli1sOQc/hqdefault.jpg"

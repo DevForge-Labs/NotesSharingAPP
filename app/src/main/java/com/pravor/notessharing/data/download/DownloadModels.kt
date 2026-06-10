@@ -14,7 +14,7 @@ data class DownloadedDocument(
     val examType: String? = null,
     val sectionDisplay: String? = null,
     val upvotes: Int = 0,
-    val downloads: Int = 0,
+    val downloadsCount: Int = 0,
     val localThumbnailPath: String? = null
 )
 

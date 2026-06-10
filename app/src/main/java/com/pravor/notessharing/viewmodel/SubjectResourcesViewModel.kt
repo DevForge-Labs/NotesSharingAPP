@@ -50,12 +50,12 @@ class SubjectResourcesViewModel(
                 is TrendingNote -> {
                     val isUpvoted = upvotesMap[res.id] ?: false
                     val upvotesCount = upvoteCountsMap[res.id] ?: res.upvotes
-                    val downloadsCount = downloadCountsMap[res.id] ?: res.downloads
+                    val downloadsCount = downloadCountsMap[res.id] ?: res.downloadsCount
                     res.copy(
                         isBookmarked = bookmarkedIds.contains(res.id),
                         isUpvoted = isUpvoted,
                         upvotes = upvotesCount,
-                        downloads = downloadsCount
+                        downloadsCount = downloadsCount
                     )
                 }
                 is VideoRecommendation -> {
@@ -125,7 +125,7 @@ class SubjectResourcesViewModel(
                     }
                     deferreds.awaitAll().flatten()
                 }.sortedByDescending { doc ->
-                    doc.getLong("uploadedAt") ?: doc.getLong("uploadTimestamp") ?: 0L
+                    doc.getLong("uploadedAt") ?: 0L
                 }
 
                 val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
@@ -143,8 +143,8 @@ class SubjectResourcesViewModel(
 
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
-                    val downloads = (data["downloads"] as? Long ?: 0L).toInt()
-                    val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
+                    val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
+                    val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
                     val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
                         ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
                     val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
@@ -201,7 +201,7 @@ class SubjectResourcesViewModel(
                             id = id,
                             title = title,
                             subject = docSubject,
-                            downloads = downloads,
+                            downloadsCount = downloadsCount,
                             rating = 4.5,
                             upvotes = upvotes,
                             isBookmarked = bookmarkedIds.contains(id),
@@ -247,7 +247,7 @@ class SubjectResourcesViewModel(
                     title = note.title,
                     uploadDate = "Saved",
                     fileType = fileType,
-                    downloads = note.downloads,
+                    downloadsCount = note.downloadsCount,
                     upvotes = note.upvotes,
                     thumbnailUrl = note.thumbnailUrl,
                     subject = note.subject,
@@ -272,7 +272,7 @@ class SubjectResourcesViewModel(
                     title = video.title,
                     uploadDate = "Saved",
                     fileType = com.pravor.notessharing.model.FileType.Video,
-                    downloads = 0,
+                    downloadsCount = 0,
                     upvotes = video.upvotes,
                     thumbnailUrl = video.thumbnailUrl ?: video.youtubeThumbnailUrl,
                     subject = video.subject,

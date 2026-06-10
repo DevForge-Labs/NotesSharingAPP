@@ -232,11 +232,8 @@ class UploadRepository(private val context: Context) {
                 "uploaderId" to uploaderId,
                 "uploaderName" to uploaderName,
                 "uploaderPhotoUrl" to uploaderPhotoUrl,
-                "uploadTimestamp" to uploadedAt,
                 "uploadedAt" to uploadedAt,
                 "downloadsCount" to 0,
-                "downloads" to 0,
-                "likesCount" to 0,
                 "upvotes" to 0,
                 "bookmarks" to 0,
                 "viewsCount" to 0,
@@ -244,7 +241,6 @@ class UploadRepository(private val context: Context) {
                 "storagePath" to null,
                 "fileSize" to 0L,
                 "fileExtension" to "",
-                "isVerified" to false,
                 "tags" to emptyList<String>(),
                 "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: ""))
             )
@@ -330,11 +326,8 @@ class UploadRepository(private val context: Context) {
                     "uploaderId" to uploaderId,
                     "uploaderName" to uploaderName,
                     "uploaderPhotoUrl" to uploaderPhotoUrl,
-                    "uploadTimestamp" to uploadedAt,
                     "uploadedAt" to uploadedAt,
                     "downloadsCount" to 0,
-                    "downloads" to 0,
-                    "likesCount" to 0,
                     "upvotes" to 0,
                     "bookmarks" to 0,
                     "viewsCount" to 0,
@@ -344,7 +337,6 @@ class UploadRepository(private val context: Context) {
                     "storagePaths" to listOf(uploadedPath),
                     "fileSize" to file.sizeBytes,
                     "fileExtension" to "pdf",
-                    "isVerified" to false,
                     "tags" to emptyList<String>(),
                     "attachmentCount" to 1
                 )
@@ -446,11 +438,8 @@ class UploadRepository(private val context: Context) {
                     "uploaderId" to uploaderId,
                     "uploaderName" to uploaderName,
                     "uploaderPhotoUrl" to uploaderPhotoUrl,
-                    "uploadTimestamp" to uploadedAt,
                     "uploadedAt" to uploadedAt,
                     "downloadsCount" to 0,
-                    "downloads" to 0,
-                    "likesCount" to 0,
                     "upvotes" to 0,
                     "bookmarks" to 0,
                     "viewsCount" to 0,
@@ -460,7 +449,6 @@ class UploadRepository(private val context: Context) {
                     "storagePaths" to storagePaths,
                     "fileSize" to totalBytes,
                     "fileExtension" to firstFileExtension,
-                    "isVerified" to false,
                     "tags" to emptyList<String>(),
                     
                     // Enhanced metadata fields

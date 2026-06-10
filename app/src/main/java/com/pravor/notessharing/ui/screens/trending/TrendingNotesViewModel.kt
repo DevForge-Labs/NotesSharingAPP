@@ -38,12 +38,12 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         val updatedNotes = notes.map { note ->
             val isUpvoted = upvotesMap[note.id] ?: false
             val upvotesCount = upvoteCountsMap[note.id] ?: note.upvotes
-            val downloadsCount = downloadCountsMap[note.id] ?: note.downloads
+            val downloadsCount = downloadCountsMap[note.id] ?: note.downloadsCount
             note.copy(
                 isBookmarked = bookmarkedIds.contains(note.id),
                 isUpvoted = isUpvoted,
                 upvotes = upvotesCount,
-                downloads = downloadsCount
+                downloadsCount = downloadsCount
             )
         }.filter { note ->
             val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
@@ -69,12 +69,12 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
             val updated = repository.trendingNotes.value.map { note ->
                 val isUpvoted = upvotesMap[note.id] ?: false
                 val upvotesCount = upvoteCountsMap[note.id] ?: note.upvotes
-                val downloadsCount = downloadCountsMap[note.id] ?: note.downloads
+                val downloadsCount = downloadCountsMap[note.id] ?: note.downloadsCount
                 note.copy(
                     isBookmarked = bookmarkedIds.contains(note.id),
                     isUpvoted = isUpvoted,
                     upvotes = upvotesCount,
-                    downloads = downloadsCount
+                    downloadsCount = downloadsCount
                 )
             }.filter { note ->
                 val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
@@ -146,7 +146,7 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                     title = note.title,
                     uploadDate = "Saved",
                     fileType = fileType,
-                    downloads = note.downloads,
+                    downloadsCount = note.downloadsCount,
                     upvotes = note.upvotes,
                     thumbnailUrl = note.thumbnailUrl,
                     subject = note.subject,

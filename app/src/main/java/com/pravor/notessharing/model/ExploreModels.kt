@@ -7,7 +7,7 @@ data class TrendingNote(
     val id: String,
     val title: String,
     val subject: String,
-    val downloads: Int,
+    val downloadsCount: Int,
     val rating: Double,
     val upvotes: Int,
     val isBookmarked: Boolean,
@@ -82,7 +82,7 @@ sealed interface DiscoverFeedItem {
         override val id: String,
         val title: String,
         val subject: String,
-        val downloads: Int
+        val downloadsCount: Int
     ) : DiscoverFeedItem
 
     @Immutable

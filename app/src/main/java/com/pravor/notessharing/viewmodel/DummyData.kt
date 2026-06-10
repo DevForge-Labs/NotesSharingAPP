@@ -102,7 +102,7 @@ internal object DummyData {
             id = "trending-note-$index",
             title = entry.first,
             subject = entry.second,
-            downloads = 420 + index * 87,
+            downloadsCount = 420 + index * 87,
             rating = 4.2 + (index % 8) * 0.1,
             upvotes = 64 + index * 13,
             isBookmarked = index % 5 == 0
@@ -222,7 +222,7 @@ internal object DummyData {
                 id = "discover-note-$index",
                 title = trendingNotes[index % trendingNotes.size].title,
                 subject = trendingNotes[index % trendingNotes.size].subject,
-                downloads = 300 + index * 41
+                downloadsCount = 300 + index * 41
             )
             1 -> DiscoverFeedItem.Video(
                 id = "discover-video-$index",

@@ -296,7 +296,7 @@ fun FeedCard(
                     value = item.upvotes.toString(),
                     modifier = Modifier.clickable(onClick = onUpvoteClick)
                 )
-                StatItem(Icons.Default.Download, item.downloads.toString())
+                StatItem(Icons.Default.Download, item.downloadsCount.toString())
             }
         }
     }
@@ -344,7 +344,7 @@ fun StudyFileCard(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${file.uploadDate} | ${file.fileType.label} | ${file.downloads} downloads | ${file.upvotes} upvotes",
+                    text = "${file.uploadDate} | ${file.fileType.label} | ${file.downloadsCount} downloads | ${file.upvotes} upvotes",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -395,7 +395,7 @@ fun CompactStudyFileRow(
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    text = "${file.uploadDate} | ${file.downloads} downloads",
+                    text = "${file.uploadDate} | ${file.downloadsCount} downloads",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -964,7 +964,7 @@ fun StudyHubShelfCard(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = file.downloads.toString(),
+                                text = file.downloadsCount.toString(),
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                 color = Color(0xFF64B5F6).copy(alpha = 0.9f),
                                 fontWeight = FontWeight.Medium

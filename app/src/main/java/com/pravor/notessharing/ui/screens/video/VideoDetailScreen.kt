@@ -173,7 +173,7 @@ fun VideoDetailScreen(
                                             title = video.title,
                                             uploadDate = "Saved",
                                             fileType = FileType.Video,
-                                            downloads = 0,
+                                            downloadsCount = 0,
                                             upvotes = video.upvotes,
                                             thumbnailUrl = video.thumbnailUrl
                                                 ?: video.youtubeThumbnailUrl,

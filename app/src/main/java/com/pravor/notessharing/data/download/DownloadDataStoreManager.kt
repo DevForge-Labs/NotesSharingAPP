@@ -63,7 +63,7 @@ class DownloadDataStoreManager(private val context: Context) {
                     examType = document.examType,
                     sectionDisplay = document.sectionDisplay,
                     upvotes = document.upvotes,
-                    downloads = document.downloads,
+                    downloadsCount = document.downloadsCount,
                     localThumbnailPath = localThumbnailPath
                 )
             )
@@ -143,7 +143,7 @@ class DownloadDataStoreManager(private val context: Context) {
                         examType = obj.optString("examType", "").ifEmpty { null },
                         sectionDisplay = obj.optString("sectionDisplay", "").ifEmpty { null },
                         upvotes = obj.optInt("upvotes", 0),
-                        downloads = obj.optInt("downloads", 0),
+                        downloadsCount = obj.optInt("downloadsCount", 0),
                         localThumbnailPath = obj.optString("localThumbnailPath", "").ifEmpty { null }
                     )
                 )
@@ -175,7 +175,7 @@ class DownloadDataStoreManager(private val context: Context) {
             obj.put("examType", item.examType ?: "")
             obj.put("sectionDisplay", item.sectionDisplay ?: "")
             obj.put("upvotes", item.upvotes)
-            obj.put("downloads", item.downloads)
+            obj.put("downloadsCount", item.downloadsCount)
             obj.put("localThumbnailPath", item.localThumbnailPath ?: "")
             
             jsonArray.put(obj)

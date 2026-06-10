@@ -42,7 +42,7 @@ class ExploreCacheRepository(context: Context) {
                     put("id", it.id)
                     put("title", it.title)
                     put("subject", it.subject)
-                    put("downloads", it.downloads)
+                    put("downloadsCount", it.downloadsCount)
                     put("rating", it.rating)
                     put("upvotes", it.upvotes)
                     put("isBookmarked", it.isBookmarked)
@@ -174,7 +174,7 @@ class ExploreCacheRepository(context: Context) {
                         id = obj.getString("id"),
                         title = obj.getString("title"),
                         subject = obj.getString("subject"),
-                        downloads = obj.getInt("downloads"),
+                        downloadsCount = obj.getInt("downloadsCount"),
                         rating = obj.getDouble("rating"),
                         upvotes = obj.getInt("upvotes"),
                         isBookmarked = obj.getBoolean("isBookmarked"),
@@ -316,7 +316,7 @@ class ExploreCacheRepository(context: Context) {
             put("fileType", item.fileType.name)
             put("upvotes", item.upvotes)
             put("comments", item.comments)
-            put("downloads", item.downloads)
+            put("downloadsCount", item.downloadsCount)
             put("isUpvoted", item.isUpvoted)
             put("isSaved", item.isSaved)
             put("bookmarksCount", item.bookmarksCount)
@@ -362,7 +362,7 @@ class ExploreCacheRepository(context: Context) {
             fileType = fileType,
             upvotes = obj.getInt("upvotes"),
             comments = obj.getInt("comments"),
-            downloads = obj.getInt("downloads"),
+            downloadsCount = obj.getInt("downloadsCount"),
             isUpvoted = obj.getBoolean("isUpvoted"),
             isSaved = obj.getBoolean("isSaved"),
             bookmarksCount = obj.optInt("bookmarksCount", 0),
@@ -403,7 +403,7 @@ class ExploreCacheRepository(context: Context) {
                     put("id", item.id)
                     put("title", item.title)
                     put("subject", item.subject)
-                    put("downloads", item.downloads)
+                    put("downloadsCount", item.downloadsCount)
                 }
                 is DiscoverFeedItem.Video -> {
                     put("discType", "Video")
@@ -435,7 +435,7 @@ class ExploreCacheRepository(context: Context) {
                 id = obj.getString("id"),
                 title = obj.getString("title"),
                 subject = obj.getString("subject"),
-                downloads = obj.getInt("downloads")
+                downloadsCount = obj.getInt("downloadsCount")
             )
             "Video" -> DiscoverFeedItem.Video(
                 id = obj.getString("id"),

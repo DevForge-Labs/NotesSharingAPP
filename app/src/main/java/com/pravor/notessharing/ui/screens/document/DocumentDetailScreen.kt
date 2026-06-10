@@ -239,7 +239,7 @@ fun DocumentDetailScreen(
                                         title = doc.title,
                                         uploadDate = "Saved",
                                         fileType = fileTypeEnum,
-                                        downloads = doc.downloads,
+                                        downloadsCount = doc.downloadsCount,
                                         upvotes = doc.upvotes,
                                         thumbnailUrl = doc.thumbnailUrl,
                                         subject = doc.subject,

@@ -202,17 +202,17 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
                         val updatedPopular = current.content.popularUploads.map { item ->
-                            val count = downloadCountsMap[item.id] ?: item.downloads
-                            item.copy(downloads = count)
+                            val count = downloadCountsMap[item.id] ?: item.downloadsCount
+                            item.copy(downloadsCount = count)
                         }
                         val updatedTrending = current.content.trendingNotes.map { note ->
-                            val count = downloadCountsMap[note.id] ?: note.downloads
-                            note.copy(downloads = count)
+                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+                            note.copy(downloadsCount = count)
                         }
                         val updatedDiscover = current.content.discoverItems.map { item ->
                             if (item is com.pravor.notessharing.model.DiscoverFeedItem.Note) {
-                                val count = downloadCountsMap[item.id] ?: item.downloads
-                                item.copy(downloads = count)
+                                val count = downloadCountsMap[item.id] ?: item.downloadsCount
+                                item.copy(downloadsCount = count)
                             } else {
                                 item
                             }
@@ -287,7 +287,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     }
                     deferreds.awaitAll().flatten()
                 }.sortedByDescending { doc ->
-                    doc.getLong("uploadedAt") ?: doc.getLong("uploadTimestamp") ?: 0L
+                    doc.getLong("uploadedAt") ?: 0L
                 }
 
                 val realFeed = allDocs.mapNotNull { doc ->
@@ -328,8 +328,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
                     val subject = data["subject"] as? String ?: ""
-                    val downloads = (data["downloads"] as? Long ?: 0L).toInt()
-                    val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
+                    val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
+                    val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
                     val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
                         ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
                     val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
@@ -346,7 +346,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         id = id,
                         title = title,
                         subject = subject,
-                        downloads = downloads,
+                        downloadsCount = downloadsCount,
                         rating = 4.5,
                         upvotes = resolvedUpvotes,
                         isBookmarked = bookmarkedIds.contains(id),
@@ -423,12 +423,12 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
                     val subject = data["subject"] as? String ?: ""
-                    val downloads = (data["downloads"] as? Long ?: 0L).toInt()
+                    val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
                     DiscoverFeedItem.Note(
                         id = id,
                         title = title,
                         subject = subject,
-                        downloads = downloads
+                        downloadsCount = downloadsCount
                     )
                 }
 
@@ -497,9 +497,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             .joinToString("")
             .ifBlank { "AN" }
         
-        val uploadTimestamp = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
+        val uploadedAt = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
         val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-        val uploadDate = sdf.format(java.util.Date(uploadTimestamp))
+        val uploadDate = sdf.format(java.util.Date(uploadedAt))
         
         val docType = doc["documentType"] as? String ?: (doc["type"] as? String ?: "Notes")
         val fileType = when (docType) {
@@ -518,7 +518,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         
         val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
-        val downloads = (doc["downloads"] as? Long ?: (doc["downloadsCount"] as? Long ?: 0L)).toInt()
+        val downloadsCount = (doc["downloadsCount"] as? Long ?: (doc["downloads"] as? Long ?: 0L)).toInt()
         val bookmarks = (doc["bookmarks"] as? Long ?: 0L).toInt()
 
         val youtubeUrl = doc["youtubeUrl"] as? String
@@ -553,7 +553,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             fileType = fileType,
             upvotes = resolvedUpvotes,
             comments = 0,
-            downloads = downloads,
+            downloadsCount = downloadsCount,
             isUpvoted = resolvedIsUpvoted,
             isSaved = false,
             bookmarksCount = bookmarks,
@@ -592,7 +592,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     title = note.title,
                     uploadDate = "Saved",
                     fileType = fileType,
-                    downloads = note.downloads,
+                    downloadsCount = note.downloadsCount,
                     upvotes = note.upvotes,
                     thumbnailUrl = note.thumbnailUrl,
                     subject = note.subject,
@@ -617,7 +617,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     title = video.title,
                     uploadDate = "Saved",
                     fileType = com.pravor.notessharing.model.FileType.Video,
-                    downloads = 0,
+                    downloadsCount = 0,
                     upvotes = video.upvotes,
                     thumbnailUrl = video.thumbnailUrl ?: video.youtubeThumbnailUrl,
                     subject = video.subject,

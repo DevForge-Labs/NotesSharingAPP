@@ -291,7 +291,7 @@ fun HomeFeedCard(
                         horizontalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
                         StatItem(Icons.Default.ThumbUp, item.upvotes.toString())
-                        StatItem(Icons.Default.Download, item.downloads.toString())
+                        StatItem(Icons.Default.Download, item.downloadsCount.toString())
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         ActionIconButton(
@@ -689,7 +689,7 @@ fun ForYouGridCard(
                              modifier = Modifier.size(16.dp)
                          )
                          Text(
-                             text = item.downloads.toString(),
+                             text = item.downloadsCount.toString(),
                              style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                              color = Color(0xFF64B5F6).copy(alpha = 0.9f),
                              fontWeight = FontWeight.Medium
