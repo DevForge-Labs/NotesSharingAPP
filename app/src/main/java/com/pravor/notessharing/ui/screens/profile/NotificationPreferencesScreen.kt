@@ -96,7 +96,8 @@ fun NotificationPreferencesScreen(
                     description = "Download progress, completion status, and download-related alerts.",
                     icon = Icons.Default.Download,
                     checked = uiState.downloads,
-                    onCheckedChange = { viewModel.toggleCategory("notifications_enabled", it) }
+                    onCheckedChange = { viewModel.toggleCategory("downloads_enabled", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
 
@@ -106,7 +107,8 @@ fun NotificationPreferencesScreen(
                     description = "Updates related to your account, uploads, contributor progress, document removals, moderation actions, and contributor achievements.",
                     icon = Icons.Default.Person,
                     checked = uiState.personal,
-                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_personal", it) }
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_personal", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
 
@@ -116,7 +118,8 @@ fun NotificationPreferencesScreen(
                     description = "Notifications when new notes, assignments, PYQs, cheatsheets, videos, or study resources become available for your branch and semester.",
                     icon = Icons.Default.Bookmark,
                     checked = uiState.contentAlerts,
-                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_content_alerts", it) }
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_content_alerts", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
 
@@ -126,7 +129,8 @@ fun NotificationPreferencesScreen(
                     description = "Important messages, maintenance notices, feature releases, platform updates, and official NotesSharing communications.",
                     icon = Icons.Default.Notifications,
                     checked = uiState.announcements,
-                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_announcements", it) }
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_announcements", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
 
@@ -136,7 +140,8 @@ fun NotificationPreferencesScreen(
                     description = "A weekly summary of uploads, trending resources, contributor activity, and study material relevant to your branch and semester.",
                     icon = Icons.Default.History,
                     checked = uiState.weeklyDigest,
-                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_weekly_digest", it) }
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_weekly_digest", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
 
@@ -146,7 +151,8 @@ fun NotificationPreferencesScreen(
                     description = "Exam-season reminders, revision resources, PYQ recommendations, and important academic preparation alerts.",
                     icon = Icons.Default.Assignment,
                     checked = uiState.examAlerts,
-                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_exam_alerts", it) }
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_exam_alerts", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
 
@@ -156,7 +162,8 @@ fun NotificationPreferencesScreen(
                     description = "Notifications when highly downloaded, featured, or trending resources become available.",
                     icon = Icons.Default.TrendingUp,
                     checked = uiState.trendingResources,
-                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_trending_resources", it) }
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_trending_resources", it) },
+                    enabled = uiState.masterEnabled
                 )
             }
         }
@@ -275,12 +282,16 @@ private fun PreferenceCategoryCard(
     icon: ImageVector,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
+    val cardAlpha = if (enabled) 1f else 0.5f
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardAlpha)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (enabled) 2.dp else 0.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -291,14 +302,14 @@ private fun PreferenceCategoryCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                color = if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
                 modifier = Modifier.size(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -312,17 +323,18 @@ private fun PreferenceCategoryCard(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
             Switch(
                 checked = checked,
+                enabled = enabled,
                 onCheckedChange = onCheckedChange,
                 modifier = Modifier.scale(0.85f),
                 colors = SwitchDefaults.colors(

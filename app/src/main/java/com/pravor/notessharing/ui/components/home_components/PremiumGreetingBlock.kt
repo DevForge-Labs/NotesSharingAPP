@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -180,6 +181,22 @@ private fun PremiumGreetingBlock(
                 
                 Spacer(modifier = Modifier.width(8.dp))
                 
+                val bellRotation = remember { Animatable(0f) }
+                LaunchedEffect(unreadCount) {
+                    if (unreadCount > 0) {
+                        while (true) {
+                            bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
+                            delay(8000)
+                        }
+                    } else {
+                        bellRotation.snapTo(0f)
+                    }
+                }
+
                 IconButton(onClick = onBellClick) {
                     BadgedBox(
                         badge = {
@@ -203,7 +220,11 @@ private fun PremiumGreetingBlock(
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications",
-                            tint = Color(0xFFF5F7FA)
+                            tint = Color(0xFFF5F7FA),
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = bellRotation.value
+                                transformOrigin = TransformOrigin(0.5f, 0.0f)
+                            }
                         )
                     }
                 }

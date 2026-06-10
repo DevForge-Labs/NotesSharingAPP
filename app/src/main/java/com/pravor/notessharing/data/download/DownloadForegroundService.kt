@@ -100,6 +100,15 @@ class DownloadForegroundService : Service() {
         return enabled
     }
 
+    private fun isDownloadsNotificationEnabled(): Boolean {
+        val prefs = applicationContext.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val masterEnabled = prefs.getBoolean("notifications_enabled", true)
+        val downloadsEnabled = prefs.getBoolean("downloads_enabled", true)
+        val enabled = masterEnabled && downloadsEnabled
+        Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "isDownloadsNotificationEnabled: Checked SharedPreferences: $enabled (master=$masterEnabled, downloads=$downloadsEnabled)")
+        return enabled
+    }
+
     private fun hasNotificationPermission(): Boolean {
         val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -152,11 +161,13 @@ class DownloadForegroundService : Service() {
                     }
                 } else {
                     Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "startDocumentDownload: Service already in foreground. Posting new download notificationId=$notificationId")
-                    try {
-                        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                        notificationManager.notify(notificationId, notification)
-                    } catch (e: Exception) {
-                        Log.e("DOWNLOAD_NOTIFICATION_DEBUG", "notify failed in startDocumentDownload: ${e.message}", e)
+                    if (isDownloadsNotificationEnabled()) {
+                        try {
+                            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                            notificationManager.notify(notificationId, notification)
+                        } catch (e: Exception) {
+                            Log.e("DOWNLOAD_NOTIFICATION_DEBUG", "notify failed in startDocumentDownload: ${e.message}", e)
+                        }
                     }
                 }
             }
@@ -176,7 +187,7 @@ class DownloadForegroundService : Service() {
                     activeProgress[docId] = percentage
                     
                     val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    if (isNotificationPreferenceEnabled()) {
+                    if (isDownloadsNotificationEnabled()) {
                         val updatedNotification = buildProgressNotification(document, percentage)
                         synchronized(this@DownloadForegroundService) {
                             if (firstNotificationId == null) {
@@ -238,7 +249,7 @@ class DownloadForegroundService : Service() {
                     Log.e("DOWNLOAD_NOTIFICATION_DEBUG", "Failed to increment download count in Firestore for docId=$docId: ${e.message}", e)
                 }
                 
-                if (isNotificationPreferenceEnabled()) {
+                if (isDownloadsNotificationEnabled()) {
                     val successNotification = buildSuccessNotification(document)
                     val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     try {
@@ -266,7 +277,7 @@ class DownloadForegroundService : Service() {
                 val finalState = if (isDownloadedLocally) DownloadState.Downloaded else DownloadState.NotDownloaded
                 DownloadTracker.updateState(docId, finalState)
 
-                if (isNotificationPreferenceEnabled()) {
+                if (isDownloadsNotificationEnabled()) {
                     val failureNotification = buildFailureNotification(document, e.localizedMessage ?: "Connection error")
                     val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     try {
