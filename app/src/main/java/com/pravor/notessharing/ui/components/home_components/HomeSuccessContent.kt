@@ -57,6 +57,7 @@ import androidx.compose.animation.core.LinearEasing
 fun HomeSuccessContent(
     content: HomeContent,
     myFilesUiState: MyFilesUiState,
+    uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
     unreadNotificationsCount: Int = 0,
@@ -203,10 +204,6 @@ fun HomeSuccessContent(
             }
 
             item(key = "study-hub-uploads", contentType = "study-hub-card") {
-                val uploadsCount = when (myFilesUiState) {
-                    is MyFilesUiState.Success -> myFilesUiState.content.uploadedFiles.size
-                    else -> 0
-                }
                 val uploadsText = "$uploadsCount study materials"
                 StudyHubCard(
                     title = "Uploads",
