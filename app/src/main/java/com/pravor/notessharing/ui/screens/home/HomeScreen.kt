@@ -116,6 +116,7 @@ fun HomeRoute(
     val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
     val bookmarkUiState by bookmarkViewModel.uiState.collectAsStateWithLifecycle()
     val activeDownloadsCount by com.pravor.notessharing.data.download.DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
+    val uploadsCount by viewModel.uploadsCount.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.refreshRecentlyOpened()
@@ -156,6 +157,7 @@ fun HomeRoute(
         isRefreshing = isRefreshing,
         onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
         myFilesUiState = myFilesUiState,
+        uploadsCount = uploadsCount,
         bookmarksCount = bookmarksCount,
         activeDownloadsCount = activeDownloadsCount,
         notifications = notifications,
@@ -185,6 +187,7 @@ fun HomeScreen(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     myFilesUiState: MyFilesUiState,
+    uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
     notifications: List<com.pravor.notessharing.model.Notification>,
@@ -298,6 +301,7 @@ fun HomeScreen(
                     is HomeUiState.Success -> HomeSuccessContent(
                         content = state.content,
                         myFilesUiState = myFilesUiState,
+                        uploadsCount = uploadsCount,
                         bookmarksCount = bookmarksCount,
                         activeDownloadsCount = activeDownloadsCount,
                         unreadNotificationsCount = unreadNotificationsCount,
@@ -889,6 +893,7 @@ private fun HomePreview() {
             myFilesUiState = MyFilesUiState.Success(
                 com.pravor.notessharing.state.MyFilesContent(emptyList(), DummyData.uploadedFiles)
             ),
+            uploadsCount = 12,
             bookmarksCount = 5,
             activeDownloadsCount = 0,
             notifications = emptyList(),

@@ -41,6 +41,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _uploadsCount = MutableStateFlow(0)
+    val uploadsCount: StateFlow<Int> = _uploadsCount.asStateFlow()
  
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
@@ -87,6 +90,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             lastReloadCause = "InitialLoad"
             profileJob?.cancel()
+            _uploadsCount.value = 0
             loadRealDocuments(null)
             notificationRepository.stopObserving()
         }
@@ -205,6 +209,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val changedFields = getChangedFields(previousProfile, profile)
                 android.util.Log.d("PERF", "[PERF] Changed fields=$changedFields")
                 previousProfile = profile
+                _uploadsCount.value = profile?.uploads ?: 0
 
                 val semester = profile?.semester
                 lastReloadCause = "ProfileUpdate"
