@@ -278,6 +278,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val caller = stackTrace.getOrNull(1)?.let { "${it.className}.${it.methodName}:${it.lineNumber}" } ?: "unknown"
         val stackSource = stackTrace.drop(1).take(5).joinToString(" -> ") { "${it.className}.${it.methodName}:${it.lineNumber}" }
 
+        if (isPullToRefresh) {
+            android.util.Log.d("PullToRefresh", "HomeViewModel refresh started")
+        }
+
         viewModelScope.launch {
             if (isPullToRefresh) {
                 _isRefreshing.value = true
@@ -309,7 +313,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     android.util.Log.d("PERF", "[PERF] Home reload reason=lastReloadCause=$lastReloadCause, forcedSemester=$semester, necessary=$isNecessary")
                     android.util.Log.d("PERF", "[PERF] Home reload stackSource=$stackSource")
 
-                    if (lastReloadCause == "NavigationReturn" && !isNecessary) {
+                    if (lastReloadCause == "NavigationReturn" && !isNecessary && !isPullToRefresh) {
                         android.util.Log.d("PERF", "[PERF] Home reload skipped reason=NavigationReturn unnecessary=true")
                         _uiState.update { current ->
                             if (current is HomeUiState.Success) {

@@ -22,10 +22,11 @@ data class VideoDetail(
     val thumbnailUrl: String? = null,
     val youtubeThumbnailUrl: String? = null,
     val youtubeResourceType: String = "video",
-    val youtubePlaylistId: String = ""
+    val youtubePlaylistId: String = "",
+    val collection: String = "videos"
 )
 
-fun Map<String, Any>.toVideoDetail(id: String): VideoDetail {
+fun Map<String, Any>.toVideoDetail(id: String, collection: String = "videos"): VideoDetail {
     val youtubeUrlStr = this["youtubeUrl"] as? String ?: ""
     val extractedId = extractYoutubeVideoId(youtubeUrlStr) ?: (this["youtubeVideoId"] as? String ?: "")
     val youtubeResourceType = this["youtubeResourceType"] as? String ?: "video"
@@ -54,6 +55,7 @@ fun Map<String, Any>.toVideoDetail(id: String): VideoDetail {
         thumbnailUrl = this["thumbnailUrl"] as? String,
         youtubeThumbnailUrl = this["youtubeThumbnailUrl"] as? String,
         youtubeResourceType = youtubeResourceType,
-        youtubePlaylistId = youtubePlaylistId
+        youtubePlaylistId = youtubePlaylistId,
+        collection = collection
     )
 }

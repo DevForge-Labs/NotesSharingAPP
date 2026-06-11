@@ -97,7 +97,10 @@ fun VideoDetailRoute(
         videoId = videoId,
         uiState = uiState,
         onBackClick = onBackClick,
-        onNavigateToVideoDetail = onNavigateToVideoDetail
+        onNavigateToVideoDetail = onNavigateToVideoDetail,
+        onPlayClick = { video ->
+            viewModel.incrementVideoViews(video.id, video.collection, "Video")
+        }
     )
 }
 
@@ -107,7 +110,8 @@ fun VideoDetailScreen(
     videoId: String,
     uiState: VideoDetailUiState,
     onBackClick: () -> Unit,
-    onNavigateToVideoDetail: (String) -> Unit
+    onNavigateToVideoDetail: (String) -> Unit,
+    onPlayClick: (VideoDetail) -> Unit
 ) {
     val context = LocalContext.current
     val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
@@ -242,7 +246,8 @@ fun VideoDetailScreen(
                             contributorLevel = state.contributorLevel,
                             relatedVideos = state.relatedVideos,
                             onNavigateToVideoDetail = onNavigateToVideoDetail,
-                            context = context
+                            context = context,
+                            onPlayClick = onPlayClick
                         )
                     }
                 }
@@ -286,7 +291,8 @@ private fun VideoDetailContent(
     contributorLevel: String,
     relatedVideos: List<VideoDetail>,
     onNavigateToVideoDetail: (String) -> Unit,
-    context: Context
+    context: Context,
+    onPlayClick: (VideoDetail) -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     LazyColumn(
@@ -304,7 +310,8 @@ private fun VideoDetailContent(
                 thumbnailUrl = video.thumbnailUrl,
                 youtubeThumbnailUrl = video.youtubeThumbnailUrl,
                 youtubeResourceType = video.youtubeResourceType,
-                youtubePlaylistId = video.youtubePlaylistId
+                youtubePlaylistId = video.youtubePlaylistId,
+                onPlayClick = { onPlayClick(video) }
             )
         }
 
@@ -377,7 +384,8 @@ fun YouTubeThumbnailPlayer(
     thumbnailUrl: String? = null,
     youtubeThumbnailUrl: String? = null,
     youtubeResourceType: String = "video",
-    youtubePlaylistId: String = ""
+    youtubePlaylistId: String = "",
+    onPlayClick: () -> Unit
 ) {
     val finalImageUrl = if (!thumbnailUrl.isNullOrBlank()) {
         thumbnailUrl
@@ -404,6 +412,7 @@ fun YouTubeThumbnailPlayer(
                 .clip(RoundedCornerShape(22.dp))
                 .background(Color.Black)
                 .clickable {
+                    onPlayClick()
                     launchYouTubeIntent(
                         resourceType = youtubeResourceType,
                         videoId = youtubeVideoId,

@@ -354,7 +354,19 @@ fun DocumentDetailScreen(
                             } else if (isImage) {
                                 onNavigateToImageViewer(state.document.id, url, state.document.title)
                             } else {
-                                Toast.makeText(context, "Preview not supported yet", Toast.LENGTH_SHORT).show()
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                    context.startActivity(intent)
+                                    scope.launch {
+                                        com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCountDirect(
+                                            state.document.id,
+                                            state.document.collection,
+                                            state.document.documentType
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No app available to open this link", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                         isArchived = state.isArchived

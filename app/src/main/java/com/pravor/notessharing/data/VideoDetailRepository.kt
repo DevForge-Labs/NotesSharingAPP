@@ -18,7 +18,7 @@ class VideoDetailRepository {
         android.util.Log.d("PERF", "[PERF] getVideo START id=$videoId thread=${Thread.currentThread().name}")
         return try {
             val collections = listOf("documents", "videos")
-            var foundData: Map<String, Any>? = null
+            var foundData: Pair<Map<String, Any>, String>? = null
             coroutineScope {
                 val deferreds = collections.map { col ->
                     async {
@@ -28,7 +28,7 @@ class VideoDetailRepository {
                             val snap = firestore.collection(col).document(videoId).get().await()
                             val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
                             android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col document=$videoId duration=${firestoreQueryDuration}ms exists=${snap.exists()} thread=${Thread.currentThread().name}")
-                            if (snap.exists()) snap.data else null
+                            if (snap.exists() && snap.data != null) Pair(snap.data!!, col) else null
                         } catch (e: Exception) {
                             null
                         }
@@ -37,7 +37,7 @@ class VideoDetailRepository {
                 foundData = deferreds.awaitAll().firstOrNull { it != null }
             }
             val result = if (foundData != null) {
-                foundData?.toVideoDetail(videoId)
+                foundData?.first?.toVideoDetail(videoId, foundData?.second ?: "videos")
             } else {
                 getDummyVideoDetail(videoId)
             }

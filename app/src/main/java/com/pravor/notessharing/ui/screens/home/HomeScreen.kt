@@ -376,6 +376,11 @@ fun HomeScreen(
                 onDismiss = { selectedUploadForViewer = null },
                 onFileClick = { url ->
                     try {
+                        if (viewerData.id.isNotEmpty()) {
+                            coroutineScope.launch {
+                                com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCount(viewerData.id)
+                            }
+                        }
                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                         context.startActivity(intent)
                     } catch (e: Exception) {
