@@ -19,11 +19,14 @@ sealed interface VideoDetailUiState {
     data class Error(val message: String) : VideoDetailUiState
 }
 
-class VideoDetailViewModel : ViewModel() {
-    private val repository = VideoDetailRepository()
+class VideoDetailViewModel(
+    private val repository: VideoDetailRepository = VideoDetailRepository(),
+    private val viewTrackingRepository: com.pravor.notessharing.data.ViewTrackingRepository = com.pravor.notessharing.data.ViewTrackingRepository()
+) : ViewModel() {
     
     private val _uiState = MutableStateFlow<VideoDetailUiState>(VideoDetailUiState.Loading)
     val uiState: StateFlow<VideoDetailUiState> = _uiState.asStateFlow()
+    private var hasIncremented = false
     
     fun loadVideoDetail(videoId: String) {
         viewModelScope.launch {
@@ -40,6 +43,14 @@ class VideoDetailViewModel : ViewModel() {
             } catch (e: Exception) {
                 _uiState.value = VideoDetailUiState.Error(e.message ?: "Failed to load video details")
             }
+        }
+    }
+
+    fun incrementVideoViews(videoId: String, collection: String, resourceType: String) {
+        if (hasIncremented) return
+        hasIncremented = true
+        viewModelScope.launch {
+            viewTrackingRepository.incrementViewCountDirect(videoId, collection, resourceType)
         }
     }
 }

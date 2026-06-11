@@ -68,7 +68,7 @@ class DocumentDetailRepository {
                 foundData = deferreds.awaitAll().firstOrNull { it != null }
             }
             val result = if (foundData != null) {
-                foundData?.first?.toDocumentDetail(documentId)
+                foundData?.first?.toDocumentDetail(documentId, foundData?.second ?: "notes")
             } else {
                 getDummyDocumentDetail(documentId)
             }

@@ -544,6 +544,7 @@ private fun SearchPreview() {
 }
 
 data class UploadViewerData(
+    val id: String = "",
     val title: String,
     val fileUrls: List<String>
 )

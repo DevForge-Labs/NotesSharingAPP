@@ -21,9 +21,12 @@ sealed interface PdfViewingUiState {
     data class Error(val message: String) : PdfViewingUiState
 }
 
-class PdfViewingViewModel : ViewModel() {
+class PdfViewingViewModel(
+    private val viewTrackingRepository: com.pravor.notessharing.data.ViewTrackingRepository = com.pravor.notessharing.data.ViewTrackingRepository()
+) : ViewModel() {
     private val _uiState = MutableStateFlow<PdfViewingUiState>(PdfViewingUiState.Loading)
     val uiState: StateFlow<PdfViewingUiState> = _uiState.asStateFlow()
+    private var hasIncremented = false
 
     fun loadPdf(context: Context, documentId: String, fileUrl: String) {
         android.util.Log.d("PDF_DEBUG", "loadPdf called")
@@ -136,6 +139,10 @@ class PdfViewingViewModel : ViewModel() {
     }
 
     private fun incrementViewsCount(documentId: String) {
-        // TODO: Analytics - Increment viewsCount when a PDF is successfully opened.
+        if (hasIncremented) return
+        hasIncremented = true
+        viewModelScope.launch {
+            viewTrackingRepository.incrementViewCount(documentId)
+        }
     }
 }

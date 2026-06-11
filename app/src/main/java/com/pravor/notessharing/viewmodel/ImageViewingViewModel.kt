@@ -21,9 +21,12 @@ sealed interface ImageViewingUiState {
     data class Error(val message: String) : ImageViewingUiState
 }
 
-class ImageViewingViewModel : ViewModel() {
+class ImageViewingViewModel(
+    private val viewTrackingRepository: com.pravor.notessharing.data.ViewTrackingRepository = com.pravor.notessharing.data.ViewTrackingRepository()
+) : ViewModel() {
     private val _uiState = MutableStateFlow<ImageViewingUiState>(ImageViewingUiState.Loading)
     val uiState: StateFlow<ImageViewingUiState> = _uiState.asStateFlow()
+    private var hasIncremented = false
 
     fun loadImage(context: Context, documentId: String, imageUrl: String) {
         _uiState.value = ImageViewingUiState.Loading
@@ -36,6 +39,7 @@ class ImageViewingViewModel : ViewModel() {
                     val localFile = File(localPath)
                     if (localFile.exists() && localFile.length() > 0) {
                         _uiState.value = ImageViewingUiState.Success(localFile)
+                        incrementViewsCount(documentId)
                         return@launch
                     } else {
                         db.removeDownload(documentId)
@@ -48,6 +52,7 @@ class ImageViewingViewModel : ViewModel() {
                 val imageFile = getCachedImageFile(context, documentId, imageUrl)
                 if (imageFile.exists() && imageFile.length() > 0) {
                     _uiState.value = ImageViewingUiState.Success(imageFile)
+                    incrementViewsCount(documentId)
                 } else {
                     downloadImageAndCache(context, documentId, imageUrl, imageFile)
                 }
@@ -98,10 +103,12 @@ class ImageViewingViewModel : ViewModel() {
 
                     if (tmpFile.renameTo(targetFile)) {
                         _uiState.value = ImageViewingUiState.Success(targetFile)
+                        incrementViewsCount(documentId)
                     } else {
                         tmpFile.copyTo(targetFile, overwrite = true)
                         tmpFile.delete()
                         _uiState.value = ImageViewingUiState.Success(targetFile)
+                        incrementViewsCount(documentId)
                     }
                 } else {
                     _uiState.value = ImageViewingUiState.Error("Server returned code ${connection.responseCode}")
@@ -109,6 +116,14 @@ class ImageViewingViewModel : ViewModel() {
             } catch (e: Exception) {
                 _uiState.value = ImageViewingUiState.Error("Download failed: ${e.localizedMessage}")
             }
+        }
+    }
+
+    private fun incrementViewsCount(documentId: String) {
+        if (hasIncremented) return
+        hasIncremented = true
+        viewModelScope.launch {
+            viewTrackingRepository.incrementViewCount(documentId)
         }
     }
 }
