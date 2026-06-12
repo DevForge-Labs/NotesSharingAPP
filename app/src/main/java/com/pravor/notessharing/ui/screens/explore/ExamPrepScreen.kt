@@ -26,6 +26,7 @@ fun ExamPrepRoute(
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val detailRepository = remember { DocumentDetailRepository() }
 
     var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
@@ -42,6 +43,8 @@ fun ExamPrepRoute(
 
     ExamPrepScreen(
         uiState = uiState,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
         detailRepository = detailRepository,
         onBackClick = onBackClick,
         onDocumentClick = onDocumentClick,
@@ -82,6 +85,8 @@ fun ExamPrepRoute(
 @Composable
 fun ExamPrepScreen(
     uiState: ExploreUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     detailRepository: DocumentDetailRepository,
     onBackClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
@@ -126,7 +131,9 @@ fun ExamPrepScreen(
 
             ExploreExpandedListScaffold(
                 title = "Exam Prep",
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh
             ) {
                 item(key = "exam-prep-filters", contentType = "filters") {
                     Row(

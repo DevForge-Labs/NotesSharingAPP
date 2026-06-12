@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import com.pravor.notessharing.ui.components.CustomPullRefreshIndicator
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -285,15 +288,38 @@ fun HomeScreen(
     }
  
     val pullToRefreshState = rememberPullToRefreshState()
+    val pullProgress = if (isRefreshing) 1f else pullToRefreshState.distanceFraction.coerceIn(0f, 1f)
+    val blurRadius = (pullProgress * 2).dp
+    val dimAlpha = pullProgress * 0.08f
  
     Box(modifier = modifier.fillMaxSize()) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
             state = pullToRefreshState,
+            indicator = {
+                CustomPullRefreshIndicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    restingOffset = 112.dp,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            },
             modifier = Modifier.fillMaxSize()
         ) {
-            Crossfade(targetState = stateKey, label = "home-state", modifier = Modifier.fillMaxSize()) {
+            Crossfade(
+                targetState = stateKey,
+                label = "home-state",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(blurRadius)
+                    .drawWithContent {
+                        drawContent()
+                        if (dimAlpha > 0f) {
+                            drawRect(Color.Black.copy(alpha = dimAlpha))
+                        }
+                    }
+            ) {
                 when (val state = uiState) {
                     HomeUiState.Loading -> KnowledgeNetworkLoading()
                     HomeUiState.Empty -> StatePanel("No notes yet", "Saved study resources will appear here", modifier = Modifier.padding(top = 96.dp))
@@ -342,28 +368,6 @@ fun HomeScreen(
                             }
                         },
                         listState = feedListState
-                    )
-                }
-            }
-
-            // Helper text overlay when user pulls down
-            androidx.compose.animation.AnimatedVisibility(
-                visible = pullToRefreshState.distanceFraction > 0.1f && !isRefreshing,
-                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
-                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp)
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    tonalElevation = 4.dp
-                ) {
-                    Text(
-                        text = "Pull down to refresh feed",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontWeight = FontWeight.Medium
                     )
                 }
             }

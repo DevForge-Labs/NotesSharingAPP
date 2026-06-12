@@ -20,8 +20,11 @@ fun DiscoverRoute(
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     DiscoverScreen(
         uiState = uiState,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
         onBackClick = onBackClick,
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick
@@ -31,6 +34,8 @@ fun DiscoverRoute(
 @Composable
 fun DiscoverScreen(
     uiState: ExploreUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onBackClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit
@@ -41,7 +46,9 @@ fun DiscoverScreen(
         is ExploreUiState.Error -> StatePanel("Explore failed", uiState.message)
         is ExploreUiState.Success -> ExploreExpandedListScaffold(
             title = "Discover",
-            onBackClick = onBackClick
+            onBackClick = onBackClick,
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh
         ) {
             itemsIndexed(
                 items = uiState.content.discoverItems,
