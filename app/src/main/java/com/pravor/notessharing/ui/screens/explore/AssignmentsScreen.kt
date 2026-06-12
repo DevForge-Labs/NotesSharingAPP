@@ -26,6 +26,7 @@ fun AssignmentsRoute(
     viewModel: ExploreViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val detailRepository = remember { DocumentDetailRepository() }
 
     var pendingRemoveBookmarkNote by remember { mutableStateOf<TrendingNote?>(null) }
@@ -42,6 +43,8 @@ fun AssignmentsRoute(
 
     AssignmentsScreen(
         uiState = uiState,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
         detailRepository = detailRepository,
         onBackClick = onBackClick,
         onDocumentClick = onDocumentClick,
@@ -82,6 +85,8 @@ fun AssignmentsRoute(
 @Composable
 fun AssignmentsScreen(
     uiState: ExploreUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     detailRepository: DocumentDetailRepository,
     onBackClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
@@ -120,7 +125,9 @@ fun AssignmentsScreen(
 
             ExploreExpandedListScaffold(
                 title = "Assignments",
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh
             ) {
                 item(key = "assignments-filters", contentType = "filters") {
                     Row(
