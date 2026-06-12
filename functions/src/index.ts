@@ -14,6 +14,7 @@ setGlobalOptions({
 // 3. Export Firestore triggers
 export * from "./firestoreTriggers.js";
 export * from "./upvote.js";
+export * from "./trending.js";
 export { sendTestNotification } from "./notificationService.js";
 
 // 4. Preserve existing test function

@@ -25,7 +25,8 @@ data class TrendingNote(
     val examType: String? = null,
     val semester: String = "",
     val isUpvoted: Boolean = false,
-    val branch: String = ""
+    val branch: String = "",
+    val trendingScore: Double = 0.0
 )
 
 @Immutable

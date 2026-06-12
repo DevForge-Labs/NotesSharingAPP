@@ -53,6 +53,7 @@ class ExploreCacheRepository(context: Context) {
                     put("type", it.type ?: "")
                     put("examYear", it.examYear ?: "")
                     put("examType", it.examType ?: "")
+                    put("trendingScore", it.trendingScore)
                 })
             }
             json.put("trendingNotes", trendingArray)
@@ -185,7 +186,8 @@ class ExploreCacheRepository(context: Context) {
                         type = obj.optString("type").ifBlank { null },
                         examYear = obj.optString("examYear").ifBlank { null },
                         examType = obj.optString("examType").ifBlank { null },
-                        semester = obj.optString("semester", "")
+                        semester = obj.optString("semester", ""),
+                        trendingScore = obj.optDouble("trendingScore", 0.0)
                     ))
                 }
             }

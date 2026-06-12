@@ -286,9 +286,13 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         }
                     }
                     deferreds.awaitAll().flatten()
-                }.sortedByDescending { doc ->
-                    doc.getLong("uploadedAt") ?: 0L
-                }
+                }.sortedWith(
+                    compareByDescending<com.google.firebase.firestore.DocumentSnapshot> { doc ->
+                        (doc.data?.get("trendingScore") as? Number)?.toDouble() ?: 0.0
+                    }.thenByDescending { doc ->
+                        doc.getLong("uploadedAt") ?: 0L
+                    }
+                )
 
                 val realFeed = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
@@ -328,7 +332,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
                     val subject = data["subject"] as? String ?: ""
-                    val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
+                    val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
                     val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
                     val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
                         ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
@@ -341,6 +345,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
                     val resolvedIsUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
                     val resolvedUpvotes = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value[id] ?: upvotes
+                    val trendingScore = (data["trendingScore"] as? Number)?.toDouble() ?: 0.0
 
                     com.pravor.notessharing.model.TrendingNote(
                         id = id,
@@ -357,7 +362,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         type = typeField,
                         examYear = examYearVal,
                         isUpvoted = resolvedIsUpvoted,
-                        branch = branchVal
+                        branch = branchVal,
+                        trendingScore = trendingScore
                     )
                 }
 
@@ -423,7 +429,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
                     val subject = data["subject"] as? String ?: ""
-                    val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
+                    val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
                     DiscoverFeedItem.Note(
                         id = id,
                         title = title,
@@ -518,7 +524,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         
         val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
-        val downloadsCount = (doc["downloadsCount"] as? Long ?: (doc["downloads"] as? Long ?: 0L)).toInt()
+        val downloadsCount = (doc["downloadsCount"] as? Long ?: 0L).toInt()
         val bookmarks = (doc["bookmarks"] as? Long ?: 0L).toInt()
 
         val youtubeUrl = doc["youtubeUrl"] as? String
