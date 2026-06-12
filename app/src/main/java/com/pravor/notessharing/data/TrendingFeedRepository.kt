@@ -119,6 +119,7 @@ class TrendingFeedRepository(private val context: Context) {
             put("semester", note.semester)
             put("examYear", note.examYear ?: "")
             put("examType", note.examType ?: "")
+            put("trendingScore", note.trendingScore)
         }
     }
 
@@ -143,7 +144,8 @@ class TrendingFeedRepository(private val context: Context) {
             bookmarks = obj.optInt("bookmarks", 0),
             semester = obj.optString("semester", ""),
             examYear = obj.optString("examYear").ifBlank { null },
-            examType = obj.optString("examType").ifBlank { null }
+            examType = obj.optString("examType").ifBlank { null },
+            trendingScore = obj.optDouble("trendingScore", 0.0)
         )
     }
 
@@ -225,7 +227,8 @@ class TrendingFeedRepository(private val context: Context) {
                     if (isCollectionEnd[col] == true) return@async Pair(emptyList<DocumentSnapshot>(), null)
                     try {
                         var query = firestore.collection(col)
-                            .orderBy("upvotes", Query.Direction.DESCENDING)
+                            .orderBy("trendingScore", Query.Direction.DESCENDING)
+                            .orderBy("uploadedAt", Query.Direction.DESCENDING)
                             .limit(PAGE_SIZE.toLong())
 
                         val lastSnap = lastSnapshots[col]
@@ -277,10 +280,14 @@ class TrendingFeedRepository(private val context: Context) {
         android.util.Log.d("PERF", "[PERF] Trending stage=FetchCandidates duration=${candidatesDuration}ms")
 
         val sortingStartTime = System.currentTimeMillis()
-        // Sort all candidates by upvotes descending
-        allCandidates.sortByDescending { (doc, _) ->
-            doc.getLong("upvotes") ?: 0L
-        }
+        // Sort all candidates by trendingScore descending, then by uploadedAt descending
+        allCandidates.sortWith(
+            compareByDescending<Pair<DocumentSnapshot, String>> { (doc, _) ->
+                (doc.data?.get("trendingScore") as? Number)?.toDouble() ?: 0.0
+            }.thenByDescending { (doc, _) ->
+                doc.getLong("uploadedAt") ?: 0L
+            }
+        )
 
         // Take the top PAGE_SIZE (10)
         val selected = allCandidates.take(PAGE_SIZE)
@@ -342,7 +349,7 @@ class TrendingFeedRepository(private val context: Context) {
             val id = doc.id
             val title = data["title"] as? String ?: "Untitled Document"
             val subject = data["subject"] as? String ?: "General"
-            val downloadsCount = (data["downloadsCount"] as? Long ?: data["downloads"] as? Long ?: 0L).toInt()
+            val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
             val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
             val thumbnailUrl = data["thumbnailUrl"] as? String
             val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
@@ -358,6 +365,7 @@ class TrendingFeedRepository(private val context: Context) {
             val semester = data["semester"] as? String ?: ""
             val examYear = (data["examYear"] ?: data["year"])?.toString()
             val examType = data["examType"]?.toString()
+            val trendingScore = (data["trendingScore"] as? Number)?.toDouble() ?: 0.0
 
             val contributorLevel = if (uploaderId.isNotEmpty()) {
                 if (uploaderId == "dummy-uid") {
@@ -389,7 +397,8 @@ class TrendingFeedRepository(private val context: Context) {
                 bookmarks = bookmarks,
                 semester = semester,
                 examYear = examYear,
-                examType = examType
+                examType = examType,
+                trendingScore = trendingScore
             )
         }
         val mappingTotalDuration = System.currentTimeMillis() - mappingStartTime
