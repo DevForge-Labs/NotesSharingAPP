@@ -36,7 +36,11 @@ class VideoDetailViewModel(
                 if (video != null) {
                     val contributorLevel = repository.getUploaderContributorLevel(video.uploaderId) ?: "Bronze Contributor"
                     val related = repository.getRelatedVideos(video)
-                    _uiState.value = VideoDetailUiState.Success(video, contributorLevel, related)
+                    android.util.Log.d("REC_TRACE", "[VIDEO_VM] 6. Received by ViewModel count=${related.size}")
+                    
+                    val uiStateToSet = VideoDetailUiState.Success(video, contributorLevel, related)
+                    android.util.Log.d("REC_TRACE", "[VIDEO_VM] 7. Exposed through UI State success count=${uiStateToSet.relatedVideos.size}")
+                    _uiState.value = uiStateToSet
                 } else {
                     _uiState.value = VideoDetailUiState.Error("Video not found in repository")
                 }

@@ -10,6 +10,7 @@ data class UpdatePageModel(
         CONVERGING_RESOURCES,
         STAGGERED_CARDS,
         RIPPLE_COMMUNITY,
+        WHY_USE_APP,
         WELCOME_INSPIRING
     }
 }

@@ -16,6 +16,8 @@ import com.pravor.notessharing.model.toDocumentDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -39,50 +41,219 @@ sealed interface DownloadState {
 class DocumentDetailViewModel(
     private val repository: DocumentDetailRepository = DocumentDetailRepository()
 ) : ViewModel() {
+    private var loadedDocumentId: String? = null
+
     private val _uiState = MutableStateFlow<DocumentDetailUiState>(DocumentDetailUiState.Loading)
     val uiState: StateFlow<DocumentDetailUiState> = _uiState.asStateFlow()
 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.NotDownloaded)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
+    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
+    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
+    private val auth = FirebaseAuth.getInstance()
+
     init {
         android.util.Log.d("DETAILS_DEBUG", "DetailsViewModel Created")
-    }
 
-    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
-    private val auth = FirebaseAuth.getInstance()
+        viewModelScope.launch {
+            val currentUid = auth.currentUser?.uid
+            if (currentUid != null) {
+                bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
+                upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
+            }
+        }
+
+        viewModelScope.launch {
+            com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
+                val bookmarkedIds = bookmarks.map { it.id }.toSet()
+                _uiState.update { current ->
+                    if (current is DocumentDetailUiState.Success) {
+                        val updatedDoc = current.document.copy(
+                            isBookmarked = bookmarkedIds.contains(current.document.id)
+                        )
+                        val updatedRelated = current.relatedDocuments.map { doc ->
+                            doc.copy(isBookmarked = bookmarkedIds.contains(doc.id))
+                        }
+                        current.copy(
+                            document = updatedDoc,
+                            relatedDocuments = updatedRelated
+                        )
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            combine(
+                com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
+                com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+            ) { upvotesMap, upvoteCountsMap ->
+                Pair(upvotesMap, upvoteCountsMap)
+            }.collect { (upvotesMap, upvoteCountsMap) ->
+                _uiState.update { current ->
+                    if (current is DocumentDetailUiState.Success) {
+                        val mainId = current.document.id
+                        val mainIsUpvoted = upvotesMap[mainId] ?: false
+                        val mainUpvotesCount = upvoteCountsMap[mainId] ?: current.document.upvotes
+                        
+                        val updatedDoc = current.document.copy(
+                            isUpvoted = mainIsUpvoted,
+                            upvotes = mainUpvotesCount
+                        )
+                        val updatedRelated = current.relatedDocuments.map { doc ->
+                            val rId = doc.id
+                            val rIsUpvoted = upvotesMap[rId] ?: false
+                            val rUpvotesCount = upvoteCountsMap[rId] ?: doc.upvotes
+                            doc.copy(
+                                isUpvoted = rIsUpvoted,
+                                upvotes = rUpvotesCount
+                            )
+                        }
+                        current.copy(
+                            document = updatedDoc,
+                            relatedDocuments = updatedRelated
+                        )
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
+                _uiState.update { current ->
+                    if (current is DocumentDetailUiState.Success) {
+                        val mainId = current.document.id
+                        val mainDownloads = downloadCountsMap[mainId] ?: current.document.downloadsCount
+                        
+                        val updatedDoc = current.document.copy(
+                            downloadsCount = mainDownloads
+                        )
+                        val updatedRelated = current.relatedDocuments.map { doc ->
+                            val rId = doc.id
+                            val rDownloads = downloadCountsMap[rId] ?: doc.downloadsCount
+                            doc.copy(downloadsCount = rDownloads)
+                        }
+                        current.copy(
+                            document = updatedDoc,
+                            relatedDocuments = updatedRelated
+                        )
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+    }
 
     fun toggleUpvote(itemId: String) {
         val currentUid = auth.currentUser?.uid ?: return
-        val doc = (_uiState.value as? DocumentDetailUiState.Success)?.document ?: return
-        val col = upvoteRepository.getCollectionForDocType(doc.documentType)
+        val successState = (_uiState.value as? DocumentDetailUiState.Success) ?: return
+        
+        val (col, currentUpvotes) = if (successState.document.id == itemId) {
+            val type = successState.document.documentType
+            val col = upvoteRepository.getCollectionForDocType(type)
+            Pair(col, successState.document.upvotes)
+        } else {
+            val relatedDoc = successState.relatedDocuments.find { it.id == itemId } ?: return
+            val type = relatedDoc.documentType
+            val col = upvoteRepository.getCollectionForDocType(type)
+            Pair(col, relatedDoc.upvotes)
+        }
 
         viewModelScope.launch {
             upvoteRepository.toggleUpvote(
                 documentId = itemId,
                 collectionName = col,
-                currentUpvotes = doc.upvotes,
+                currentUpvotes = currentUpvotes,
                 userId = currentUid
             )
         }
     }
 
-    fun observeUpvotes(docId: String, docType: String) {
+    fun toggleBookmark(itemId: String) {
+        val currentUid = auth.currentUser?.uid ?: return
+        val successState = (_uiState.value as? DocumentDetailUiState.Success) ?: return
+        
+        val doc = if (successState.document.id == itemId) {
+            successState.document
+        } else {
+            successState.relatedDocuments.find { it.id == itemId } ?: return
+        }
+
+        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == itemId }
+
+        viewModelScope.launch {
+            if (wasBookmarked) {
+                bookmarkRepository.removeBookmark(itemId, currentUid)
+            } else {
+                val docType = doc.documentType.ifBlank { "Notes" }
+                val fileType = when (docType.lowercase(java.util.Locale.US)) {
+                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
+                    "cheat sheet" -> com.pravor.notessharing.model.FileType.CheatSheet
+                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
+                    "video" -> com.pravor.notessharing.model.FileType.Video
+                    else -> com.pravor.notessharing.model.FileType.Pdf
+                }
+                val studyFile = com.pravor.notessharing.model.StudyFile(
+                    id = doc.id,
+                    title = doc.title,
+                    uploadDate = "Saved",
+                    fileType = fileType,
+                    downloadsCount = doc.downloadsCount,
+                    upvotes = doc.upvotes,
+                    thumbnailUrl = doc.thumbnailUrl,
+                    subject = doc.subject,
+                    documentType = docType
+                )
+                bookmarkRepository.addBookmark(studyFile, currentUid)
+            }
+        }
+    }
+
+    private fun DocumentDetail.withLiveMetadata(): DocumentDetail {
+        val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+        val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+        val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
+
+        return this.copy(
+            isBookmarked = bookmarkedIds.contains(this.id),
+            isUpvoted = upvotesMap[this.id] == true,
+            upvotes = upvoteCountsMap[this.id] ?: this.upvotes,
+            downloadsCount = downloadCountsMap[this.id] ?: this.downloadsCount
+        )
+    }
+
+    fun observeUpvotes(docId: String, docType: String, relatedDocuments: List<DocumentDetail> = emptyList()) {
         val currentUid = auth.currentUser?.uid
         viewModelScope.launch {
             if (currentUid != null) {
                 upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
             }
-            val col = upvoteRepository.getCollectionForDocType(docType)
-            upvoteRepository.observeVisibleDocuments("DetailsScreen", listOf(docId to col))
+            val mainCol = upvoteRepository.getCollectionForDocType(docType)
+            val targets = mutableListOf(docId to mainCol)
+            for (doc in relatedDocuments) {
+                val col = upvoteRepository.getCollectionForDocType(doc.documentType)
+                targets.add(doc.id to col)
+            }
+            upvoteRepository.observeVisibleDocuments("DetailsScreen_$docId", targets)
         }
     }
 
     fun clearUpvotesObservation() {
-        upvoteRepository.observeVisibleDocuments("DetailsScreen", emptyList())
+        val docId = loadedDocumentId
+        if (docId != null) {
+            upvoteRepository.observeVisibleDocuments("DetailsScreen_$docId", emptyList())
+        }
     }
 
     fun loadDocumentDetail(documentId: String, context: Context) {
+        loadedDocumentId = documentId
         val currentState = _uiState.value
         if (currentState is DocumentDetailUiState.Success && currentState.document.id == documentId) {
             android.util.Log.d("DETAILS_DEBUG", "loadDocumentDetail: Already loaded, skipping fetch")
@@ -123,13 +294,17 @@ class DocumentDetailViewModel(
                         if (docDetail != null) {
                             val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
                             val relatedDocs = repository.getRelatedDocuments(docDetail)
-                            observeUpvotes(docDetail.id, docDetail.documentType)
-                            _uiState.value = DocumentDetailUiState.Success(
-                                document = docDetail,
+                            android.util.Log.d("REC_TRACE", "[DOC_VM] 6. Received by ViewModel (cached flow) count=${relatedDocs.size}")
+                            observeUpvotes(docDetail.id, docDetail.documentType, relatedDocs)
+                            
+                            val uiStateToSet = DocumentDetailUiState.Success(
+                                document = docDetail.withLiveMetadata(),
                                 contributorLevel = contributorLevel,
-                                relatedDocuments = relatedDocs,
+                                relatedDocuments = relatedDocs.map { it.withLiveMetadata() },
                                 isArchived = false
                             )
+                            android.util.Log.d("REC_TRACE", "[DOC_VM] 7. Exposed through UI State success (cached flow) count=${uiStateToSet.relatedDocuments.size}")
+                            _uiState.value = uiStateToSet
                             return@launch
                         } else {
                             // Document missing from Firestore, but local file exists! Resolve from local DataStore metadata
@@ -160,7 +335,7 @@ class DocumentDetailViewModel(
                                     thumbnailUrls = if (!localDoc.localThumbnailPath.isNullOrBlank()) listOf(localDoc.localThumbnailPath) else emptyList()
                                 )
                                 _uiState.value = DocumentDetailUiState.Success(
-                                    document = archivedDocDetail,
+                                    document = archivedDocDetail.withLiveMetadata(),
                                     contributorLevel = localDoc.uploaderContributorLevel,
                                     relatedDocuments = emptyList(),
                                     isArchived = true
@@ -184,13 +359,17 @@ class DocumentDetailViewModel(
                 if (docDetail != null) {
                     val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
                     val relatedDocs = repository.getRelatedDocuments(docDetail)
-                    observeUpvotes(docDetail.id, docDetail.documentType)
-                    _uiState.value = DocumentDetailUiState.Success(
-                        document = docDetail,
+                    android.util.Log.d("REC_TRACE", "[DOC_VM] 6. Received by ViewModel count=${relatedDocs.size}")
+                    observeUpvotes(docDetail.id, docDetail.documentType, relatedDocs)
+                    
+                    val uiStateToSet = DocumentDetailUiState.Success(
+                        document = docDetail.withLiveMetadata(),
                         contributorLevel = contributorLevel,
-                        relatedDocuments = relatedDocs,
+                        relatedDocuments = relatedDocs.map { it.withLiveMetadata() },
                         isArchived = false
                     )
+                    android.util.Log.d("REC_TRACE", "[DOC_VM] 7. Exposed through UI State success count=${uiStateToSet.relatedDocuments.size}")
+                    _uiState.value = uiStateToSet
                 } else {
                     _uiState.value = DocumentDetailUiState.Error("Document details not found.")
                 }
@@ -231,7 +410,7 @@ class DocumentDetailViewModel(
         if (targetCol != null && snapshot != null) {
             val data = snapshot.data
             if (data != null) {
-                return data.toDocumentDetail(documentId)
+                return data.toDocumentDetail(documentId, targetCol)
             }
         }
         return repository.getDocument(documentId)

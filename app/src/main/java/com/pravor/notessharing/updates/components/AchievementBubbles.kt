@@ -29,26 +29,26 @@ fun LearnerNode(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, iconColor.copy(alpha = 0.3f)),
-        shadowElevation = 3.dp
+        border = BorderStroke(1.dp, iconColor.copy(alpha = 0.4f)),
+        shadowElevation = 4.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(12.dp)
+                modifier = Modifier.size(16.dp)
             )
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )

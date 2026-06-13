@@ -35,7 +35,9 @@ data class DocumentDetail(
     val section: String? = null,
     val sectionDisplay: String? = null,
     val youtubeThumbnailUrl: String? = null,
-    val collection: String = "notes"
+    val collection: String = "notes",
+    val isUpvoted: Boolean = false,
+    val isBookmarked: Boolean = false
 ) {
     fun toFeedItem(): FeedItem {
         val initials = if (uploaderName.isNotBlank()) {

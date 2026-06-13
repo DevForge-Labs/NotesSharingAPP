@@ -24,8 +24,14 @@ object OnboardingPages {
         ),
         UpdatePageModel(
             pageIndex = 3,
-            headline = "Learn. Share. Grow.",
-            supportingText = "Join a community where students help students succeed.",
+            headline = "Why Students Use Notes Sharing",
+            supportingText = "Unlock the power of shared knowledge to speed up your learning and help others.",
+            layoutType = UpdatePageModel.LayoutType.WHY_USE_APP
+        ),
+        UpdatePageModel(
+            pageIndex = 4,
+            headline = "Learn. Share. Help Others.",
+            supportingText = "Join a growing academic community of students supporting fellow students.",
             layoutType = UpdatePageModel.LayoutType.WELCOME_INSPIRING
         )
     )
