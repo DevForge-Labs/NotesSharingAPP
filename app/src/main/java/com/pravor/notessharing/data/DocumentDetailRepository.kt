@@ -3,7 +3,8 @@ package com.pravor.notessharing.data
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.model.toDocumentDetail
-import com.pravor.notessharing.viewmodel.DummyData
+import com.pravor.notessharing.data.ExploreRankingUtils
+import com.pravor.notessharing.ui.components.utils.normalizeSubject
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -70,16 +71,15 @@ class DocumentDetailRepository {
             val result = if (foundData != null) {
                 foundData?.first?.toDocumentDetail(documentId, foundData?.second ?: "notes")
             } else {
-                getDummyDocumentDetail(documentId)
+                null
             }
             val duration = System.currentTimeMillis() - startTime
             android.util.Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
             result
         } catch (e: Exception) {
-            val result = getDummyDocumentDetail(documentId)
             val duration = System.currentTimeMillis() - startTime
             android.util.Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
-            result
+            null
         }
     }
 
@@ -96,7 +96,7 @@ class DocumentDetailRepository {
             
             val fromCache = snapshot.metadata.isFromCache
             UserFetchDiagnostics.recordFetch(uploaderId, fromCache)
-
+ 
             if (snapshot.exists()) {
                 val level = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 getContributorLevelName(level)
@@ -110,53 +110,111 @@ class DocumentDetailRepository {
         }
     }
 
-    suspend fun getRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> {
+    private fun isVideoResource(data: Map<String, Any>): Boolean {
+        val docType = (data["documentType"] as? String ?: data["type"] as? String ?: "").trim()
+        val contentType = (data["contentType"] as? String ?: "").trim()
+        val hasYoutubeLink = (data["hasYoutubeLink"] as? Boolean) == true || (data["hasYoutubeLink"] as? String)?.lowercase() == "true"
+        val sourceType = (data["sourceType"] as? String ?: "").trim()
+        val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
+        val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
+        val resourceType = (data["resourceType"] as? String ?: "").trim()
+        val source = (data["source"] as? String ?: "").trim()
+
+        return docType.equals("VIDEO", ignoreCase = true) ||
+                docType.equals("YouTube Resource", ignoreCase = true) ||
+                docType.equals("Videos", ignoreCase = true) ||
+                contentType.equals("VIDEO", ignoreCase = true) ||
+                hasYoutubeLink ||
+                sourceType.equals("youtube", ignoreCase = true) ||
+                sourceType.equals("video", ignoreCase = true) ||
+                youtubeUrl.isNotBlank() ||
+                youtubeVideoId.isNotBlank() ||
+                resourceType.equals("VIDEO", ignoreCase = true) ||
+                source.equals("YOUTUBE", ignoreCase = true)
+    }
+
+    suspend fun getRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> = coroutineScope {
         val startTime = System.currentTimeMillis()
         android.util.Log.d("PERF", "[PERF] getRelatedDocuments START id=${doc.id} thread=${Thread.currentThread().name}")
-        return try {
-            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
-            val allRelatedDocs = coroutineScope {
-                val deferreds = collections.map { col ->
-                    async {
-                        try {
-                            val firestoreQueryStartTime = System.currentTimeMillis()
-                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
-                            val snapshot = firestore.collection(col)
-                                .whereEqualTo("semester", doc.semester)
-                                .whereEqualTo("subject", doc.subject)
-                                .whereEqualTo("documentType", doc.documentType)
-                                .limit(4)
-                                .get()
-                                .await()
-                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${snapshot.size()} thread=${Thread.currentThread().name}")
-                            snapshot.documents
-                        } catch (e: Exception) {
-                            emptyList()
-                        }
-                    }
+        
+        val col = doc.collection
+        if (col.isBlank()) {
+            android.util.Log.e("RECOMMENDATIONS", "getRelatedDocuments: collection is blank for docId=${doc.id}. Returning empty recommendations.")
+            android.util.Log.d("REC_TRACE", "[DOC] 1. Candidates fetched: 0 (collection is blank)")
+            android.util.Log.d("REC_TRACE", "[DOC] 2. Count after type filtering: 0")
+            android.util.Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion: 0")
+            android.util.Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=0, otherSubjects=0")
+            android.util.Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=0")
+            return@coroutineScope emptyList()
+        }
+        
+        try {
+            val firestoreQueryStartTime = System.currentTimeMillis()
+            val querySnapshot = firestore.collection(col)
+                .get()
+                .await()
+            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+            android.util.Log.d("FIRESTORE", "[FIRESTORE] getRelatedDocuments single query collection=$col duration=${firestoreQueryDuration}ms docs=${querySnapshot.documents.size}")
+            
+            val candidates = querySnapshot.documents
+                .sortedWith(ExploreRankingUtils.documentSnapshotComparator)
+                .take(100)
+            android.util.Log.d("REC_TRACE", "[DOC] 1. Candidates fetched from collection=$col count=${candidates.size}")
+            
+            val currentNormalizedSubject = normalizeSubject(doc.subject)
+            
+            val sameSubjectPairs = mutableListOf<Pair<com.google.firebase.firestore.DocumentSnapshot, DocumentDetail>>()
+            val otherSubjectPairs = mutableListOf<Pair<com.google.firebase.firestore.DocumentSnapshot, DocumentDetail>>()
+            
+            var afterTypeFilter = 0
+            var afterCurrentItemExclusion = 0
+            
+            for (d in candidates) {
+                val data = d.data ?: continue
+                
+                // Type filter (excludes video resources)
+                if (isVideoResource(data)) continue
+                afterTypeFilter++
+                
+                // Current item exclusion
+                if (d.id == doc.id) continue
+                afterCurrentItemExclusion++
+                
+                val mappedDoc = data.toDocumentDetail(d.id, col)
+                val candidateNormalizedSubject = normalizeSubject(mappedDoc.subject)
+                
+                if (candidateNormalizedSubject == currentNormalizedSubject) {
+                    sameSubjectPairs.add(d to mappedDoc)
+                } else {
+                    otherSubjectPairs.add(d to mappedDoc)
                 }
-                deferreds.awaitAll().flatten()
             }
-
-            val firestoreRelated = allRelatedDocs.mapNotNull { d ->
-                if (d.id == doc.id) null
-                else d.data?.toDocumentDetail(d.id)
-            }.distinctBy { it.id }.take(3)
-
-            val result = if (firestoreRelated.isNotEmpty()) {
-                firestoreRelated
-            } else {
-                getDummyRelatedDocuments(doc)
+            
+            android.util.Log.d("REC_TRACE", "[DOC] 2. Count after type filtering (non-videos only) count=$afterTypeFilter")
+            android.util.Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion count=$afterCurrentItemExclusion")
+            android.util.Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=${sameSubjectPairs.size}, otherSubjects=${otherSubjectPairs.size}")
+            
+            val pairComparator = Comparator<Pair<com.google.firebase.firestore.DocumentSnapshot, DocumentDetail>> { p1, p2 ->
+                ExploreRankingUtils.documentSnapshotComparator.compare(p1.first, p2.first)
             }
+            
+            val sortedSame = ExploreRankingUtils.sortWithTieBreak(sameSubjectPairs, pairComparator).map { it.second }
+            val sortedOther = ExploreRankingUtils.sortWithTieBreak(otherSubjectPairs, pairComparator).map { it.second }
+            
+            val combined = (sortedSame + sortedOther)
+                .distinctBy { it.id }
+                .take(5)
+            
             val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${result.size} thread=${Thread.currentThread().name}")
-            result
+            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${combined.size}")
+            android.util.Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=${combined.size} items=${combined.map { it.id }}")
+            combined
         } catch (e: Exception) {
-            val result = getDummyRelatedDocuments(doc)
+            e.printStackTrace()
             val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${result.size} thread=${Thread.currentThread().name}")
-            result
+            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms error")
+            android.util.Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=0 due to exception: ${e.message}")
+            emptyList()
         }
     }
 
@@ -168,110 +226,5 @@ class DocumentDetailRepository {
             4 -> "Platinum Contributor"
             else -> "Mythic Contributor"
         }
-    }
-
-    private fun getDummyRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> {
-        // Query from DummyData
-        val allDummyDocs = DummyData.feedItems.map { it.id to getDummyDocumentDetail(it.id) }
-            .mapNotNull { it.second }
-        
-        return allDummyDocs.filter { dummy ->
-            dummy.id != doc.id &&
-            (dummy.semester == doc.semester || dummy.subject == doc.subject || dummy.documentType == doc.documentType)
-        }.take(3)
-    }
-
-    private fun getDummyDocumentDetail(id: String): DocumentDetail? {
-        val feedItem = DummyData.feedItems.find { it.id == id }
-        if (feedItem != null) {
-            val fileUrls = when (id) {
-                "feed-dbms-4" -> listOf(
-                    "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-                    "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500",
-                    "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=500"
-                )
-                "feed-cn-cheat" -> listOf("https://images.unsplash.com/photo-1517842645767-c639042777db?w=500")
-                "feed-coa-notes" -> listOf(
-                    "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500",
-                    "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=500"
-                )
-                else -> listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-            }
-            return DocumentDetail(
-                id = feedItem.id,
-                title = feedItem.title,
-                description = feedItem.description,
-                branch = "Computer Science",
-                semester = "Semester 3",
-                subject = feedItem.tags.firstOrNull() ?: "General",
-                documentType = feedItem.fileType.label,
-                uploaderId = "dummy-uid",
-                uploaderName = feedItem.uploaderName,
-                uploaderPhotoUrl = "",
-                uploadedAt = System.currentTimeMillis() - 86400000,
-                downloadsCount = feedItem.downloadsCount,
-                upvotes = feedItem.upvotes,
-                bookmarks = if (feedItem.isSaved) 1 else 0,
-                fileUrls = fileUrls,
-                fileSize = 1024 * 1024 * 3L,
-                fileExtension = if (fileUrls.firstOrNull()?.contains("pdf") == true) "pdf" else "jpg",
-                fileType = if (fileUrls.firstOrNull()?.contains("pdf") == true) "pdf" else "image",
-                attachmentCount = fileUrls.size
-            )
-        }
-
-        val studyFile = DummyData.savedFiles.find { it.id == id } 
-            ?: DummyData.uploadedFiles.find { it.id == id }
-        if (studyFile != null) {
-            val fileUrls = listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-            return DocumentDetail(
-                id = studyFile.id,
-                title = studyFile.title,
-                description = "Saved document from your study social library.",
-                branch = "Computer Science",
-                semester = "Semester 3",
-                subject = "General",
-                documentType = studyFile.fileType.label,
-                uploaderId = "dummy-uid",
-                uploaderName = "System",
-                uploaderPhotoUrl = "",
-                uploadedAt = System.currentTimeMillis() - 86400000 * 2,
-                downloadsCount = studyFile.downloadsCount,
-                upvotes = studyFile.upvotes,
-                bookmarks = 1,
-                fileUrls = fileUrls,
-                fileSize = 1024 * 1024L,
-                fileExtension = "pdf",
-                fileType = "pdf",
-                attachmentCount = fileUrls.size
-            )
-        }
-
-        val trending = DummyData.trendingNotes.find { it.id == id }
-        if (trending != null) {
-            val fileUrls = listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-            return DocumentDetail(
-                id = trending.id,
-                title = trending.title,
-                description = "Trending study guide or collection notes.",
-                branch = "Computer Science",
-                semester = "Semester 3",
-                subject = trending.subject,
-                documentType = "Notes",
-                uploaderId = "dummy-uid",
-                uploaderName = "Top Contributor",
-                uploaderPhotoUrl = "",
-                uploadedAt = System.currentTimeMillis(),
-                downloadsCount = trending.downloadsCount,
-                upvotes = trending.upvotes,
-                bookmarks = if (trending.isBookmarked) 1 else 0,
-                fileUrls = fileUrls,
-                fileSize = 1024 * 1500L,
-                fileExtension = "pdf",
-                fileType = "pdf",
-                attachmentCount = 1
-            )
-        }
-        return null
     }
 }

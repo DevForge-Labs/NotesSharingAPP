@@ -129,6 +129,7 @@ fun DocumentDetailRoute(
         onBackClick = onBackClick,
         onNavigateToDetail = onNavigateToDetail,
         onUpvoteClick = viewModel::toggleUpvote,
+        onBookmarkClick = viewModel::toggleBookmark,
         onNavigateToPdfViewer = onNavigateToPdfViewer,
         onNavigateToImageViewer = onNavigateToImageViewer,
         onRetry = { viewModel.loadDocumentDetail(documentId, context) },
@@ -145,6 +146,7 @@ fun DocumentDetailScreen(
     onBackClick: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onUpvoteClick: (String) -> Unit,
+    onBookmarkClick: (String) -> Unit,
     onNavigateToPdfViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
     onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
     onRetry: () -> Unit,
@@ -172,6 +174,17 @@ fun DocumentDetailScreen(
     val scope = rememberCoroutineScope()
     var showRemoveBookmarkDialog by remember { mutableStateOf(false) }
     var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
+
+    val handleUpvoteClick = remember(onUpvoteClick) {
+        { itemId: String ->
+            val wasUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] ?: false
+            if (wasUpvoted) {
+                pendingRemoveUpvoteId = itemId
+            } else {
+                onUpvoteClick(itemId)
+            }
+        }
+    }
 
     LaunchedEffect(currentUid) {
         if (currentUid.isNotEmpty()) {
@@ -225,28 +238,7 @@ fun DocumentDetailScreen(
                             if (isBookmarked) {
                                 showRemoveBookmarkDialog = true
                             } else {
-                                scope.launch {
-                                    val bookmarkRepository = BookmarkRepository()
-                                    val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.US).replace(" ", "")) {
-                                        "pyq" -> FileType.Pyq
-                                        "cheatsheet", "cheat sheet" -> FileType.CheatSheet
-                                        "assignment" -> FileType.Notes
-                                        "notes" -> FileType.Notes
-                                        else -> FileType.Pdf
-                                    }
-                                    val studyFile = StudyFile(
-                                        id = doc.id,
-                                        title = doc.title,
-                                        uploadDate = "Saved",
-                                        fileType = fileTypeEnum,
-                                        downloadsCount = doc.downloadsCount,
-                                        upvotes = doc.upvotes,
-                                        thumbnailUrl = doc.thumbnailUrl,
-                                        subject = doc.subject,
-                                        documentType = doc.documentType
-                                    )
-                                    bookmarkRepository.addBookmark(studyFile, currentUid)
-                                }
+                                onBookmarkClick(doc.id)
                             }
                         }
                     }) {
@@ -268,109 +260,123 @@ fun DocumentDetailScreen(
             )
         }
     ) { innerPadding ->
+        val stateType = remember(uiState) {
+            when (uiState) {
+                is DocumentDetailUiState.Loading -> 0
+                is DocumentDetailUiState.Error -> 1
+                is DocumentDetailUiState.Success -> 2
+            }
+        }
         Crossfade(
-            targetState = uiState,
+            targetState = stateType,
             label = "document-detail-crossfade",
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ) { state ->
-            when (state) {
-                DocumentDetailUiState.Loading -> {
+        ) { type ->
+            when (type) {
+                0 -> {
                     DocumentDetailSkeleton()
                 }
 
-                is DocumentDetailUiState.Error -> {
-                    val isDeleted = state.message.contains("not found", ignoreCase = true)
-                    if (isDeleted) {
-                        LaunchedEffect(documentId) {
-                            val recentRepo = RecentlyOpenedRepository(context)
-                            if (recentRepo.getLastOpened()?.id == documentId) {
-                                recentRepo.clearLastOpened()
-                            }
-                            val contRepo = com.pravor.notessharing.data.ContinueLearningRepository(context)
-                            if (contRepo.getLastOpened()?.id == documentId) {
-                                contRepo.clearLastOpened()
-                            }
-                            try {
-                                val downloadManager = com.pravor.notessharing.data.download.DownloadDataStoreManager(context)
-                                val attachments = downloadManager.getDownloadedAttachments()
-                                    .filter { it.documentId == documentId }
-                                attachments.forEach { attachment ->
-                                    try {
-                                        val file = java.io.File(attachment.localPath)
-                                        if (file.exists()) {
-                                            file.delete()
-                                        }
-                                    } catch (e: Exception) {
-                                        // Ignore
-                                    }
+                1 -> {
+                    val errorState = uiState as? DocumentDetailUiState.Error
+                    if (errorState != null) {
+                        val isDeleted = errorState.message.contains("not found", ignoreCase = true)
+                        if (isDeleted) {
+                            LaunchedEffect(documentId) {
+                                val recentRepo = RecentlyOpenedRepository(context)
+                                if (recentRepo.getLastOpened()?.id == documentId) {
+                                    recentRepo.clearLastOpened()
                                 }
-                                downloadManager.removeDownload(documentId)
-                            } catch (e: Exception) {
-                                // Ignore
+                                val contRepo = com.pravor.notessharing.data.ContinueLearningRepository(context)
+                                if (contRepo.getLastOpened()?.id == documentId) {
+                                    contRepo.clearLastOpened()
+                                }
+                                try {
+                                    val downloadManager = com.pravor.notessharing.data.download.DownloadDataStoreManager(context)
+                                    val attachments = downloadManager.getDownloadedAttachments()
+                                        .filter { it.documentId == documentId }
+                                    attachments.forEach { attachment ->
+                                        try {
+                                            val file = java.io.File(attachment.localPath)
+                                            if (file.exists()) {
+                                                file.delete()
+                                            }
+                                        } catch (e: Exception) {
+                                            // Ignore
+                                        }
+                                    }
+                                    downloadManager.removeDownload(documentId)
+                                } catch (e: Exception) {
+                                    // Ignore
+                                }
+                                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
                             }
-                            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
                         }
+                        com.pravor.notessharing.ui.components.states.DocumentErrorState(
+                            onRetry = onRetry,
+                            title = if (isDeleted) "Not Available" else "Oops!",
+                            message = if (isDeleted) "This resource is no longer available." else errorState.message
+                        )
                     }
-                    com.pravor.notessharing.ui.components.states.DocumentErrorState(
-                        onRetry = onRetry,
-                        title = if (isDeleted) "Not Available" else "Oops!",
-                        message = if (isDeleted) "This resource is no longer available." else state.message
-                    )
                 }
 
-                is DocumentDetailUiState.Success -> {
-                    DocumentDetailSuccessContent(
-                        doc = state.document,
-                        contributorLevel = state.contributorLevel,
-                        relatedDocuments = state.relatedDocuments,
-                        downloadState = downloadState,
-                        onNavigateToDetail = onNavigateToDetail,
-                        onDownloadClick = onDownloadClick,
-                        onShareClick = { fileUrl ->
-                            // TODO: Implement file sharing flow
-                            Toast.makeText(
-                                context,
-                                "Share functionality coming soon",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        onUpvoteClick = onUpvoteClick,
-                        onShowRemoveUpvoteDialog = {
-                            pendingRemoveUpvoteId = state.document.id
-                        },
-                        onAttachmentClick = { url ->
-                            val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
-                            val isImage = url.contains(".jpg", ignoreCase = true) || url.contains(".jpeg", ignoreCase = true) ||
-                                          url.contains(".png", ignoreCase = true) || url.contains(".webp", ignoreCase = true) ||
-                                          url.contains("unsplash.com", ignoreCase = true)
+                2 -> {
+                    val successState = uiState as? DocumentDetailUiState.Success
+                    if (successState != null) {
+                        DocumentDetailSuccessContent(
+                            doc = successState.document,
+                            contributorLevel = successState.contributorLevel,
+                            relatedDocuments = successState.relatedDocuments,
+                            downloadState = downloadState,
+                            onNavigateToDetail = onNavigateToDetail,
+                            onDownloadClick = onDownloadClick,
+                            onShareClick = { fileUrl ->
+                                // TODO: Implement file sharing flow
+                                Toast.makeText(
+                                    context,
+                                    "Share functionality coming soon",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
+                            onUpvoteClick = handleUpvoteClick,
+                            onBookmarkClick = onBookmarkClick,
+                            onShowRemoveUpvoteDialog = {
+                                pendingRemoveUpvoteId = successState.document.id
+                            },
+                            onAttachmentClick = { url ->
+                                val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
+                                val isImage = url.contains(".jpg", ignoreCase = true) || url.contains(".jpeg", ignoreCase = true) ||
+                                              url.contains(".png", ignoreCase = true) || url.contains(".webp", ignoreCase = true) ||
+                                              url.contains("unsplash.com", ignoreCase = true)
 
-                            if (isPdf) {
-                                android.util.Log.d("PDF_DEBUG", "Opening PDF")
-                                android.util.Log.d("PDF_DEBUG", "DocumentId=${state.document.id}")
-                                android.util.Log.d("PDF_DEBUG", "FileUrl=$url")
-                                onNavigateToPdfViewer(state.document.id, url, state.document.title)
-                            } else if (isImage) {
-                                onNavigateToImageViewer(state.document.id, url, state.document.title)
-                            } else {
-                                try {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                                    context.startActivity(intent)
-                                    scope.launch {
-                                        com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCountDirect(
-                                            state.document.id,
-                                            state.document.collection,
-                                            state.document.documentType
-                                        )
+                                if (isPdf) {
+                                    android.util.Log.d("PDF_DEBUG", "Opening PDF")
+                                    android.util.Log.d("PDF_DEBUG", "DocumentId=${successState.document.id}")
+                                    android.util.Log.d("PDF_DEBUG", "FileUrl=$url")
+                                    onNavigateToPdfViewer(successState.document.id, url, successState.document.title)
+                                } else if (isImage) {
+                                    onNavigateToImageViewer(successState.document.id, url, successState.document.title)
+                                } else {
+                                    try {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                        context.startActivity(intent)
+                                        scope.launch {
+                                            com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCountDirect(
+                                                successState.document.id,
+                                                successState.document.collection,
+                                                successState.document.documentType
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "No app available to open this link", Toast.LENGTH_SHORT).show()
                                     }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No app available to open this link", Toast.LENGTH_SHORT).show()
                                 }
-                            }
-                        },
-                        isArchived = state.isArchived
-                    )
+                            },
+                            isArchived = successState.isArchived
+                        )
+                    }
                 }
             }
         }
@@ -385,9 +391,7 @@ fun DocumentDetailScreen(
                 TextButton(
                     onClick = {
                         if (doc != null && currentUid.isNotEmpty()) {
-                            scope.launch {
-                                BookmarkRepository().removeBookmark(doc.id, currentUid)
-                            }
+                            onBookmarkClick(doc.id)
                         }
                         showRemoveBookmarkDialog = false
                     }
@@ -408,7 +412,7 @@ fun DocumentDetailScreen(
     if (pendingRemoveUpvoteId != null) {
         AlertDialog(
             onDismissRequest = { pendingRemoveUpvoteId = null },
-            title = { Text(text = "Remove this upvote?") },
+            title = { Text(text = "Remove your upvote?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -419,7 +423,7 @@ fun DocumentDetailScreen(
                         pendingRemoveUpvoteId = null
                     }
                 ) {
-                    Text("Remove")
+                    Text("Remove Upvote")
                 }
             },
             dismissButton = {
@@ -443,6 +447,7 @@ fun DocumentDetailSuccessContent(
     onDownloadClick: () -> Unit,
     onShareClick: (String) -> Unit,
     onUpvoteClick: (String) -> Unit,
+    onBookmarkClick: (String) -> Unit,
     onShowRemoveUpvoteDialog: () -> Unit,
     onAttachmentClick: (String) -> Unit,
     isArchived: Boolean = false
@@ -685,11 +690,14 @@ fun DocumentDetailSuccessContent(
         }
 
         // 5. RELATED DOCUMENTS
+        android.util.Log.d("REC_TRACE", "[DOC_UI] Composable render: isArchived=$isArchived relatedDocumentsCount=${relatedDocuments.size}")
         if (!isArchived && relatedDocuments.isNotEmpty()) {
             item(key = "related-section") {
                 RelatedDocumentsSection(
                     relatedDocuments = relatedDocuments,
-                    onNavigateToDetail = onNavigateToDetail
+                    onNavigateToDetail = onNavigateToDetail,
+                    onBookmarkClick = onBookmarkClick,
+                    onUpvoteClick = onUpvoteClick
                 )
             }
         }

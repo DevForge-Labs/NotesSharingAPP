@@ -225,7 +225,7 @@ fun GoogleIcon(modifier: Modifier = Modifier) {
         Image(
             painter = painterResource(R.drawable.google_icon),
             contentDescription = "Google",
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }

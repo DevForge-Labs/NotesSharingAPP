@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,20 +30,69 @@ import com.pravor.notessharing.R
 
 @Composable
 fun ConvergingResourcesVisual(isActive: Boolean) {
-    val convergeFraction by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0f,
-        animationSpec = tween(1400, easing = FastOutSlowInEasing),
-        label = "converge_fraction"
-    )
-    
-    val scale by animateFloatAsState(
-        targetValue = if (isActive && convergeFraction > 0.9f) 1f else 0.85f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+    val infiniteTransition = rememberInfiniteTransition(label = "orbit_transition")
+
+    // Calm 20-second rotation for the orbits
+    val baseAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "converge_scale"
+        label = "baseAngle"
     )
+
+    // 12-second cycle for sequential merging: one card merges every 3 seconds
+    val cycleProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(12000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "cycleProgress"
+    )
+
+    val entryProgress by animateFloatAsState(
+        targetValue = if (isActive) 1f else 0f,
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "entryProgress"
+    )
+
+    // 4 static cards properties
+    val baseRadii = listOf(65.dp, 80.dp, 95.dp, 110.dp)
+    val cardIcons = listOf(
+        Icons.Filled.Description,
+        Icons.Filled.QuestionAnswer,
+        Icons.Filled.Class,
+        Icons.Filled.Share
+    )
+    val cardTexts = listOf(
+        "DBMS Notes",
+        "ECE PYQs",
+        "Semester 4",
+        "http://drive..."
+    )
+    val cardColors = listOf(
+        Color(0xFFC62828), // Red
+        Color(0xFF1B5E20), // Green
+        Color(0xFFF57F17), // Orange
+        Color(0xFF1565C0)  // Blue
+    )
+
+    // Calculate a subtle logo scale pulse based on whether any card is merging
+    var logoPulse = 0f
+    for (j in 0..3) {
+        var lp = cycleProgress - j
+        if (lp < 0f) { lp += 4f }
+        val dist = Math.abs(lp - 0.5f)
+        if (dist < 0.08f) {
+            logoPulse = (1f - (dist / 0.08f)) * 0.08f
+            break
+        }
+    }
+    val logoScale = entryProgress * (1f + logoPulse)
 
     Box(
         modifier = Modifier
@@ -50,27 +100,29 @@ fun ConvergingResourcesVisual(isActive: Boolean) {
             .height(280.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Subtle orbits
+        // Orbit paths
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val radius = 100.dp.toPx()
-            drawCircle(
-                color = Color.White.copy(alpha = 0.05f),
-                radius = radius,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = 2f,
-                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+            baseRadii.forEach { radius ->
+                val radiusPx = radius.toPx() * entryProgress
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.04f * entryProgress),
+                    radius = radiusPx,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = 2f,
+                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 15f), 0f)
+                    )
                 )
-            )
+            }
         }
 
-        // Central Logo (Unified Destination)
+        // Central static app logo
         Surface(
             modifier = Modifier
-                .size(96.dp)
-                .scale(scale),
+                .size(90.dp)
+                .scale(logoScale),
             shape = RoundedCornerShape(26.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
             shadowElevation = 8.dp
         ) {
             Box(
@@ -89,67 +141,54 @@ fun ConvergingResourcesVisual(isActive: Boolean) {
                 Image(
                     painter = painterResource(R.drawable.app_logo_normal),
                     contentDescription = "NotesSharing Logo",
-                    modifier = Modifier.size(60.dp)
+                    modifier = Modifier.size(56.dp)
                 )
             }
         }
 
-        // Scattered resources converging towards the center
-        // Top-Left: Chat
-        ScatteredItem(
-            icon = Icons.Filled.QuestionAnswer,
-            text = "Group: ECE PYQs here",
-            backgroundColor = Color(0xFF1B5E20), // Dark green bubble
-            offsetX = startToCenter(-105.dp, convergeFraction),
-            offsetY = startToCenter(-75.dp, convergeFraction),
-            alpha = getFadeAlpha(convergeFraction),
-            scale = getScaleFactor(convergeFraction)
-        )
+        // Render orbiting cards
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        for (i in 0..3) {
+            var localProgress = cycleProgress - i
+            if (localProgress < 0f) { localProgress += 4f }
 
-        // Top-Right: PDF
-        ScatteredItem(
-            icon = Icons.Filled.Description,
-            text = "DBMS_Notes.pdf",
-            backgroundColor = Color(0xFFC62828), // Red gradient
-            offsetX = startToCenter(105.dp, convergeFraction),
-            offsetY = startToCenter(-55.dp, convergeFraction),
-            alpha = getFadeAlpha(convergeFraction),
-            scale = getScaleFactor(convergeFraction)
-        )
+            var radiusScale = 1f
+            var alphaVal = 1f
+            var scaleVal = 1f
 
-        // Bottom-Left: Folder
-        ScatteredItem(
-            icon = Icons.Filled.Class,
-            text = "Drive > Semester 4",
-            backgroundColor = Color(0xFFF57F17), // Orange/gold
-            offsetX = startToCenter(-95.dp, convergeFraction),
-            offsetY = startToCenter(75.dp, convergeFraction),
-            alpha = getFadeAlpha(convergeFraction),
-            scale = getScaleFactor(convergeFraction)
-        )
+            if (localProgress in 0f..0.5f) {
+                // Merge into center
+                val t = localProgress / 0.5f
+                radiusScale = 1f - t
+                alphaVal = 1f - t
+                scaleVal = 1f - 0.3f * t
+            } else if (localProgress in 0.5f..1.0f) {
+                // Emerge from center
+                val t = (localProgress - 0.5f) / 0.5f
+                radiusScale = t
+                alphaVal = t
+                scaleVal = 0.7f + 0.3f * t
+            }
 
-        // Bottom-Right: Link
-        ScatteredItem(
-            icon = Icons.Filled.Share,
-            text = "http://drive.google...",
-            backgroundColor = Color(0xFF1565C0), // Blue
-            offsetX = startToCenter(95.dp, convergeFraction),
-            offsetY = startToCenter(65.dp, convergeFraction),
-            alpha = getFadeAlpha(convergeFraction),
-            scale = getScaleFactor(convergeFraction)
-        )
+            // Orbital angle (cards spaced 90 degrees apart)
+            val angle = baseAngle + (i * 90f)
+            val radians = Math.toRadians(angle.toDouble())
+
+            val radiusPx = with(density) { (baseRadii[i] * radiusScale * entryProgress).toPx() }
+            val offsetX = with(density) { (radiusPx * Math.cos(radians)).toFloat().toDp() }
+            val offsetY = with(density) { (radiusPx * Math.sin(radians)).toFloat().toDp() }
+
+            ScatteredItem(
+                icon = cardIcons[i],
+                text = cardTexts[i],
+                backgroundColor = cardColors[i],
+                offsetX = offsetX,
+                offsetY = offsetY,
+                alpha = alphaVal * entryProgress,
+                scale = scaleVal
+            )
+        }
     }
-}
-
-// Math helpers
-private fun startToCenter(start: androidx.compose.ui.unit.Dp, fraction: Float): androidx.compose.ui.unit.Dp {
-    return start * (1f - fraction)
-}
-private fun getFadeAlpha(fraction: Float): Float {
-    return (1f - (fraction - 0.75f).coerceAtLeast(0f) * 4f).coerceIn(0f, 1f)
-}
-private fun getScaleFactor(fraction: Float): Float {
-    return (1f - fraction * 0.4f).coerceIn(0.6f, 1f)
 }
 
 @Composable
@@ -179,7 +218,7 @@ fun ScatteredItem(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            androidx.compose.material3.Icon(
+            Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = Color.White,

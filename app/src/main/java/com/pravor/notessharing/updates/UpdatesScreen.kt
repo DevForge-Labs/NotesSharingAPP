@@ -35,19 +35,18 @@ fun UpdatesScreen(
     viewModel: AuthViewModel,
     onNavigateToLogin: () -> Unit,
     onNavigateToSignUp: () -> Unit,
+    onSkip: () -> Unit,
+    onCompleteOnboarding: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val prefs = remember { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) }
 
     var showAuthSheet by remember { mutableStateOf(false) }
     val isLoading = uiState is AuthUiState.Loading
 
-    val completeOnboarding = {
-        prefs.edit().putBoolean("has_completed_onboarding", true).apply()
-    }
+    val completeOnboarding = onCompleteOnboarding
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -62,6 +61,7 @@ fun UpdatesScreen(
                 viewModel.clearState()
                 onNavigateToLogin()
             },
+            onSkipClick = onSkip,
             modifier = Modifier.fillMaxSize()
         )
 

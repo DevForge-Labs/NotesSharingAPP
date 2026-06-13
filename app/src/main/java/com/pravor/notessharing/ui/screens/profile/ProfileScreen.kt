@@ -111,6 +111,7 @@ import com.pravor.notessharing.state.ProfileUiState
 import com.pravor.notessharing.state.ThemePreference
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.LiquidContributorCard
+import com.pravor.notessharing.ui.components.profile_components.ProfileHeaderCard
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.profile.ProfileViewModel
@@ -321,7 +322,7 @@ private fun ProfileContent(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item(key = "profile-header", contentType = "profile-header") {
-                ProfileHeaderCard(profile)
+                ProfileHeaderCard(profile = profile, onClick = onEditProfileClick)
             }
             item(key = "contributor-summary", contentType = "contributor-summary") {
                 LiquidContributorCard(profile)
@@ -562,94 +563,6 @@ private fun ProfileContent(
             shape = RoundedCornerShape(24.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
-    }
-}
-
-@Composable
-fun ProfileHeaderCard(profile: Profile) {
-    PressScaleCard(
-        shape = RoundedCornerShape(30.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.surfaceContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.72f)
-                        )
-                    )
-                )
-                .padding(20.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            var isImageError by remember { mutableStateOf(false) }
-            if (profile.profileImageUrl.isNotEmpty() && !isImageError) {
-                AsyncImage(
-                    model = profile.profileImageUrl,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(86.dp)
-                        .clip(CircleShape)
-                        .border(
-                            2.dp,
-                            Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                            ),
-                            CircleShape
-                        ),
-                    contentScale = ContentScale.Crop,
-                    onError = { isImageError = true }
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(86.dp)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                            ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = profile.initials,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = profile.name,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            val academicText = remember(profile.branch, profile.semester, profile.section) {
-                val branchDisplay = com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(profile.branch)
-                val semesterDisplay = profile.semester
-                val sectionDisplay = profile.section
-                if (sectionDisplay.isNotBlank()) {
-                    "$branchDisplay | $semesterDisplay | $sectionDisplay"
-                } else {
-                    "$branchDisplay | $semesterDisplay"
-                }
-            }
-            Text(
-                text = academicText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(12.dp))
-        }
     }
 }
 

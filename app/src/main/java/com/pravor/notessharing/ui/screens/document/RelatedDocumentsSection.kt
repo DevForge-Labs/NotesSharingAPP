@@ -17,8 +17,11 @@ import com.pravor.notessharing.ui.components.explore_components.TrendingNoteCard
 fun RelatedDocumentsSection(
     relatedDocuments: List<DocumentDetail>,
     onNavigateToDetail: (String) -> Unit,
+    onBookmarkClick: (String) -> Unit,
+    onUpvoteClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    android.util.Log.d("REC_TRACE", "[DOC_UI] 8. RelatedDocumentsSection rendering count=${relatedDocuments.size}")
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -44,7 +47,8 @@ fun RelatedDocumentsSection(
                     downloadsCount = relatedDoc.downloadsCount,
                     rating = 4.5,
                     upvotes = relatedDoc.upvotes,
-                    isBookmarked = false,
+                    isBookmarked = relatedDoc.isBookmarked,
+                    isUpvoted = relatedDoc.isUpvoted,
                     thumbnailUrl = relatedDoc.thumbnailUrl,
                     thumbnailGenerated = relatedDoc.thumbnailGenerated,
                     thumbnailType = relatedDoc.thumbnailType,
@@ -52,7 +56,9 @@ fun RelatedDocumentsSection(
                 )
                 TrendingNoteCard(
                     note = trendingNote,
-                    onClick = { onNavigateToDetail(relatedDoc.id) }
+                    onClick = { onNavigateToDetail(relatedDoc.id) },
+                    onBookmarkClick = { onBookmarkClick(relatedDoc.id) },
+                    onUpvoteClick = { onUpvoteClick(relatedDoc.id) }
                 )
             }
         }

@@ -175,6 +175,7 @@ fun NotesSharingApp(
                 }
                 SessionState.LoggedOut -> {
                     val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+                    val forceShow = com.pravor.notessharing.core.config.DeveloperConfig.FORCE_SHOW_ONBOARDING
                     val hasCompletedOnboarding = prefs.getBoolean("has_completed_onboarding", false)
                     
                     val isCurrentlyAuth = currentRoute == "onboarding" ||
@@ -182,8 +183,8 @@ fun NotesSharingApp(
                             currentRoute == AppDestination.Login.route ||
                             currentRoute == AppDestination.SignUp.route
                     
-                    if (!isCurrentlyAuth) {
-                        val startRoute = if (hasCompletedOnboarding) {
+                    if (!isCurrentlyAuth || (forceShow && currentRoute != "onboarding")) {
+                        val startRoute = if (hasCompletedOnboarding && !forceShow) {
                             AppDestination.Welcome.route
                         } else {
                             "onboarding"
@@ -306,19 +307,35 @@ fun NotesSharingApp(
                     // Start destination placeholder, navigation is managed by root-level LaunchedEffect
                 }
                 composable("onboarding") {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val prefs = remember { context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE) }
+                    val completeOnboarding = {
+                        prefs.edit().putBoolean("has_completed_onboarding", true).apply()
+                    }
                     UpdatesScreen(
                         viewModel = authViewModel,
                         onNavigateToLogin = {
+                            completeOnboarding()
                             navController.navigate(AppDestination.Welcome.route) {
                                 popUpTo("onboarding") { inclusive = true }
                             }
                             navController.navigate(AppDestination.Login.route)
                         },
                         onNavigateToSignUp = {
+                            completeOnboarding()
                             navController.navigate(AppDestination.Welcome.route) {
                                 popUpTo("onboarding") { inclusive = true }
                             }
                             navController.navigate(AppDestination.SignUp.route)
+                        },
+                        onSkip = {
+                            completeOnboarding()
+                            navController.navigate(AppDestination.Welcome.route) {
+                                popUpTo("onboarding") { inclusive = true }
+                            }
+                        },
+                        onCompleteOnboarding = {
+                            completeOnboarding()
                         }
                     )
                 }

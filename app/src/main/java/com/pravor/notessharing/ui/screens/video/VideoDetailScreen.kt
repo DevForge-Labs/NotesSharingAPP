@@ -349,6 +349,7 @@ private fun VideoDetailContent(
         }
 
         // 4. Related Videos section
+        android.util.Log.d("REC_TRACE", "[VIDEO_UI] Composable render check: relatedVideosCount=${relatedVideos.size}")
         if (relatedVideos.isNotEmpty()) {
             item(key = "related-title") {
                 Text(

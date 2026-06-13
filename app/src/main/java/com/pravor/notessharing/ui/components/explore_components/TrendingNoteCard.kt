@@ -50,6 +50,25 @@ import kotlinx.coroutines.withContext
 
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.pointerInput
+
+@Composable
+fun NoPropagationBox(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = modifier.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    event.changes.forEach { it.consume() }
+                }
+            }
+        },
+        content = content
+    )
+}
 
 // Singleton memory cache to prevent redundant database hits on scroll recompositions
 object TrendingPreviewCache {
@@ -330,14 +349,16 @@ fun TrendingNoteCard(
                 Spacer(Modifier.width(10.dp))
                 SmallMetric(Icons.Default.ThumbUp, note.upvotes.toString())
                 Spacer(Modifier.weight(1f))
-                Icon(
-                    imageVector = if (note.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = "Bookmark",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { onBookmarkClick() }
-                )
+                NoPropagationBox {
+                    Icon(
+                        imageVector = if (note.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = "Bookmark",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onBookmarkClick() }
+                    )
+                }
             }
 
             Spacer(Modifier.height(10.dp))
@@ -345,18 +366,20 @@ fun TrendingNoteCard(
             // 5. ACTION BUTTON ROW
             val buttonColor = if (note.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.primaryContainer
             val buttonContentColor = if (note.isUpvoted) Color(0xFF141A23) else MaterialTheme.colorScheme.onPrimaryContainer
-            Button(
-                onClick = onUpvoteClick,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor,
-                    contentColor = buttonContentColor
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(note.upvotes.toString())
+            NoPropagationBox(modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onUpvoteClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = buttonColor,
+                        contentColor = buttonContentColor
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(note.upvotes.toString())
+                }
             }
         }
     }
