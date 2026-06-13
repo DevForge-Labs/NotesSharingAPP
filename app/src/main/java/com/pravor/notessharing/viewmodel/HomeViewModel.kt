@@ -83,6 +83,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val authListener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
         val uid = firebaseAuth.currentUser?.uid
+        
+        // Immediately refresh recently opened state to avoid any stale data leakage across accounts
+        val lastOpened = recentlyOpenedRepository.getLastOpened()
+        _uiState.update { current ->
+            if (current is HomeUiState.Success) {
+                current.copy(content = current.content.copy(recentlyOpened = lastOpened))
+            } else {
+                current
+            }
+        }
+
         if (uid != null) {
             lastReloadCause = "InitialLoad"
             startObservingProfile(uid)

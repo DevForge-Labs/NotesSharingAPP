@@ -1,12 +1,17 @@
 package com.pravor.notessharing.data
 
 import android.content.Context
+import com.google.firebase.auth.FirebaseAuth
 import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.model.FileType
 import org.json.JSONObject
 
 class RecentlyOpenedRepository(context: Context) {
     private val preferences = context.getSharedPreferences("recently_opened", Context.MODE_PRIVATE)
+
+    private fun getUserId(): String {
+        return FirebaseAuth.getInstance().currentUser?.uid ?: "guest"
+    }
 
     fun saveLastOpened(
         id: String,
@@ -48,11 +53,13 @@ class RecentlyOpenedRepository(context: Context) {
         thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
         json.put("thumbnailUrls", thumbnailUrlsArray)
         
-        preferences.edit().putString(KEY_LAST_OPENED, json.toString()).apply()
+        val key = "${KEY_LAST_OPENED}_${getUserId()}"
+        preferences.edit().putString(key, json.toString()).apply()
     }
 
     fun getLastOpened(): FeedItem? {
-        val raw = preferences.getString(KEY_LAST_OPENED, null) ?: return null
+        val key = "${KEY_LAST_OPENED}_${getUserId()}"
+        val raw = preferences.getString(key, null) ?: return null
         return try {
             val json = JSONObject(raw)
             val id = json.getString("id")
@@ -128,7 +135,8 @@ class RecentlyOpenedRepository(context: Context) {
     }
 
     fun clearLastOpened() {
-        preferences.edit().remove(KEY_LAST_OPENED).apply()
+        val key = "${KEY_LAST_OPENED}_${getUserId()}"
+        preferences.edit().remove(key).apply()
     }
 
     companion object {
