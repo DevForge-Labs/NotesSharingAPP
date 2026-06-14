@@ -45,9 +45,6 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    
-    // Privacy Policy Coming Soon dialog state
-    var showPrivacyDialog by remember { mutableStateOf(false) }
 
     // Retrieve Version and Build Info
     val packageInfo = remember(context) {
@@ -249,7 +246,9 @@ fun AboutScreen(
                 item {
                     AboutSectionWrapper(index = 7, isVisible = isVisible) {
                         ExternalLinksSection(
-                            onPrivacyPolicyClick = { showPrivacyDialog = true }
+                            onPrivacyPolicyClick = {
+                                openUrl("https://devforge-labs.github.io/NotesSharingAPP/privacy-policy.html")
+                            }
                         )
                     }
                 }
@@ -267,32 +266,7 @@ fun AboutScreen(
         }
     }
 
-    // Coming Soon dialogue for Privacy Policy
-    if (showPrivacyDialog) {
-        AlertDialog(
-            onDismissRequest = { showPrivacyDialog = false },
-            title = {
-                Text(
-                    text = "Privacy Policy",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "The Privacy Policy for Campus Pages is coming soon. Please check back later!",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showPrivacyDialog = false }) {
-                    Text(text = "OK", fontWeight = FontWeight.Bold)
-                }
-            },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    }
+
 }
 
 /**
