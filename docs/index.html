@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Pages — Your Campus. Your Notes. Your Community.</title>
+    <meta name="description" content="Campus Pages is a modern student-first platform designed to help learners discover, share, organize, and collaborate around high-quality academic resources.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Modern CSS Reset & Color Palette */
+        :root {
+            --bg-color: #080a14;
+            --surface-color: rgba(18, 22, 40, 0.65);
+            --surface-hover: rgba(26, 32, 58, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(99, 102, 241, 0.2);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --secondary: #3b82f6;
+            --tertiary: #10b981;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+
+        /* Animated Floating Background Gradients */
+        .bg-glow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-glow-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            animation: floatGlow1 20s infinite alternate ease-in-out;
+        }
+
+        .bg-glow-2 {
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            animation: floatGlow2 25s infinite alternate ease-in-out;
+        }
+
+        @keyframes floatGlow1 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(15%, 15%) scale(1.2); }
+        }
+
+        @keyframes floatGlow2 {
+            0% { transform: translate(0, 0) scale(1.1); }
+            100% { transform: translate(-15%, -15%) scale(0.9); }
+        }
+
+        /* Container & Grid Layouts */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header Navigation */
+        header {
+            padding: 24px 0;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(8, 10, 20, 0.7);
+        }
+
+        .nav-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-box {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .logo-box svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        .brand-title {
+            font-size: 22px;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 20px var(--primary-glow);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px var(--border-glow);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0 60px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .tagline-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            padding: 8px 16px;
+            border-radius: 30px;
+            color: #a5b4fc;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+            50% { box-shadow: 0 0 15px 2px rgba(99, 102, 241, 0.15); }
+        }
+
+        .hero-title {
+            font-size: 58px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            margin-bottom: 18px;
+            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+            font-weight: 500;
+        }
+
+        .hero-description {
+            max-width: 720px;
+            margin: 0 auto 36px auto;
+            color: var(--text-secondary);
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 60px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .section-subtitle {
+            color: var(--text-secondary);
+            max-width: 580px;
+            margin: 0 auto;
+            font-size: 15px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 24px;
+        }
+
+        /* Glassmorphism Card Style */
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 28px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.12);
+            background-color: var(--surface-hover);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(99, 102, 241, 0.12);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .card-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* About & Vision Section */
+        .about-section {
+            padding: 60px 0;
+            position: relative;
+        }
+
+        .about-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 32px;
+            padding: 48px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .about-card h2 {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .about-card p {
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* Developers Section */
+        .devs-section {
+            padding: 60px 0;
+        }
+
+        .devs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 28px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .dev-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .avatar-initials {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .avatar-pn {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+        }
+
+        .avatar-ad {
+            background: linear-gradient(135deg, #3b82f6, #10b981);
+        }
+
+        .dev-info {
+            flex-grow: 1;
+        }
+
+        .dev-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .dev-role {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .dev-links {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-social {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .btn-social:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .btn-social svg {
+            width: 15px;
+            height: 15px;
+            fill: currentColor;
+        }
+
+        /* Privacy Policy Callout Banner */
+        .privacy-banner {
+            padding: 40px 0 80px 0;
+            text-align: center;
+        }
+
+        .privacy-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 36px 24px;
+            max-width: 600px;
+            margin: 0 auto;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .privacy-box h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .privacy-box p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        /* Footer Style */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 32px 0;
+            text-align: center;
+            background: rgba(4, 5, 10, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .footer-heart {
+            color: #ef4444;
+            display: inline-block;
+            animation: beat 1.2s infinite alternate ease-in-out;
+        }
+
+        @keyframes beat {
+            to { transform: scale(1.2); }
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .footer-text a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-text a:hover {
+            color: var(--primary);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 768px) {
+            .hero-title { font-size: 40px; }
+            .hero-subtitle { font-size: 17px; }
+            .about-card { padding: 32px 20px; }
+            .about-card h2 { font-size: 26px; }
+            .devs-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Gradient Background -->
+    <div class="bg-glow-container">
+        <div class="bg-glow-1"></div>
+        <div class="bg-glow-2"></div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="container nav-wrapper">
+            <a href="#" class="brand-logo-group" id="nav-logo">
+                <div class="logo-box">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    </svg>
+                </div>
+                <span class="brand-title">Campus Pages</span>
+            </a>
+            <a href="privacy-policy.html" class="btn btn-outline" id="nav-btn-privacy">Privacy Policy</a>
+        </div>
+    </header>
+
+    <!-- Main Contents -->
+    <main class="container">
+        
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="tagline-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span>Learn Together. Grow Together.</span>
+            </div>
+            <h1 class="hero-title">Campus Pages</h1>
+            <p class="hero-subtitle">Your Campus. Your Notes. Your Community.</p>
+            <p class="hero-description">
+                Campus Pages is a modern, student-first platform designed to help learners discover, share, organize, and collaborate around high-quality academic resources. We connect you directly with the study materials you need.
+            </p>
+            <div class="hero-actions">
+                <a href="#features" class="btn btn-primary" id="hero-btn-explore">Explore Features</a>
+                <a href="privacy-policy.html" class="btn btn-outline" id="hero-btn-privacy">View Privacy Policy</a>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="features" id="features">
+            <div class="section-header">
+                <h2 class="section-title">Designed Around Students</h2>
+                <p class="section-subtitle">Everything you need to succeed academically, organized in a modern learning application.</p>
+            </div>
+
+            <div class="features-grid">
+                <!-- Feature 1 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h3 class="card-title">Continue Reading</h3>
+                    <p class="card-desc">Quickly resume previously opened materials. Never lose track of your studying progress.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+                    </div>
+                    <h3 class="card-title">Personalized Feed</h3>
+                    <p class="card-desc">A tailored "For You" recommendation feed powered by engagement. Discover notes, assignments, and prep materials.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    </div>
+                    <h3 class="card-title">Explore & Discovery</h3>
+                    <p class="card-desc">Beautiful subject-focused discovery experiences help students quickly explore resources across multiple disciplines.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
+                    </div>
+                    <h3 class="card-title">Social Learning</h3>
+                    <p class="card-desc">Connect with your campus knowledge base. Learn dynamically and collaborate with active student developers.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+                    </div>
+                    <h3 class="card-title">Community Upvotes</h3>
+                    <p class="card-desc">Rate useful resources. The most helpful study documents naturally rise higher to maintain top quality.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    </div>
+                    <h3 class="card-title">Upload Notes & Guides</h3>
+                    <p class="card-desc">Contribute study guides, lecture summaries, exam materials, and assignments to strengthen the learning community.</p>
+                </div>
+
+                <!-- Feature 7 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                    </div>
+                    <h3 class="card-title">Bookmarks</h3>
+                    <p class="card-desc">Keep your essential resources saved. Access bookmarks instantly from your personal profile dashboard.</p>
+                </div>
+
+                <!-- Feature 8 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </div>
+                    <h3 class="card-title">Offline Downloads</h3>
+                    <p class="card-desc">Save documents directly to your local library. Study offline anywhere, without requiring a network connection.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- About/Vision Section -->
+        <section class="about-section">
+            <div class="about-card">
+                <h2>Our Vision</h2>
+                <p>
+                    Campus Pages combines note sharing, content discovery, and student collaboration into a modern learning platform. We believe academic resources should be easier to find, easier to share, and easier to learn from. By prioritizing student-first architecture, we help campus communities thrive.
+                </p>
+            </div>
+        </section>
+
+        <!-- Meet the Developers -->
+        <section class="devs-section">
+            <div class="section-header">
+                <h2 class="section-title">Meet the Founders</h2>
+                <p class="section-subtitle">Campus Pages is a student-built project designed to uplift and support the learning community.</p>
+            </div>
+
+            <div class="devs-grid">
+                <!-- Developer 1 -->
+                <div class="card dev-card">
+                    <div class="avatar-initials avatar-pn">PN</div>
+                    <div class="dev-info">
+                        <h3 class="dev-name">Pratyush Nishank</h3>
+                        <p class="dev-role">Founder</p>
+                        <div class="dev-links">
+                            <a href="https://github.com/pratyush-deve" class="btn-social" target="_blank" aria-label="GitHub Profile" id="dev-pratyush-github">
+                                <svg viewBox="0 0 24 24"><path d="M12 2A10 10 0 002 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg>
+                            </a>
+                            <a href="https://www.linkedin.com/in/pratyush-nishank/" class="btn-social" target="_blank" aria-label="LinkedIn Profile" id="dev-pratyush-linkedin">
+                                <svg viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Developer 2 -->
+                <div class="card dev-card">
+                    <div class="avatar-initials avatar-ad">AD</div>
+                    <div class="dev-info">
+                        <h3 class="dev-name">Apoorva Deep</h3>
+                        <p class="dev-role">Founder</p>
+                        <div class="dev-links">
+                            <a href="https://github.com/cdr-APD" class="btn-social" target="_blank" aria-label="GitHub Profile" id="dev-apoorva-github">
+                                <svg viewBox="0 0 24 24"><path d="M12 2A10 10 0 002 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg>
+                            </a>
+                            <a href="https://www.linkedin.com/in/apoorva-deep/" class="btn-social" target="_blank" aria-label="LinkedIn Profile" id="dev-apoorva-linkedin">
+                                <svg viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Privacy Section Link Button -->
+        <section class="privacy-banner">
+            <div class="privacy-box">
+                <h3>Privacy & Compliance</h3>
+                <p>We are fully committed to protecting student data security, privacy rights, and maintaining a secure Firebase cloud infrastructure.</p>
+                <a href="privacy-policy.html" class="btn btn-outline" id="banner-btn-privacy">View Privacy Policy</a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Made for Students <span class="footer-heart">❤️</span></p>
+            <p class="footer-text">Copyright &copy; <span id="current-year"></span> Campus Pages. All rights reserved.</p>
+            <p class="footer-text"><a href="privacy-policy.html" id="footer-link-privacy">Privacy Policy</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Set dynamic copyright year
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

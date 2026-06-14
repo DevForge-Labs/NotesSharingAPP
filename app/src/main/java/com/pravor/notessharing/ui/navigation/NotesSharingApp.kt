@@ -236,7 +236,8 @@ fun NotesSharingApp(
     val showBottomBar = !isAuthScreen &&
             currentRoute?.startsWith("pdf_viewing") != true &&
             currentRoute?.startsWith("image_viewing") != true &&
-            currentRoute?.startsWith("profile/notification_preferences") != true
+            currentRoute?.startsWith("profile/notification_preferences") != true &&
+            currentRoute?.startsWith("profile/about") != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -709,6 +710,9 @@ fun NotesSharingApp(
                             navController.navigate(AppDestination.MyFiles.route) {
                                 launchSingleTop = true
                             }
+                        },
+                        onAboutClick = {
+                            navController.navigate(AppDestination.About.route)
                         }
                     )
                 }
@@ -725,6 +729,11 @@ fun NotesSharingApp(
                 }
                 composable(AppDestination.NotificationPreferences.route) {
                     com.pravor.notessharing.ui.screens.profile.NotificationPreferencesScreen(
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+                composable(AppDestination.About.route) {
+                    com.pravor.notessharing.ui.screens.AboutScreen(
                         onBackClick = { navController.popBackStack() }
                     )
                 }

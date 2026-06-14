@@ -128,6 +128,7 @@ fun ProfileRoute(
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit = {},
+    onAboutClick: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -138,7 +139,8 @@ fun ProfileRoute(
         onNotificationPreferencesClick = onNotificationPreferencesClick,
         onLogoutClick = onLogoutClick,
         onEditProfileClick = onEditProfileClick,
-        onMyUploadsClick = onMyUploadsClick
+        onMyUploadsClick = onMyUploadsClick,
+        onAboutClick = onAboutClick
     )
 }
 
@@ -152,6 +154,7 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit,
+    onAboutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val profileListState = rememberLazyListState()
@@ -180,6 +183,7 @@ fun ProfileScreen(
                 onLogoutClick = onLogoutClick,
                 onEditProfileClick = onEditProfileClick,
                 onMyUploadsClick = onMyUploadsClick,
+                onAboutClick = onAboutClick,
                 listState = profileListState
             )
         }
@@ -195,6 +199,7 @@ private fun ProfileContent(
     onLogoutClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit,
+    onAboutClick: () -> Unit,
     listState: LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
@@ -449,7 +454,8 @@ private fun ProfileContent(
                         label = "About",
                         icon = Icons.Rounded.Info,
                         onClick = {
-                            // Dummy, do nothing
+                            isExpanded = false
+                            onAboutClick()
                         }
                     )
                 }

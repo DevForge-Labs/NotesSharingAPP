@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — Campus Pages</title>
+    <meta name="description" content="Privacy Policy for Campus Pages. Understand how we collect, use, and safeguard your account information, content uploads, and usage analytics.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Shared Branding & Layout Variables */
+        :root {
+            --bg-color: #080a14;
+            --surface-color: rgba(18, 22, 40, 0.65);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(99, 102, 241, 0.2);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --secondary: #3b82f6;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            line-height: 1.7;
+        }
+
+        h1, h2, h3, .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+
+        /* Background Glow Gradients */
+        .bg-glow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-glow-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+        }
+
+        .bg-glow-2 {
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+        }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Top Bar */
+        header {
+            padding: 24px 0;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(8, 10, 20, 0.7);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-box {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px var(--primary-glow);
+        }
+
+        .logo-box svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+
+        .brand-title {
+            font-size: 20px;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--border-glow);
+        }
+
+        /* Policy Main Layout */
+        main {
+            padding: 60px 0 80px 0;
+        }
+
+        .policy-card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 28px;
+            padding: 48px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .policy-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 28px;
+            margin-bottom: 36px;
+        }
+
+        .policy-title {
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .policy-meta {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Policy Section Typography styling */
+        section {
+            margin-bottom: 32px;
+        }
+
+        section:last-child {
+            margin-bottom: 0;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        p, ul {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        ul {
+            padding-left: 20px;
+            list-style-type: square;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        li::marker {
+            color: var(--primary);
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        a.contact-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        a.contact-link:hover {
+            color: #818cf8;
+            text-decoration: underline;
+        }
+
+        /* Footer Style */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 32px 0;
+            text-align: center;
+            background: rgba(4, 5, 10, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .footer-heart {
+            color: #ef4444;
+            display: inline-block;
+            animation: beat 1.2s infinite alternate ease-in-out;
+        }
+
+        @keyframes beat {
+            to { transform: scale(1.2); }
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .policy-card { padding: 28px 20px; }
+            .policy-title { font-size: 28px; }
+            h2 { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Glow -->
+    <div class="bg-glow-container">
+        <div class="bg-glow-1"></div>
+        <div class="bg-glow-2"></div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header>
+        <div class="container nav-wrapper">
+            <a href="index.html" class="brand-logo-group" id="nav-logo">
+                <div class="logo-box">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    </svg>
+                </div>
+                <span class="brand-title">Campus Pages</span>
+            </a>
+            <a href="index.html" class="btn btn-outline" id="nav-btn-back">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back to Home
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <article class="policy-card">
+            
+            <header class="policy-header">
+                <h1 class="policy-title">Privacy Policy</h1>
+                <p class="policy-meta">Last Updated: June 2026</p>
+            </header>
+
+            <!-- Section 1 -->
+            <section>
+                <h2>Information We Collect</h2>
+                <p>Campus Pages collects specific information to deliver customized academic tools and platform stability. The categories we collect may include:</p>
+                <ul>
+                    <li><strong>Account Information:</strong> Profile credentials, username, and user configurations saved on Firebase services.</li>
+                    <li><strong>Email Address:</strong> Registration email used to establish verification profiles and security check credentials.</li>
+                    <li><strong>Uploaded Academic Content:</strong> Lecture notes, revision booklets, lab guides, exam materials, and study resources that you explicitly select and upload to share.</li>
+                    <li><strong>Usage Analytics:</strong> Anonymous diagnostic engagement telemetry to identify system usage frequencies.</li>
+                    <li><strong>Crash Diagnostics:</strong> Log telemetry records to troubleshoot errors and improve general platform consistency.</li>
+                </ul>
+            </section>
+
+            <!-- Section 2 -->
+            <section>
+                <h2>How We Use Information</h2>
+                <p>We leverage collected information to improve notes sharing security and overall features compatibility. Collected details are used to:</p>
+                <ul>
+                    <li>Provide core application functionality and secure logins.</li>
+                    <li>Improve user recommendation feeds based on general relevance.</li>
+                    <li>Maintain platform security, moderation compliance, and protect our servers from misuse.</li>
+                    <li>Enable files upload and downloads functionality.</li>
+                    <li>Optimize general user experience across various smartphone screens.</li>
+                </ul>
+            </section>
+
+            <!-- Section 3 -->
+            <section>
+                <h2>Content Uploaded By Users</h2>
+                <p>Campus Pages operates as a community knowledge hub. Users are entirely responsible for the academic materials they choose to upload to our platform. Users must ensure that they hold the necessary permissions to share their documents and that the uploads do not violate copyright policies.</p>
+                <p>Campus Pages does not claim ownership of user-uploaded academic content, and we preserve content credits to their respective contributors.</p>
+            </section>
+
+            <!-- Section 4 -->
+            <section>
+                <h2>Data Security</h2>
+                <p>We use industry-standard security architectures and Google Firebase cloud services (Firestore Database, Cloud Storage, Authentication, and Firebase Cloud Messaging) to safeguard your files and account profiles. However, please be aware that no wireless transmission or internet storage method can be guaranteed to be absolutely secure.</p>
+            </section>
+
+            <!-- Section 5 -->
+            <section>
+                <h2>Third-Party Services</h2>
+                <p>To provide advanced notifications and secure authentication, Campus Pages may integrate services from third-party partners. These services may include:</p>
+                <ul>
+                    <li>Firebase Authentication</li>
+                    <li>Firebase Cloud Firestore</li>
+                    <li>Firebase Cloud Messaging (FCM)</li>
+                    <li>Google Play Services</li>
+                </ul>
+            </section>
+
+            <!-- Section 6 -->
+            <section>
+                <h2>Children's Privacy</h2>
+                <p>Campus Pages is not intended or targeted for children under 13 years of age. We do not intentionally collect personal profiles of individuals under this age group. If we discover that a user under 13 has supplied us with personal info, we will take immediate steps to remove their record from our Firebase databases.</p>
+            </section>
+
+            <!-- Section 7 -->
+            <section>
+                <h2>Changes To This Policy</h2>
+                <p>This privacy policy may be modified periodically. We recommend checking this page regularly to review any changes. Modifications become effective immediately upon posting to this page.</p>
+            </section>
+
+            <!-- Section 8 -->
+            <section>
+                <h2>Contact</h2>
+                <p>If you have any questions or feedback regarding this privacy policy or data handling practices in Campus Pages, please contact us directly at:</p>
+                <p>
+                    <a href="mailto:campuspages.app@gmail.com" class="contact-link" id="contact-email">campuspages.app@gmail.com</a>
+                </p>
+            </section>
+
+        </article>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Made for Students <span class="footer-heart">❤️</span></p>
+            <p class="footer-text">Copyright &copy; <span id="current-year"></span> Campus Pages. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Set dynamic copyright year
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>
