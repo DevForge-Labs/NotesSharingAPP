@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">NotesSharing</string>
+    <string name="app_name">Campus Pages</string>
     <string name="widget_description">Quick access to bookmarks, uploads, and downloads.</string>
     <string name="widget_learning_description">Resume your recently opened learning materials.</string>
 </resources>

@@ -53,7 +53,7 @@
         <receiver
             android:name="com.pravor.notessharing.widget.QuickActionsWidgetReceiver"
             android:exported="true"
-            android:label="NotesSharing Quick Actions">
+            android:label="Campus Pages Quick Actions">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -65,7 +65,7 @@
         <receiver
             android:name="com.pravor.notessharing.widget.ContinueLearningWidgetReceiver"
             android:exported="true"
-            android:label="NotesSharing Continue Learning">
+            android:label="Campus Pages Continue Learning">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
