@@ -1,174 +1,122 @@
-# NotesSharing
+# 📚 Campus Pages
 
-A modern student-focused platform for sharing academic notes, PDFs, images, and educational resources.
+<div align="center">
 
-Built with:
-- Kotlin
-- Jetpack Compose
-- Material 3
-- MVVM Architecture
-- Gradle Kotlin DSL
+### Discover • Share • Learn
 
----
+A modern student-focused academic platform for discovering, organizing, and sharing educational resources.
 
-## Getting Started
+Built with **Kotlin**, **Jetpack Compose**, **Firebase**, and **Material 3**.
 
-### Prerequisites
+![Platform](https://img.shields.io/badge/Platform-Android-green)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.x-blue)
+![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-orange)
+![Firebase](https://img.shields.io/badge/Backend-Firebase-yellow)
+![Status](https://img.shields.io/badge/Status-Active%20Development-success)
 
-- Android Studio (latest stable version recommended)
-- JDK 17+
-- Git
+</div>
 
 ---
 
-## Clone Repository
+## ✨ Overview
 
-Open Android Studio:
+Campus Pages helps students discover, upload, organize, and access academic resources from a centralized platform.
 
-```text
-Get from Version Control
-```
-
-Paste repository URL:
-
-```bash
-https://github.com/<owner>/<repository>.git
-```
-
-Choose a folder and click **Clone**.
-
-Wait for:
-
-- Gradle Sync
-- Dependency Downloads
-- Project Indexing
-
-to finish completely.
+Whether it's lecture notes, PDFs, study material, question papers, or educational videos, Campus Pages makes learning resources easier to find and share.
 
 ---
 
-## Verify Setup
+## 📱 Features
 
-Run the application once before making any changes.
+### 🔍 Content Discovery
 
-Confirm:
-
-- Project builds successfully
-- Application launches correctly
-
----
-
-## Branch Workflow
-
-⚠️ Do NOT work directly on `master`.
-
-Every contributor should use their own branch.
-
-### Create Your Branch
-
-Example:
-
-```bash
-git checkout -b YourName
-```
-
-Push branch to GitHub:
-
-```bash
-git push -u origin YourName
-```
-
-Examples:
-
-```bash
-git checkout -b Pratyush
-git push -u origin Pratyush
-```
-
-```bash
-git checkout -b Rahul
-git push -u origin Rahul
-```
+| Feature                | Description                                |
+| ---------------------- | ------------------------------------------ |
+| Explore Feed           | Discover newly uploaded academic resources |
+| Trending Section       | Surfacing high-engagement study materials  |
+| Subject Hubs           | Organized content by subject               |
+| Branch-Based Filtering | Find resources relevant to your department |
+| Smart Recommendations  | Personalized content suggestions           |
+| Continue Reading       | Resume previously viewed resources         |
+| Recently Viewed        | Quick access to past activity              |
 
 ---
 
-## Daily Development Workflow
+### 📤 Upload & Share
 
-Switch to your branch:
-
-```bash
-git checkout YourName
-```
-
-Get latest updates:
-
-```bash
-git pull
-```
-
-Make changes.
-
-Commit changes:
-
-```bash
-git add .
-git commit -m "Describe your changes"
-```
-
-Push changes:
-
-```bash
-git push
-```
+| Feature                  | Description                            |
+| ------------------------ | -------------------------------------- |
+| PDF Uploads              | Share lecture notes and study material |
+| Image Uploads            | Upload handwritten notes and diagrams  |
+| YouTube Resources        | Add educational video references       |
+| Multi-Attachment Support | Support for rich content submissions   |
+| Metadata System          | Structured academic categorization     |
 
 ---
 
-## Pull Requests
+### 👤 Personalization
 
-When a feature is complete:
-
-1. Push your branch
-2. Open GitHub
-3. Create a Pull Request
-4. Select:
-
-```text
-Base Branch: master
-Compare Branch: YourName
-```
-
-5. Review changes
-6. Merge into master
+* Personalized recommendations
+* User-specific Continue Reading
+* Recently Viewed synchronization
+* Bookmark synchronization
+* Account-based preferences
 
 ---
 
-## After a Merge
+### 📊 Engagement System
 
-Update your local repository:
-
-```bash
-git checkout master
-git pull
-```
-
-Then return to your branch:
-
-```bash
-git checkout YourName
-```
-
-Bring latest master changes into your branch:
-
-```bash
-git merge master
-```
+* View tracking
+* Download tracking
+* Bookmark system
+* Upvote system
+* Contributor profiles
+* User statistics
+* Activity tracking
 
 ---
 
-## Project Structure
+### ⚡ Performance
+
+* Real-time Firestore synchronization
+* Optimized loading pipelines
+* Download count synchronization
+* View count synchronization
+* Efficient pagination
+* Offline-friendly architecture
+
+---
+
+## 🛠 Tech Stack
+
+### Android
+
+* Kotlin
+* Jetpack Compose
+* Material 3
+* Navigation Compose
+* Coroutines & Flow
+
+### Architecture
+
+* MVVM Architecture
+* Repository Pattern
+* State Management
+* Reactive UI
+
+### Backend
+
+* Firebase Authentication
+* Cloud Firestore
+* Firebase Storage
+
+---
+
+## 🏗 Architecture
 
 ```text
 app/
+├── data/
 ├── model/
 ├── repository/
 ├── state/
@@ -177,31 +125,103 @@ app/
 │   ├── screens/
 │   └── theme/
 ├── viewmodel/
+├── navigation/
 └── MainActivity.kt
 ```
 
 ---
 
-## Current Features
+## 📸 Screenshots
 
-- Explore feed
-- Trending notes
-- YouTube recommendations
-- Study collections
-- Subject hubs
-- Contributor profiles
-- Upload screen
-  - PDFs
-  - Images
-  - YouTube links
-- Local persistence
-- Dark theme support
-- Material 3 UI
+> Add Play Store screenshots here.
+
+| Home       | Explore    | Profile    |
+| ---------- | ---------- | ---------- |
+| Screenshot | Screenshot | Screenshot |
 
 ---
 
-## Development Status
+## 🚀 Getting Started
 
-🚧 Active Development
+### Prerequisites
 
-Features and architecture may change while development is in progress.
+* Android Studio (Latest Stable)
+* JDK 17+
+* Git
+
+### Clone
+
+```bash
+git clone https://github.com/<owner>/<repository>.git
+```
+
+### Run
+
+```bash
+./gradlew assembleDebug
+```
+
+Or simply open the project in Android Studio and run the application.
+
+---
+
+## 🔥 Firebase Setup
+
+Campus Pages uses:
+
+* Firebase Authentication
+* Cloud Firestore
+* Firebase Storage
+
+Place your Firebase configuration file at:
+
+```text
+app/google-services.json
+```
+
+---
+
+## 📈 Development Status
+
+🟢 Active Development
+
+The project is continuously evolving with new features, performance improvements, and user experience enhancements.
+
+---
+
+## ⚠ Repository Policy
+
+This repository is publicly visible for portfolio, educational, and showcase purposes.
+
+### External Contributions
+
+Currently:
+
+* Pull Requests are not being accepted
+* External feature contributions are not being reviewed
+* Redistribution is not permitted without authorization
+
+All development is managed by the project maintainers.
+
+---
+
+## 📄 License
+
+No open-source license has been applied to this repository.
+
+Viewing the source code does not grant permission to:
+
+* Redistribute
+* Modify
+* Repackage
+* Commercially use
+
+the project without explicit written permission from the owners.
+
+---
+
+<div align="center">
+
+Made with ❤️ for students.
+
+</div>
