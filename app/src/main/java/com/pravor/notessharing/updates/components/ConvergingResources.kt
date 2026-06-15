@@ -72,7 +72,7 @@ fun ConvergingResourcesVisual(isActive: Boolean) {
         "DBMS Notes",
         "ECE PYQs",
         "Semester 4",
-        "http://drive..."
+        "Lecture Slides"
     )
     val cardColors = listOf(
         Color(0xFFC62828), // Red

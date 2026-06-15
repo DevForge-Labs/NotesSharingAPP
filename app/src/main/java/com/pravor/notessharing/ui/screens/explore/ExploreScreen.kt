@@ -285,7 +285,7 @@ fun ExploreScreen(
                     }
             ) { type ->
                 when (type) {
-                    "loading" -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
+                    "loading" -> StatePanel("Finding topics", "Scanning campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
                     "empty" -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
                     "error" -> {
                         val errorState = uiState as? ExploreUiState.Error
