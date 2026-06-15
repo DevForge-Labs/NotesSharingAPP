@@ -1,6 +1,5 @@
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
 
 export interface NotificationInput {
@@ -199,40 +198,4 @@ export const NotificationService = {
   createNotificationsForUsers,
 };
 
-/**
- * Callable test function: sendTestNotification
- * Accepts `uid` in request data and triggers test notification flow.
- */
-export const sendTestNotification = onCall(async (request) => {
-  // Ensure user triggering this function is authenticated
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated to trigger test notification.");
-  }
 
-  const targetUid = request.data?.uid;
-  if (!targetUid || typeof targetUid !== "string") {
-    throw new HttpsError("invalid-argument", "The 'uid' field must be provided as a string.");
-  }
-
-  logger.info(`Triggering test notification for target UID: ${targetUid}`);
-
-  const success = await sendNotificationToUser(
-    targetUid,
-    "NotesSharing Test",
-    "Notifications are working successfully.",
-    undefined,
-    "test"
-  );
-
-  if (!success) {
-    throw new HttpsError(
-      "internal",
-      `Failed to send push notification to user ${targetUid}. Check Firebase Function logs for details.`
-    );
-  }
-
-  return {
-    success: true,
-    message: `Test notification sent successfully to user ${targetUid}`,
-  };
-});

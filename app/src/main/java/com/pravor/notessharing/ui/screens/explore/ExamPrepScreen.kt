@@ -97,7 +97,7 @@ fun ExamPrepScreen(
     var selectedType by remember { mutableStateOf("") } // "PYQ", "Cheat Sheet", or "" for all
 
     when (uiState) {
-        ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning dummy campus trends", loading = true)
+        ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning campus trends", loading = true)
         ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here")
         is ExploreUiState.Error -> StatePanel("Explore failed", uiState.message)
         is ExploreUiState.Success -> {
