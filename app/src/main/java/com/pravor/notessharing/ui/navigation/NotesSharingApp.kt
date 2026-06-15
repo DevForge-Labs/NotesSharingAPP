@@ -18,7 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.pravor.notessharing.ui.components.BottomNavBar
+import com.pravor.notessharing.ui.components.AppBottomBar
 import com.pravor.notessharing.ui.screens.explore.DiscoverRoute
 import com.pravor.notessharing.ui.screens.explore.ExploreRoute
 import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
@@ -244,7 +244,7 @@ fun NotesSharingApp(
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                BottomNavBar(
+                AppBottomBar(
                     destinations = bottomDestinations,
                     currentRoute = selectedBottomRoute,
                     onDestinationClick = { destination ->
