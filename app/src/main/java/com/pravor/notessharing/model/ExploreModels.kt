@@ -27,7 +27,14 @@ data class TrendingNote(
     val isUpvoted: Boolean = false,
     val branch: String = "",
     val trendingScore: Double = 0.0
-)
+) {
+    fun isTrendingNote(): Boolean {
+        val docType = documentType.ifBlank { type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
+        val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
+        val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
+        return isValid && !isExcluded
+    }
+}
 
 @Immutable
 data class VideoRecommendation(

@@ -228,7 +228,6 @@ class TrendingFeedRepository(private val context: Context) {
                     try {
                         var query = firestore.collection(col)
                             .orderBy("trendingScore", Query.Direction.DESCENDING)
-                            .orderBy("uploadedAt", Query.Direction.DESCENDING)
                             .limit(PAGE_SIZE.toLong())
 
                         val lastSnap = lastSnapshots[col]
