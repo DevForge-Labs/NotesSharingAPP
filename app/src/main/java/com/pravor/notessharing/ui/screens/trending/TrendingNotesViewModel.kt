@@ -45,18 +45,15 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                 upvotes = upvotesCount,
                 downloadsCount = downloadsCount
             )
-        }.filter { note ->
-            val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-            val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
-            val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
-            isValid && !isExcluded
         }
-        if (updatedNotes.isEmpty() && refreshing) {
+        val postFilteredNotes = updatedNotes.filter { it.isTrendingNote() }
+        android.util.Log.d("DEBUG_TRENDING", "Flow emission - Repository Count: ${notes.size}, Post-Filter Count: ${postFilteredNotes.size}")
+        if (postFilteredNotes.isEmpty() && refreshing) {
             TrendingNotesUiState.Loading
-        } else if (updatedNotes.isEmpty()) {
+        } else if (postFilteredNotes.isEmpty()) {
             TrendingNotesUiState.Empty
         } else {
-            TrendingNotesUiState.Success(updatedNotes)
+            TrendingNotesUiState.Success(postFilteredNotes)
         }
     }.stateIn(
         scope = viewModelScope,
@@ -76,13 +73,10 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                     upvotes = upvotesCount,
                     downloadsCount = downloadsCount
                 )
-            }.filter { note ->
-                val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
-                val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
-                isValid && !isExcluded
             }
-            TrendingNotesUiState.Success(updated)
+            val postFilteredNotes = updated.filter { it.isTrendingNote() }
+            android.util.Log.d("DEBUG_TRENDING", "Initial value - Repository Count: ${repository.trendingNotes.value.size}, Post-Filter Count: ${postFilteredNotes.size}")
+            TrendingNotesUiState.Success(postFilteredNotes)
         } else {
             TrendingNotesUiState.Loading
         }

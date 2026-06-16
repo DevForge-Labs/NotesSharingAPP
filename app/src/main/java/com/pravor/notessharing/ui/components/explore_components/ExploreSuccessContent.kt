@@ -68,12 +68,7 @@ fun ExploreSuccessContent(
 
     // 1. Strictly filter Trending Notes to only show Notes and Documents
     val filteredTrending = remember(content.trendingNotes) {
-        content.trendingNotes.filter { note ->
-            val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-            val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
-            val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
-            isValid && !isExcluded
-        }
+        content.trendingNotes.filter { it.isTrendingNote() }
     }
     val visibleTrendingNotes = filteredTrending.take(7)
 
@@ -505,32 +500,34 @@ fun SubjectHeroCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-            )
+            if (resources.size > 4) {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
 
-            // See More ▼ Row (always show)
-            Surface(
-                onClick = onSeeMoreClick,
-                shape = RoundedCornerShape(12.dp),
-                color = Color.Transparent,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                // See More ▼ Row (only show when resources.size > 4)
+                Surface(
+                    onClick = onSeeMoreClick,
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "See More ▼",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "See More ▼",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor
+                        )
+                    }
                 }
             }
         }
