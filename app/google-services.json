@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1093598842915-0b5cqabdncbj3c5b4121140oapdltgam.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pravor.notessharing",
+            "certificate_hash": "58625d60bf8caf31d95cfa2a0dc50ddddddae47b"
+          }
+        },
+        {
           "client_id": "1093598842915-9qjtj3mla1bquepro0qt2p54l49lemcp.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -27,6 +35,14 @@
           "android_info": {
             "package_name": "com.pravor.notessharing",
             "certificate_hash": "917baaa32bdc3961f468bbbcd8d7fcf31ec5cb75"
+          }
+        },
+        {
+          "client_id": "1093598842915-f2ssoaab1gdckqf8q4s95jigns051fts.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pravor.notessharing",
+            "certificate_hash": "54a07e492d2d8e685ecd7efd5a5f5f3221e254b0"
           }
         },
         {
