@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.ui.components.NotesSearchBar
 
 @Composable
-fun ExploreHeader() {
+fun ExploreHeader(onSearchClick: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(
             text = "Explore",
@@ -22,7 +22,8 @@ fun ExploreHeader() {
         )
         NotesSearchBar(
             placeholder = "Search notes, subjects, playlists...",
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onSearchClick
         )
     }
 }

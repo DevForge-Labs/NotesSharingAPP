@@ -237,7 +237,8 @@ fun NotesSharingApp(
             currentRoute?.startsWith("pdf_viewing") != true &&
             currentRoute?.startsWith("image_viewing") != true &&
             currentRoute?.startsWith("profile/notification_preferences") != true &&
-            currentRoute?.startsWith("profile/about") != true
+            currentRoute?.startsWith("profile/about") != true &&
+            currentRoute?.startsWith("search") != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -444,6 +445,9 @@ fun NotesSharingApp(
                 }
                 composable(AppDestination.Explore.route) {
                     ExploreRoute(
+                        onSearchClick = {
+                            navController.navigate(AppDestination.Search.route)
+                        },
                         onTrendingSeeMoreClick = {
                             navController.navigate(AppDestination.TrendingNotes.route) {
                                 launchSingleTop = true
@@ -480,6 +484,11 @@ fun NotesSharingApp(
                         onVideoClick = { videoId ->
                             navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
                         }
+                    )
+                }
+                composable(AppDestination.Search.route) {
+                    com.pravor.notessharing.ui.screens.search.SearchRoute(
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
                 composable(

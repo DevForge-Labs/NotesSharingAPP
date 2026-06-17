@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 
 @Composable
 fun ExploreRoute(
+    onSearchClick: () -> Unit,
     onTrendingSeeMoreClick: () -> Unit,
     onRecommendedVideosSeeMoreClick: () -> Unit,
     onDiscoverSeeMoreClick: () -> Unit = {},
@@ -114,7 +115,8 @@ fun ExploreRoute(
         onVideoClick = onVideoClick,
         onBookmarkClick = onBookmarkClickRemembered,
         onVideoBookmarkClick = onVideoBookmarkClickRemembered,
-        onUpvoteClick = onUpvoteClickRemembered
+        onUpvoteClick = onUpvoteClickRemembered,
+        onSearchClick = onSearchClick
     )
 
         if (pendingRemoveBookmarkNote != null) {
@@ -218,6 +220,7 @@ fun ExploreScreen(
     onBookmarkClick: (TrendingNote) -> Unit,
     onVideoBookmarkClick: (VideoRecommendation) -> Unit = {},
     onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> },
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val recompositionCount = remember { AtomicInteger(0) }
@@ -308,7 +311,8 @@ fun ExploreScreen(
                                 onVideoClick = onVideoClick,
                                 onBookmarkClick = onBookmarkClick,
                                 onVideoBookmarkClick = onVideoBookmarkClick,
-                                onUpvoteClick = onUpvoteClick
+                                onUpvoteClick = onUpvoteClick,
+                                onSearchClick = onSearchClick
                             )
                         }
                     }
