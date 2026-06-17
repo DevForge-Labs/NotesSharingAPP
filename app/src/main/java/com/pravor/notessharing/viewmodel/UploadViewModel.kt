@@ -7,6 +7,9 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.FirebaseAuth
+import com.pravor.notessharing.profile.ProfileRepository
+import com.pravor.notessharing.util.NormalizationUtil
 import com.pravor.notessharing.data.UploadRepository
 import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
@@ -51,6 +54,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     )
     val uiState: StateFlow<UploadUiState> = _uiState.asStateFlow()
 
+    private var userCollegeId: String? = null
+
     init {
         loadSubjectCatalog()
     }
@@ -58,6 +63,14 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     private fun loadSubjectCatalog() {
         viewModelScope.launch {
             try {
+                val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+                val college = if (currentUid != null) {
+                    ProfileRepository().getProfile(currentUid)?.college
+                } else {
+                    null
+                }
+                userCollegeId = college?.let { NormalizationUtil.normalizeCollege(it) }
+
                 val snapshot = FirebaseFirestore.getInstance()
                     .collection("app_config")
                     .document("subject_catalog")
@@ -65,6 +78,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                     .await()
                 if (snapshot.exists()) {
                     subjectCatalogDocument = snapshot.data
+                    updateBranchesFromCatalog()
                     resolveSubjectForCurrentKey()
                 }
             } catch (e: Exception) {
@@ -73,41 +87,28 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun updateBranchesFromCatalog() {
+        val doc = subjectCatalogDocument ?: return
+        val collegeId = userCollegeId ?: return
+        val collegeCatalog = doc[collegeId] as? Map<*, *> ?: return
+        
+        val derivedBranches = collegeCatalog.keys
+            .map { it.toString() }
+            .filter { !it.startsWith("GROUP_", ignoreCase = true) }
+            .map { it.uppercase(Locale.ROOT) }
+
+        _uiState.update { it.copy(branches = derivedBranches) }
+    }
+
     private fun resolveSubjectForCurrentKey() {
         val state = _uiState.value
         val sem = state.selectedSemester
         val branch = state.selectedBranch
         val group = state.selectedGroup
 
-        val key = when {
-            sem == "Semester 1" -> {
-                if (group == "Group A") "GROUP_A"
-                else if (group == "Group B") "GROUP_B"
-                else null
-            }
-            sem == "Semester 2" -> {
-                if (group == "Group A") "GROUP_B"
-                else if (group == "Group B") "GROUP_A"
-                else null
-            }
-            branch.isNotBlank() && sem.isNotBlank() -> {
-                val semNum = sem.filter { it.isDigit() }
-                if (semNum.isNotEmpty()) "${branch}_$semNum" else null
-            }
-            else -> null
-        }
-
-        if (key == null) {
-            _uiState.update { it.copy(
-                catalogSubjects = emptyList(),
-                useCatalogDropdown = false,
-                subjectCatalogKeyExists = false
-            ) }
-            return
-        }
-
         val doc = subjectCatalogDocument
-        if (doc == null) {
+        val collegeId = userCollegeId
+        if (doc == null || collegeId == null) {
             _uiState.update { it.copy(
                 catalogSubjects = emptyList(),
                 useCatalogDropdown = false,
@@ -116,7 +117,71 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
 
-        val catalogData = doc[key]
+        val collegeCatalog = doc[collegeId] as? Map<*, *>
+        if (collegeCatalog == null) {
+            _uiState.update { it.copy(
+                catalogSubjects = emptyList(),
+                useCatalogDropdown = false,
+                subjectCatalogKeyExists = false
+            ) }
+            return
+        }
+
+        val isFirstYear = sem == "Semester 1" || sem == "Semester 2"
+        val catalogData = if (isFirstYear) {
+            val groupKey = when {
+                sem == "Semester 1" -> {
+                    if (group == "Group A") "GROUP_A"
+                    else if (group == "Group B") "GROUP_B"
+                    else null
+                }
+                sem == "Semester 2" -> {
+                    if (group == "Group A") "GROUP_B"
+                    else if (group == "Group B") "GROUP_A"
+                    else null
+                }
+                else -> null
+            }
+            if (groupKey == null) {
+                _uiState.update { it.copy(
+                    catalogSubjects = emptyList(),
+                    useCatalogDropdown = false,
+                    subjectCatalogKeyExists = false
+                ) }
+                return
+            }
+            collegeCatalog.entries.firstOrNull {
+                it.key.toString().equals(groupKey, ignoreCase = true)
+            }?.value
+        } else {
+            if (branch.isBlank() || sem.isBlank()) {
+                _uiState.update { it.copy(
+                    catalogSubjects = emptyList(),
+                    useCatalogDropdown = false,
+                    subjectCatalogKeyExists = false
+                ) }
+                return
+            }
+            
+            val branchCatalog = collegeCatalog.entries.firstOrNull {
+                it.key.toString().equals(branch, ignoreCase = true)
+            }?.value as? Map<*, *>
+            
+            var semesterData = branchCatalog?.entries?.firstOrNull {
+                it.key.toString().equals(sem, ignoreCase = true)
+            }?.value
+            
+            if (semesterData == null) {
+                val semNum = sem.filter { it.isDigit() }
+                if (semNum.isNotEmpty()) {
+                    semesterData = branchCatalog?.entries?.firstOrNull {
+                        it.key.toString() == semNum
+                    }?.value
+                }
+            }
+            semesterData
+        }
+
         if (catalogData != null) {
             val resolvedSubjects = mutableListOf<CatalogSubject>()
             if (catalogData is Map<*, *>) {
@@ -193,10 +258,14 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun selectSemester(semester: String) {
+        val wasFirstYear = _uiState.value.selectedSemester == "Semester 1" || _uiState.value.selectedSemester == "Semester 2"
+        val isFirstYear = semester == "Semester 1" || semester == "Semester 2"
+
         _uiState.update { 
             it.copy(
                 selectedSemester = semester,
                 selectedGroup = "",
+                selectedBranch = if (isFirstYear || wasFirstYear || semester.isBlank()) "" else it.selectedBranch,
                 subject = "",
                 subjectId = "",
                 catalogSubjects = emptyList(),
