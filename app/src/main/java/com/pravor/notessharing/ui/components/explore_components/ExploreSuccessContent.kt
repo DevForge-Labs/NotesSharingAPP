@@ -62,7 +62,8 @@ fun ExploreSuccessContent(
     onVideoClick: (String) -> Unit,
     onBookmarkClick: (TrendingNote) -> Unit,
     onVideoBookmarkClick: (VideoRecommendation) -> Unit = {},
-    onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> }
+    onUpvoteClick: (String, String?, Int) -> Unit = { _, _, _ -> },
+    onSearchClick: () -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
 
@@ -132,7 +133,7 @@ fun ExploreSuccessContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "explore-header", contentType = "header") {
-                ExploreHeader()
+                ExploreHeader(onSearchClick = onSearchClick)
             }
 
             // Trending Notes Section

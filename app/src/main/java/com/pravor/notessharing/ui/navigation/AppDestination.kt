@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -31,6 +32,7 @@ sealed class AppDestination(
     data object EditProfile : AppDestination("profile/edit", "Edit Profile", Icons.Filled.Person)
     data object NotificationPreferences : AppDestination("profile/notification_preferences", "Notification Preferences", Icons.Filled.Notifications)
     data object About : AppDestination("profile/about", "About", Icons.Filled.Info)
+    data object Search : AppDestination("search", "Search", Icons.Filled.Search)
     
     data object Welcome : AppDestination("welcome", "Welcome", Icons.Filled.Home)
     data object Login : AppDestination("login", "Login", Icons.Filled.Home)
