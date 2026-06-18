@@ -222,6 +222,6 @@ the project without explicit written permission from the owners.
 
 <div align="center">
 
-Made with ❤️ for students
+Made with ❤️ for students.
 
 </div>
