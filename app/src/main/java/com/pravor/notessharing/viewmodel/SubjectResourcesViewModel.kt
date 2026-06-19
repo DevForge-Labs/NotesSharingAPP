@@ -144,6 +144,7 @@ class SubjectResourcesViewModel(
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
                     val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
+                    val displaySubjectVal = data["displaySubject"] as? String
                     val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
                     val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
                         ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
@@ -214,7 +215,8 @@ class SubjectResourcesViewModel(
                             examYear = examYearVal,
                             isUpvoted = false,
                             branch = branchVal,
-                            trendingScore = trendingScore
+                            trendingScore = trendingScore,
+                            displaySubject = displaySubjectVal
                         )
                     }
                 }

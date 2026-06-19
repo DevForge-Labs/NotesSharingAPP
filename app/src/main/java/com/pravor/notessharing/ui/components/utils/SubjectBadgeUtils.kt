@@ -175,13 +175,20 @@ fun SubjectBadge(
     subject: String,
     modifier: Modifier = Modifier,
     isLarge: Boolean = false,
-    semester: String? = null
+    semester: String? = null,
+    disableNormalization: Boolean = false
 ) {
     if (subject.isBlank()) return
 
     val normalized = remember(subject) { normalizeSubject(subject) }
     val color = remember(normalized) { getSubjectColor(normalized) }
-    val displayName = remember(subject, normalized) { getSubjectDisplayName(subject, normalized) }
+    val displayName = remember(subject, normalized, disableNormalization) {
+        if (disableNormalization) {
+            subject
+        } else {
+            getSubjectDisplayName(subject, normalized)
+        }
+    }
     val displayWithSem = remember(displayName, semester) {
         if (!semester.isNullOrBlank()) {
             "$displayName  |  ${formatSemesterForSubject(semester)}"

@@ -332,6 +332,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
                     val subject = data["subject"] as? String ?: ""
+                    val displaySubjectVal = data["displaySubject"] as? String
                     val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
                     val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
                     val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
@@ -363,7 +364,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         examYear = examYearVal,
                         isUpvoted = resolvedIsUpvoted,
                         branch = branchVal,
-                        trendingScore = trendingScore
+                        trendingScore = trendingScore,
+                        displaySubject = displaySubjectVal
                     )
                 }
 
