@@ -26,7 +26,8 @@ data class TrendingNote(
     val semester: String = "",
     val isUpvoted: Boolean = false,
     val branch: String = "",
-    val trendingScore: Double = 0.0
+    val trendingScore: Double = 0.0,
+    val displaySubject: String? = null
 ) {
     fun isTrendingNote(): Boolean {
         val docType = documentType.ifBlank { type ?: "" }.lowercase(java.util.Locale.ROOT).trim()

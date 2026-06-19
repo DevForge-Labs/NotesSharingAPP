@@ -120,6 +120,7 @@ class TrendingFeedRepository(private val context: Context) {
             put("examYear", note.examYear ?: "")
             put("examType", note.examType ?: "")
             put("trendingScore", note.trendingScore)
+            put("displaySubject", note.displaySubject ?: "")
         }
     }
 
@@ -145,7 +146,8 @@ class TrendingFeedRepository(private val context: Context) {
             semester = obj.optString("semester", ""),
             examYear = obj.optString("examYear").ifBlank { null },
             examType = obj.optString("examType").ifBlank { null },
-            trendingScore = obj.optDouble("trendingScore", 0.0)
+            trendingScore = obj.optDouble("trendingScore", 0.0),
+            displaySubject = obj.optString("displaySubject").ifBlank { null }
         )
     }
 
@@ -365,6 +367,7 @@ class TrendingFeedRepository(private val context: Context) {
             val examYear = (data["examYear"] ?: data["year"])?.toString()
             val examType = data["examType"]?.toString()
             val trendingScore = (data["trendingScore"] as? Number)?.toDouble() ?: 0.0
+            val displaySubjectVal = data["displaySubject"] as? String
 
             val contributorLevel = if (uploaderId.isNotEmpty()) {
                 if (uploaderId == "dummy-uid") {
@@ -397,7 +400,8 @@ class TrendingFeedRepository(private val context: Context) {
                 semester = semester,
                 examYear = examYear,
                 examType = examType,
-                trendingScore = trendingScore
+                trendingScore = trendingScore,
+                displaySubject = displaySubjectVal
             )
         }
         val mappingTotalDuration = System.currentTimeMillis() - mappingStartTime

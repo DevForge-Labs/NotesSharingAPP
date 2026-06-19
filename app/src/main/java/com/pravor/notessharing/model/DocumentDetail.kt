@@ -37,7 +37,8 @@ data class DocumentDetail(
     val youtubeThumbnailUrl: String? = null,
     val collection: String = "notes",
     val isUpvoted: Boolean = false,
-    val isBookmarked: Boolean = false
+    val isBookmarked: Boolean = false,
+    val displaySubject: String? = null
 ) {
     fun toFeedItem(): FeedItem {
         val initials = if (uploaderName.isNotBlank()) {
@@ -134,6 +135,7 @@ fun Map<String, Any>.toDocumentDetail(id: String, collection: String = "notes"):
         section = this["section"] as? String,
         sectionDisplay = this["sectionDisplay"] as? String,
         youtubeThumbnailUrl = this["youtubeThumbnailUrl"] as? String,
-        collection = collection
+        collection = collection,
+        displaySubject = this["displaySubject"] as? String
     )
 }

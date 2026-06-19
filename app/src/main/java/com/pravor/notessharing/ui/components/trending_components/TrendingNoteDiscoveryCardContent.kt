@@ -113,9 +113,19 @@ fun TrendingNoteDiscoveryCardContent(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    if (isTitleValid && doc.subject.isNotBlank()) {
+                    val badgeSubject = when {
+                        !doc.displaySubject.isNullOrBlank() -> doc.displaySubject
+                        doc.subject.isNotBlank() -> doc.subject
+                        else -> "Unknown"
+                    }
+                    if (isTitleValid) {
                         Spacer(Modifier.height(4.dp))
-                        SubjectBadge(subject = doc.subject, isLarge = true, semester = doc.semester)
+                        SubjectBadge(
+                            subject = badgeSubject,
+                            isLarge = true,
+                            semester = doc.semester,
+                            disableNormalization = !doc.displaySubject.isNullOrBlank()
+                        )
                     }
 
                     Spacer(Modifier.height(4.dp))
@@ -250,9 +260,19 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (isTitleValid && note.subject.isNotBlank()) {
+                    val badgeSubject = when {
+                        !note.displaySubject.isNullOrBlank() -> note.displaySubject
+                        note.subject.isNotBlank() -> note.subject
+                        else -> "Unknown"
+                    }
+                    if (isTitleValid) {
                         Spacer(Modifier.height(4.dp))
-                        SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
+                        SubjectBadge(
+                            subject = badgeSubject,
+                            isLarge = true,
+                            semester = note.semester,
+                            disableNormalization = !note.displaySubject.isNullOrBlank()
+                        )
                     }
 
                     Spacer(Modifier.height(4.dp))
@@ -338,9 +358,19 @@ fun TrendingNoteDiscoveryCardContentFallback(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (isTitleValid && note.subject.isNotBlank()) {
+                    val badgeSubject = when {
+                        !note.displaySubject.isNullOrBlank() -> note.displaySubject
+                        note.subject.isNotBlank() -> note.subject
+                        else -> "Unknown"
+                    }
+                    if (isTitleValid) {
                         Spacer(Modifier.height(4.dp))
-                        SubjectBadge(subject = note.subject, isLarge = true, semester = note.semester)
+                        SubjectBadge(
+                            subject = badgeSubject,
+                            isLarge = true,
+                            semester = note.semester,
+                            disableNormalization = !note.displaySubject.isNullOrBlank()
+                        )
                     }
 
                     Spacer(Modifier.height(4.dp))

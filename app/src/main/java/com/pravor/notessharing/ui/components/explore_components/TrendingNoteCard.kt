@@ -308,9 +308,15 @@ fun TrendingNoteCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (note.subject.isNotBlank()) {
-                    SubjectBadge(subject = note.subject)
+                val badgeSubject = when {
+                    !note.displaySubject.isNullOrBlank() -> note.displaySubject
+                    note.subject.isNotBlank() -> note.subject
+                    else -> "Unknown"
                 }
+                SubjectBadge(
+                    subject = badgeSubject,
+                    disableNormalization = !note.displaySubject.isNullOrBlank()
+                )
 
                 // Conditional Year Badge for PYQ documents (Aligned Far Right)
                 if (docType == "PYQ" && !note.examYear.isNullOrBlank()) {
