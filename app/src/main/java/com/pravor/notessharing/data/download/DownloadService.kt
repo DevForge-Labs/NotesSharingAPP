@@ -142,7 +142,7 @@ object DownloadService {
         return manager.getAttachmentLocalPath(storagePath)
     }
 
-    private fun downloadFile(urlStr: String, targetFile: File, onProgressUpdate: (Long, Long) -> Unit) {
+    fun downloadFile(urlStr: String, targetFile: File, onProgressUpdate: (Long, Long) -> Unit) {
         val request = Request.Builder().url(urlStr).build()
         val response = okHttpClient.newCall(request).execute()
 

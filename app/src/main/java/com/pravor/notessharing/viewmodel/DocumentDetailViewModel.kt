@@ -11,15 +11,22 @@ import com.pravor.notessharing.data.download.DownloadDataStoreManager
 import com.pravor.notessharing.data.download.DownloadService
 import com.pravor.notessharing.data.download.DownloadTracker
 import com.pravor.notessharing.data.download.DownloadForegroundService
+import com.pravor.notessharing.data.download.ShareStorageProvider
 import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.model.toDocumentDetail
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
+import java.io.File
 
 sealed interface DocumentDetailUiState {
     data object Loading : DocumentDetailUiState
@@ -38,8 +45,14 @@ sealed interface DownloadState {
     data object Downloaded : DownloadState
 }
 
+sealed interface ShareEvent {
+    data class Success(val files: List<File>) : ShareEvent
+    data class Error(val message: String) : ShareEvent
+}
+
 class DocumentDetailViewModel(
-    private val repository: DocumentDetailRepository = DocumentDetailRepository()
+    private val repository: DocumentDetailRepository = DocumentDetailRepository(),
+    private val storageProvider: ShareStorageProvider? = null
 ) : ViewModel() {
     private var loadedDocumentId: String? = null
 
@@ -48,6 +61,12 @@ class DocumentDetailViewModel(
 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.NotDownloaded)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+
+    private val _shareLoading = MutableStateFlow(false)
+    val shareLoading: StateFlow<Boolean> = _shareLoading.asStateFlow()
+
+    private val _shareEvent = MutableSharedFlow<ShareEvent>()
+    val shareEvent: SharedFlow<ShareEvent> = _shareEvent.asSharedFlow()
 
     private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
     private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
@@ -464,8 +483,80 @@ class DocumentDetailViewModel(
         }
     }
 
+    fun shareDocument() {
+        val successState = (_uiState.value as? DocumentDetailUiState.Success) ?: return
+        val doc = successState.document
+        val provider = storageProvider ?: return
+
+        if (_shareLoading.value) return
+
+        viewModelScope.launch {
+            _shareLoading.value = true
+            try {
+                val urls = doc.fileUrls
+                if (urls.isEmpty()) {
+                    throw Exception("No files to share.")
+                }
+
+                val preparedFiles = withContext(Dispatchers.IO) {
+                    val tempFileList = mutableListOf<File>()
+                    for (url in urls) {
+                        // 1. Check if downloaded locally in permanent storage
+                        val localFile = provider.getDownloadedAttachmentFile(doc.id, url)
+                        if (localFile != null && localFile.exists()) {
+                            tempFileList.add(localFile)
+                            continue
+                        }
+
+                        // 2. Check if cached locally in temporary cache
+                        val cachedFile = provider.getShareCacheFile(doc.id, url)
+                        if (cachedFile.exists() && cachedFile.length() > 0) {
+                            tempFileList.add(cachedFile)
+                            continue
+                        }
+
+                        // 3. Otherwise, download it to the temporary cache
+                        DownloadService.downloadFile(url, cachedFile) { _, _ -> }
+                        if (cachedFile.exists() && cachedFile.length() > 0) {
+                            tempFileList.add(cachedFile)
+                        } else {
+                            throw Exception("Failed to download attachment.")
+                        }
+                    }
+                    tempFileList
+                }
+
+                if (preparedFiles.isNotEmpty()) {
+                    _shareEvent.emit(ShareEvent.Success(preparedFiles))
+                } else {
+                    throw Exception("No attachments found to share.")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SHARE_DEBUG", "Error preparing files: ${e.message}", e)
+                _shareEvent.emit(ShareEvent.Error(e.localizedMessage ?: "Failed to prepare files for sharing."))
+            } finally {
+                _shareLoading.value = false
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         clearUpvotesObservation()
+    }
+
+    companion object {
+        fun provideFactory(
+            context: Context,
+            repository: DocumentDetailRepository = DocumentDetailRepository()
+        ): androidx.lifecycle.ViewModelProvider.Factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return DocumentDetailViewModel(
+                    repository = repository,
+                    storageProvider = com.pravor.notessharing.data.download.AndroidShareStorageProvider(context.applicationContext)
+                ) as T
+            }
+        }
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.net.toUri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -100,7 +101,8 @@ fun VideoDetailRoute(
         onNavigateToVideoDetail = onNavigateToVideoDetail,
         onPlayClick = { video ->
             viewModel.incrementVideoViews(video.id, video.collection, "Video")
-        }
+        },
+        onUpvoteClick = viewModel::toggleUpvote
     )
 }
 
@@ -111,13 +113,15 @@ fun VideoDetailScreen(
     uiState: VideoDetailUiState,
     onBackClick: () -> Unit,
     onNavigateToVideoDetail: (String) -> Unit,
-    onPlayClick: (VideoDetail) -> Unit
+    onPlayClick: (VideoDetail) -> Unit,
+    onUpvoteClick: (String) -> Unit
 ) {
     val context = LocalContext.current
     val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
     val bookmarks by BookmarkRepository.bookmarksFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showRemoveBookmarkDialog by remember { mutableStateOf(false) }
+    var pendingRemoveUpvoteId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentUid) {
         if (currentUid.isNotEmpty()) {
@@ -128,6 +132,17 @@ fun VideoDetailScreen(
     val isBookmarked = remember(bookmarks, uiState) {
         val videoId = (uiState as? VideoDetailUiState.Success)?.video?.id ?: ""
         videoId.isNotEmpty() && bookmarks.any { it.id == videoId }
+    }
+
+    val handleUpvoteClick = remember(onUpvoteClick) {
+        { itemId: String ->
+            val wasUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] ?: false
+            if (wasUpvoted) {
+                pendingRemoveUpvoteId = itemId
+            } else {
+                onUpvoteClick(itemId)
+            }
+        }
     }
 
     Scaffold(
@@ -247,7 +262,12 @@ fun VideoDetailScreen(
                             relatedVideos = state.relatedVideos,
                             onNavigateToVideoDetail = onNavigateToVideoDetail,
                             context = context,
-                            onPlayClick = onPlayClick
+                            onPlayClick = onPlayClick,
+                            currentUid = currentUid,
+                            onUpvoteClick = handleUpvoteClick,
+                            onShowRemoveUpvoteDialog = {
+                                pendingRemoveUpvoteId = state.video.id
+                            }
                         )
                     }
                 }
@@ -282,6 +302,33 @@ fun VideoDetailScreen(
                 }
             )
         }
+
+        if (pendingRemoveUpvoteId != null) {
+            AlertDialog(
+                onDismissRequest = { pendingRemoveUpvoteId = null },
+                title = { Text(text = "Remove your upvote?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val itemId = pendingRemoveUpvoteId
+                            if (itemId != null) {
+                                onUpvoteClick(itemId)
+                            }
+                            pendingRemoveUpvoteId = null
+                        }
+                    ) {
+                        Text("Remove Upvote")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { pendingRemoveUpvoteId = null }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -292,7 +339,10 @@ private fun VideoDetailContent(
     relatedVideos: List<VideoDetail>,
     onNavigateToVideoDetail: (String) -> Unit,
     context: Context,
-    onPlayClick: (VideoDetail) -> Unit
+    onPlayClick: (VideoDetail) -> Unit,
+    currentUid: String,
+    onUpvoteClick: (String) -> Unit,
+    onShowRemoveUpvoteDialog: () -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     LazyColumn(
@@ -317,7 +367,17 @@ private fun VideoDetailContent(
 
         // 2. Video Information Card
         item(key = "info-section") {
-            VideoInfoCard(video = video, contributorLevel = contributorLevel)
+            VideoInfoCard(
+                video = video,
+                contributorLevel = contributorLevel,
+                currentUid = currentUid,
+                onUpvoteClick = onUpvoteClick,
+                onShowRemoveUpvoteDialog = onShowRemoveUpvoteDialog,
+                onShareClick = {
+                    shareVideo(context, video.youtubeUrl, video.title)
+                },
+                shareEnabled = video.youtubeUrl.isNotBlank()
+            )
         }
 
         // 3. Description if present
@@ -544,7 +604,15 @@ private fun launchYouTubeIntent(
 }
 
 @Composable
-fun VideoInfoCard(video: VideoDetail, contributorLevel: String) {
+fun VideoInfoCard(
+    video: VideoDetail,
+    contributorLevel: String,
+    currentUid: String,
+    onUpvoteClick: (String) -> Unit,
+    onShowRemoveUpvoteDialog: () -> Unit,
+    onShareClick: () -> Unit,
+    shareEnabled: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -592,6 +660,48 @@ fun VideoInfoCard(video: VideoDetail, contributorLevel: String) {
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // Upvote & Share action row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    VideoUpvoteButtonSection(
+                        videoId = video.id,
+                        initialUpvotes = video.upvotes,
+                        currentUid = currentUid,
+                        onUpvoteClick = onUpvoteClick,
+                        onShowRemoveDialog = onShowRemoveUpvoteDialog
+                    )
+                }
+
+                // Vertical Divider
+                Box(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(2.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                )
+
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    VideoShareButtonSection(
+                        onClick = onShareClick,
+                        enabled = shareEnabled
+                    )
+                }
+            }
+
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -712,5 +822,138 @@ fun RelatedVideoCard(video: VideoDetail, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+private fun shareVideo(context: Context, videoUrl: String, videoTitle: String) {
+    try {
+        val shareText = "Check out this lecture on NoteShare!\n\n$videoUrl"
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, videoTitle)
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
+        val chooser = Intent.createChooser(intent, "Share Video")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Failed to share video", Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+fun VideoUpvoteButtonSection(
+    videoId: String,
+    initialUpvotes: Int,
+    currentUid: String,
+    onUpvoteClick: (String) -> Unit,
+    onShowRemoveDialog: () -> Unit,
+    enabled: Boolean = true
+) {
+    val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
+    val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
+
+    val isUpvoted = remember(upvotesMap, videoId) {
+        upvotesMap[videoId] == true
+    }
+    val upvoteCount = remember(upvoteCountsMap, videoId) {
+        upvoteCountsMap[videoId] ?: initialUpvotes
+    }
+
+    val context = LocalContext.current
+    val upvoteColor = if (!enabled) {
+        Color(0xFF94A3B8)
+    } else if (isUpvoted) {
+        Color(0xFFFFB74D)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled) {
+                if (currentUid.isEmpty()) {
+                    Toast.makeText(context, "Please sign in to upvote", Toast.LENGTH_SHORT).show()
+                    return@clickable
+                }
+                if (isUpvoted) {
+                    onShowRemoveDialog()
+                } else {
+                    onUpvoteClick(videoId)
+                }
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ThumbUp,
+                contentDescription = "Upvote",
+                tint = upvoteColor,
+                modifier = Modifier.size(32.dp)
+            )
+            Text(
+                text = "$upvoteCount",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = upvoteColor
+                )
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (isUpvoted) "Upvoted" else "Upvote",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = upvoteColor
+            )
+        )
+    }
+}
+
+@Composable
+fun VideoShareButtonSection(
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
+    val shareColor = if (!enabled) {
+        Color(0xFF94A3B8)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled) {
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.height(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = "Share",
+                tint = shareColor,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Share",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = shareColor
+            )
+        )
     }
 }

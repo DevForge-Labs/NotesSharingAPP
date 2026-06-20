@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
@@ -70,14 +71,30 @@ fun DocumentDetailRoute(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToPdfViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
     onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
-    viewModel: DocumentDetailViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val viewModel: DocumentDetailViewModel = viewModel(
+        factory = DocumentDetailViewModel.provideFactory(context.applicationContext)
+    )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val downloadState by viewModel.downloadState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val shareLoading by viewModel.shareLoading.collectAsStateWithLifecycle()
 
     LaunchedEffect(documentId) {
         viewModel.loadDocumentDetail(documentId, context)
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.shareEvent.collect { event ->
+            when (event) {
+                is com.pravor.notessharing.viewmodel.ShareEvent.Success -> {
+                    com.pravor.notessharing.ui.components.utils.FileSharingUtils.shareFiles(context, event.files)
+                }
+                is com.pravor.notessharing.viewmodel.ShareEvent.Error -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     LaunchedEffect(uiState) {
@@ -126,6 +143,7 @@ fun DocumentDetailRoute(
         documentId = documentId,
         uiState = uiState,
         downloadState = downloadState,
+        shareLoading = shareLoading,
         onBackClick = onBackClick,
         onNavigateToDetail = onNavigateToDetail,
         onUpvoteClick = viewModel::toggleUpvote,
@@ -133,7 +151,8 @@ fun DocumentDetailRoute(
         onNavigateToPdfViewer = onNavigateToPdfViewer,
         onNavigateToImageViewer = onNavigateToImageViewer,
         onRetry = { viewModel.loadDocumentDetail(documentId, context) },
-        onDownloadClick = { viewModel.downloadDocument(context) }
+        onDownloadClick = { viewModel.downloadDocument(context) },
+        onShareClick = { viewModel.shareDocument() }
     )
 }
 
@@ -143,6 +162,7 @@ fun DocumentDetailScreen(
     documentId: String,
     uiState: DocumentDetailUiState,
     downloadState: com.pravor.notessharing.viewmodel.DownloadState,
+    shareLoading: Boolean,
     onBackClick: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onUpvoteClick: (String) -> Unit,
@@ -150,7 +170,8 @@ fun DocumentDetailScreen(
     onNavigateToPdfViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
     onNavigateToImageViewer: (documentId: String, fileUrl: String, title: String) -> Unit,
     onRetry: () -> Unit,
-    onDownloadClick: () -> Unit
+    onDownloadClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     android.util.Log.d("DETAILS_DEBUG", "DetailsScreen Composed")
     val context = LocalContext.current
@@ -330,16 +351,11 @@ fun DocumentDetailScreen(
                             contributorLevel = successState.contributorLevel,
                             relatedDocuments = successState.relatedDocuments,
                             downloadState = downloadState,
+                            shareLoading = shareLoading,
                             onNavigateToDetail = onNavigateToDetail,
                             onDownloadClick = onDownloadClick,
-                            onShareClick = { fileUrl ->
-                                // TODO: Implement file sharing flow
-                                Toast.makeText(
-                                    context,
-                                    "Share functionality coming soon",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
+                            onShareClick = { _ -> onShareClick() },
+                            onBottomShareClick = onShareClick,
                             onUpvoteClick = handleUpvoteClick,
                             onBookmarkClick = onBookmarkClick,
                             onShowRemoveUpvoteDialog = {
@@ -443,9 +459,11 @@ fun DocumentDetailSuccessContent(
     contributorLevel: String,
     relatedDocuments: List<DocumentDetail>,
     downloadState: com.pravor.notessharing.viewmodel.DownloadState,
+    shareLoading: Boolean,
     onNavigateToDetail: (String) -> Unit,
     onDownloadClick: () -> Unit,
     onShareClick: (String) -> Unit,
+    onBottomShareClick: () -> Unit,
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onShowRemoveUpvoteDialog: () -> Unit,
@@ -605,17 +623,22 @@ fun DocumentDetailSuccessContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    NotesSharingDownloadIndicator(
-                        downloadState = if (isArchived) com.pravor.notessharing.viewmodel.DownloadState.Downloaded else downloadState,
-                        onClick = {
-                            if (!isArchived) {
-                                onDownloadClick()
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        NotesSharingDownloadIndicator(
+                            downloadState = if (isArchived) com.pravor.notessharing.viewmodel.DownloadState.Downloaded else downloadState,
+                            onClick = {
+                                if (!isArchived) {
+                                    onDownloadClick()
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
 
                     // Vertical Divider
                     Box(
@@ -625,15 +648,38 @@ fun DocumentDetailSuccessContent(
                             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     )
 
-                    // Interactive Upvote Button Section
-                    UpvoteButtonSection(
-                        docId = doc.id,
-                        initialUpvotes = doc.upvotes,
-                        currentUid = currentUid,
-                        onUpvoteClick = onUpvoteClick,
-                        onShowRemoveDialog = onShowRemoveUpvoteDialog,
-                        enabled = !isArchived
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        UpvoteButtonSection(
+                            docId = doc.id,
+                            initialUpvotes = doc.upvotes,
+                            currentUid = currentUid,
+                            onUpvoteClick = onUpvoteClick,
+                            onShowRemoveDialog = onShowRemoveUpvoteDialog,
+                            enabled = !isArchived
+                        )
+                    }
+
+                    // Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .width(2.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     )
+
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ShareButtonSection(
+                            shareLoading = shareLoading,
+                            onClick = onBottomShareClick,
+                            enabled = !isArchived
+                        )
+                    }
                 }
             }
         }
@@ -774,6 +820,57 @@ fun UpvoteButtonSection(
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
                 color = upvoteColor
+            )
+        )
+    }
+}
+
+@Composable
+fun ShareButtonSection(
+    shareLoading: Boolean,
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
+    val shareColor = if (!enabled) {
+        Color(0xFF94A3B8)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled && !shareLoading) {
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.height(32.dp)
+        ) {
+            if (shareLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.5.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = shareColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Share",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = shareColor
             )
         )
     }
