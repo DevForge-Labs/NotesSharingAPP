@@ -249,8 +249,20 @@ class TrendingFeedRepository(private val context: Context) {
                         
                         val docs = snap.documents
                         val nonVideoDocs = docs.filter { doc ->
-                            val data = doc.data ?: emptyMap<String, Any>()
-                            !isVideoResource(data)
+                            val data = doc.data ?: return@filter false
+                            val docId = doc.id
+                            val idField = data["id"] as? String
+                            val docIdField = data["documentId"] as? String
+                            val title = data["title"] as? String
+                            val uploaderId = data["uploaderId"] as? String
+
+                            val isIdBlank = docId.isBlank() || 
+                                    (idField != null && idField.isBlank()) || 
+                                    (docIdField != null && docIdField.isBlank())
+                            val isTitleBlank = title.isNullOrBlank()
+                            val isDummyUploader = uploaderId == "dummy-uid"
+
+                            !isVideoResource(data) && !isIdBlank && !isTitleBlank && !isDummyUploader
                         }
 
                         val advanceCursorTo = if (nonVideoDocs.isEmpty() && docs.isNotEmpty()) {

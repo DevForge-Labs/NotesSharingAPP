@@ -91,8 +91,10 @@ fun SignUpScreen(
     
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var college by remember { mutableStateOf("KIIT") }
-    var branch by remember { mutableStateOf("") }
+    var selectedCollegeId by remember { mutableStateOf("") }
+    var selectedCollegeName by remember { mutableStateOf("") }
+    var selectedBranchId by remember { mutableStateOf("") }
+    var selectedBranchName by remember { mutableStateOf("") }
     var semester by remember { mutableStateOf("") }
     var section by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -101,6 +103,17 @@ fun SignUpScreen(
     var collegeExpanded by remember { mutableStateOf(false) }
     var branchExpanded by remember { mutableStateOf(false) }
     var semesterExpanded by remember { mutableStateOf(false) }
+
+    val colleges by viewModel.colleges.collectAsState()
+    val branches by viewModel.branches.collectAsState()
+    val isCollegesLoading by viewModel.isCollegesLoading.collectAsState()
+    val collegesError by viewModel.collegesError.collectAsState()
+    val isBranchesLoading by viewModel.isBranchesLoading.collectAsState()
+    val branchesError by viewModel.branchesError.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadColleges()
+    }
     
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
@@ -123,8 +136,8 @@ fun SignUpScreen(
         viewModel.signUpWithEmail(
             name = fullName,
             email = email,
-            college = college,
-            branch = branch,
+            college = selectedCollegeId,
+            branch = selectedBranchId,
             semester = semester,
             section = section,
             password = password,
@@ -240,7 +253,7 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = college,
+                    value = selectedCollegeName,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("College") },
@@ -267,15 +280,44 @@ fun SignUpScreen(
                     expanded = collegeExpanded,
                     onDismissRequest = { collegeExpanded = false }
                 ) {
-                    com.pravor.notessharing.model.AcademicCatalog.colleges.forEach { option ->
+                    if (isCollegesLoading) {
                         DropdownMenuItem(
-                            text = { Text(option) },
-                            onClick = {
-                                college = option
-                                collegeExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            text = { Text("Loading colleges...") },
+                            onClick = {},
+                            enabled = false
                         )
+                    } else if (collegesError != null) {
+                        DropdownMenuItem(
+                            text = { Text(collegesError ?: "Error loading colleges") },
+                            onClick = {},
+                            enabled = false
+                        )
+                    } else if (colleges.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("No colleges available") },
+                            onClick = {},
+                            enabled = false
+                        )
+                    } else {
+                        colleges.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.name) },
+                                onClick = {
+                                    if (selectedCollegeId != option.id) {
+                                        selectedCollegeId = option.id
+                                        selectedCollegeName = option.name
+                                        // Reset selected branch on college change
+                                        selectedBranchId = ""
+                                        selectedBranchName = ""
+                                        viewModel.clearBranches()
+                                        // Reload branches for the newly selected college
+                                        viewModel.loadBranchesForCollege(option.id)
+                                    }
+                                    collegeExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
                     }
                 }
             }
@@ -289,7 +331,7 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = branch,
+                    value = selectedBranchName,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Branch") },
@@ -316,15 +358,42 @@ fun SignUpScreen(
                     expanded = branchExpanded,
                     onDismissRequest = { branchExpanded = false }
                 ) {
-                    com.pravor.notessharing.model.AcademicCatalog.branches.forEach { option ->
+                    if (selectedCollegeId.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text(option) },
-                            onClick = {
-                                branch = option
-                                branchExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            text = { Text("Please select a college first") },
+                            onClick = {},
+                            enabled = false
                         )
+                    } else if (isBranchesLoading) {
+                        DropdownMenuItem(
+                            text = { Text("Loading branches...") },
+                            onClick = {},
+                            enabled = false
+                        )
+                    } else if (branchesError != null) {
+                        DropdownMenuItem(
+                            text = { Text(branchesError ?: "Error loading branches") },
+                            onClick = {},
+                            enabled = false
+                        )
+                    } else if (branches.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("No branches available") },
+                            onClick = {},
+                            enabled = false
+                        )
+                    } else {
+                        branches.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.name) },
+                                onClick = {
+                                    selectedBranchId = option.id
+                                    selectedBranchName = option.name
+                                    branchExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
                     }
                 }
             }

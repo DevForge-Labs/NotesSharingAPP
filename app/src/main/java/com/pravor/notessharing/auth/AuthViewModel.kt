@@ -21,6 +21,68 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
     var tempGoogleProfile: Profile? = null
         private set
 
+    private val metadataRepository = com.pravor.notessharing.data.MetadataRepository()
+
+    private val _colleges = MutableStateFlow<List<com.pravor.notessharing.data.CollegeMetadata>>(emptyList())
+    val colleges: StateFlow<List<com.pravor.notessharing.data.CollegeMetadata>> = _colleges.asStateFlow()
+
+    private val _branches = MutableStateFlow<List<com.pravor.notessharing.data.BranchMetadata>>(emptyList())
+    val branches: StateFlow<List<com.pravor.notessharing.data.BranchMetadata>> = _branches.asStateFlow()
+
+    private val _isCollegesLoading = MutableStateFlow(false)
+    val isCollegesLoading: StateFlow<Boolean> = _isCollegesLoading.asStateFlow()
+
+    private val _collegesError = MutableStateFlow<String?>(null)
+    val collegesError: StateFlow<String?> = _collegesError.asStateFlow()
+
+    private val _isBranchesLoading = MutableStateFlow(false)
+    val isBranchesLoading: StateFlow<Boolean> = _isBranchesLoading.asStateFlow()
+
+    private val _branchesError = MutableStateFlow<String?>(null)
+    val branchesError: StateFlow<String?> = _branchesError.asStateFlow()
+
+    fun loadColleges() {
+        viewModelScope.launch {
+            _isCollegesLoading.value = true
+            _collegesError.value = null
+            try {
+                val list = metadataRepository.getColleges()
+                if (list.isEmpty()) {
+                    _collegesError.value = "No colleges available"
+                } else {
+                    _colleges.value = list
+                }
+            } catch (e: Exception) {
+                _collegesError.value = "Failed to load colleges"
+            } finally {
+                _isCollegesLoading.value = false
+            }
+        }
+    }
+
+    fun loadBranchesForCollege(collegeId: String) {
+        viewModelScope.launch {
+            _isBranchesLoading.value = true
+            _branchesError.value = null
+            try {
+                val list = metadataRepository.getBranchesForCollege(collegeId)
+                if (list.isEmpty()) {
+                    _branchesError.value = "Unable to load branches"
+                } else {
+                    _branches.value = list
+                }
+            } catch (e: Exception) {
+                _branchesError.value = "Unable to load branches"
+            } finally {
+                _isBranchesLoading.value = false
+            }
+        }
+    }
+
+    fun clearBranches() {
+        _branches.value = emptyList()
+    }
+
     init {
         checkSession()
     }
@@ -131,7 +193,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                         _sessionState.update { SessionState.LoggedIn }
                     }
                 }.onFailure { throwable ->
-                    _uiState.update { AuthUiState.Error(throwable.localizedMessage ?: "Google sign-in failed.") }
+                    _uiState.update { AuthUiState.Error("Google Sign-In failed. Please try again.") }
                 }
             }
         }
@@ -178,7 +240,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                 _uiState.update { AuthUiState.Success(profile) }
                 _sessionState.update { SessionState.LoggedIn }
             } catch (e: Exception) {
-                _uiState.update { AuthUiState.Error(e.localizedMessage ?: "Failed to complete onboarding.") }
+                _uiState.update { AuthUiState.Error("Failed to complete onboarding. Please try again.") }
             }
         }
     }

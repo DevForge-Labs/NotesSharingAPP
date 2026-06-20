@@ -49,66 +49,91 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
             try {
                 val profile = profileRepository.getProfile(currentUid)
-                val branch = profile?.branch ?: "Computer Science"
+                val collegeId = profile?.college?.let { com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(it) } ?: "kiit"
+                val branchId = profile?.branch?.let { com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(it) } ?: "cse"
                 val semester = profile?.semester ?: "Semester 4"
 
-                val branchCode = com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(branch)
+                val firestoreQueryStartTime = System.currentTimeMillis()
+                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=app_config/subject_catalog thread=${Thread.currentThread().name}")
+                val snapshot = firestore.collection("app_config")
+                    .document("subject_catalog")
+                    .get()
+                    .await()
+                val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=app_config/subject_catalog duration=${firestoreQueryDuration}ms docs=${if (snapshot.exists()) 1 else 0} thread=${Thread.currentThread().name}")
+                
+                if (snapshot.exists()) {
+                    val collegeCatalog = snapshot.data?.get(collegeId) as? Map<*, *>
+                    
+                    val isFirstYear = semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 1") || 
+                                     semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 1") || 
+                                     semester.trim() == "1" || 
+                                     semester.trim().lowercase(java.util.Locale.ROOT).startsWith("1st") ||
+                                     semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 2") || 
+                                     semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 2") || 
+                                     semester.trim() == "2" || 
+                                     semester.trim().lowercase(java.util.Locale.ROOT).startsWith("2nd")
+                                     
+                    val catalogData = if (isFirstYear) {
+                        val groupKey = when {
+                            semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 1") || semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 1") || semester.trim() == "1" || semester.trim().lowercase(java.util.Locale.ROOT).startsWith("1st") -> "GROUP_A"
+                            else -> "GROUP_B"
+                        }
+                        collegeCatalog?.entries?.firstOrNull {
+                            it.key.toString().equals(groupKey, ignoreCase = true)
+                        }?.value
+                    } else {
+                        val branchCatalog = collegeCatalog?.entries?.firstOrNull {
+                            it.key.toString().equals(branchId, ignoreCase = true)
+                        }?.value as? Map<*, *>
+                        
+                        val semNum = semester.filter { it.isDigit() }
+                        var semesterData = branchCatalog?.entries?.firstOrNull {
+                            it.key.toString().equals(semester, ignoreCase = true)
+                        }?.value
+                        
+                        if (semesterData == null && semNum.isNotEmpty()) {
+                            semesterData = branchCatalog?.entries?.firstOrNull {
+                                it.key.toString() == semNum
+                            }?.value
+                        }
+                        semesterData
+                    }
 
-                val semNum = semester.filter { it.isDigit() }
-
-                val key = when {
-                    semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 1") || semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 1") || semester.trim() == "1" || semester.trim().lowercase(java.util.Locale.ROOT).startsWith("1st") -> "GROUP_A"
-                    semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 2") || semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 2") || semester.trim() == "2" || semester.trim().lowercase(java.util.Locale.ROOT).startsWith("2nd") -> "GROUP_B"
-                    branchCode.isNotBlank() && semNum.isNotEmpty() -> "${branchCode}_$semNum"
-                    else -> null
-                }
-
-                if (key != null) {
-                    val firestoreQueryStartTime = System.currentTimeMillis()
-                    android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=app_config/subject_catalog thread=${Thread.currentThread().name}")
-                    val snapshot = firestore.collection("app_config")
-                        .document("subject_catalog")
-                        .get()
-                        .await()
-                    val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                    android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=app_config/subject_catalog duration=${firestoreQueryDuration}ms docs=${if (snapshot.exists()) 1 else 0} thread=${Thread.currentThread().name}")
-                    if (snapshot.exists()) {
-                        val catalogData = snapshot.data?.get(key)
-                        val resolvedSubjects = mutableListOf<CatalogSubject>()
-                        if (catalogData != null) {
-                            if (catalogData is Map<*, *>) {
-                                for ((subId, subVal) in catalogData) {
-                                    val id = subId.toString()
-                                    val name = when (subVal) {
-                                        is Map<*, *> -> subVal["name"]?.toString() ?: id
-                                        is String -> subVal
-                                        else -> id
-                                    }
-                                    resolvedSubjects.add(CatalogSubject(id, name))
+                    val resolvedSubjects = mutableListOf<CatalogSubject>()
+                    if (catalogData != null) {
+                        if (catalogData is Map<*, *>) {
+                            for ((subId, subVal) in catalogData) {
+                                val id = subId.toString()
+                                val name = when (subVal) {
+                                    is Map<*, *> -> subVal["name"]?.toString() ?: id
+                                    is String -> subVal
+                                    else -> id
                                 }
-                            } else if (catalogData is List<*>) {
-                                for (item in catalogData) {
-                                    when (item) {
-                                        is Map<*, *> -> {
-                                            val id = item["subjectId"]?.toString() ?: item["id"]?.toString() ?: ""
-                                            val name = item["name"]?.toString() ?: item["subject"]?.toString() ?: id
-                                            if (id.isNotEmpty()) {
-                                                resolvedSubjects.add(CatalogSubject(id, name))
-                                            }
+                                resolvedSubjects.add(CatalogSubject(id, name))
+                            }
+                        } else if (catalogData is List<*>) {
+                            for (item in catalogData) {
+                                when (item) {
+                                    is Map<*, *> -> {
+                                        val id = item["subjectId"]?.toString() ?: item["id"]?.toString() ?: ""
+                                        val name = item["name"]?.toString() ?: item["subject"]?.toString() ?: id
+                                        if (id.isNotEmpty()) {
+                                            resolvedSubjects.add(CatalogSubject(id, name))
                                         }
-                                        is String -> {
-                                            if (item.isNotEmpty()) {
-                                                resolvedSubjects.add(CatalogSubject(item, item))
-                                            }
+                                    }
+                                    is String -> {
+                                        if (item.isNotEmpty()) {
+                                            resolvedSubjects.add(CatalogSubject(item, item))
                                         }
                                     }
                                 }
                             }
                         }
-
-                        // Preserves exact ordering from firestore catalog document mapping
-                        _allowedSubjects.value = resolvedSubjects
                     }
+
+                    // Preserves exact ordering from firestore catalog document mapping
+                    _allowedSubjects.value = resolvedSubjects
                 }
             } catch (e: Exception) {
                 // Ignore and keep defaults
@@ -296,6 +321,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
                 val realFeed = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
+                    val id = data["documentId"] as? String ?: ""
+                    val title = data["title"] as? String ?: ""
+                    val uploaderId = data["uploaderId"] as? String
+                    if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return@mapNotNull null
                     documentToFeedItem(data)
                 }
 
@@ -331,6 +360,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
+                    val uploaderId = data["uploaderId"] as? String
+                    if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return@mapNotNull null
                     val subject = data["subject"] as? String ?: ""
                     val displaySubjectVal = data["displaySubject"] as? String
                     val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
@@ -343,6 +374,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val typeField = data["type"] as? String
                     val examYearVal = data["examYear"] as? String
                     val branchVal = data["branch"] as? String ?: ""
+                    val sectionDisplayVal = data["sectionDisplay"] as? String
 
                     val resolvedIsUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
                     val resolvedUpvotes = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value[id] ?: upvotes
@@ -365,7 +397,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         isUpvoted = resolvedIsUpvoted,
                         branch = branchVal,
                         trendingScore = trendingScore,
-                        displaySubject = displaySubjectVal
+                        displaySubject = displaySubjectVal,
+                        sectionDisplay = sectionDisplayVal
                     )
                 }
 
@@ -394,8 +427,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     }
 
                     val id = data["documentId"] as? String ?: ""
+                    val title = data["title"] as? String ?: data["videoTitle"] as? String ?: ""
+                    val uploaderId = data["uploaderId"] as? String
+                    if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return@mapNotNull null
                     val subject = data["subject"] as? String ?: ""
-                    val title = data["title"] as? String ?: data["videoTitle"] as? String ?: "Untitled Video"
                     val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
                     val upvotes = (data["upvotes"] as? Long ?: 0L).toInt()
                     val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
@@ -430,6 +465,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val data = doc.data ?: return@mapNotNull null
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
+                    val uploaderId = data["uploaderId"] as? String
+                    if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return@mapNotNull null
                     val subject = data["subject"] as? String ?: ""
                     val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
                     DiscoverFeedItem.Note(
@@ -441,15 +478,15 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 val freshContent = ExploreContent(
-                    topics = DummyData.topics,
-                    popularUploads = (realFeed + DummyData.feedItems).distinctBy { it.id },
+                    topics = emptyList(),
+                    popularUploads = realFeed.distinctBy { it.id },
                     trendingNotes = realTrending,
                     videoRecommendations = realVideos,
-                    studyCollections = DummyData.studyCollections,
-                    subjectHubs = DummyData.subjectHubs,
-                    topContributors = DummyData.topContributors,
-                    revisionCards = DummyData.revisionCards,
-                    discoverItems = (realDiscover + DummyData.discoverItems).distinctBy { it.id }
+                    studyCollections = emptyList(),
+                    subjectHubs = emptyList(),
+                    topContributors = emptyList(),
+                    revisionCards = emptyList(),
+                    discoverItems = realDiscover.distinctBy { it.id }
                 )
 
                 cacheRepository.saveCache(freshContent)
@@ -466,19 +503,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 if (cacheRepository.getCache() == null) {
                     _uiState.update {
-                        ExploreUiState.Success(
-                            ExploreContent(
-                                topics = DummyData.topics,
-                                popularUploads = DummyData.feedItems,
-                                trendingNotes = emptyList(),
-                                videoRecommendations = emptyList(),
-                                studyCollections = DummyData.studyCollections,
-                                subjectHubs = DummyData.subjectHubs,
-                                topContributors = DummyData.topContributors,
-                                revisionCards = DummyData.revisionCards,
-                                discoverItems = DummyData.discoverItems
-                            )
-                        )
+                        ExploreUiState.Error(e.localizedMessage ?: "Failed to load explore content")
                     }
                 }
                 val duration = System.currentTimeMillis() - startTime

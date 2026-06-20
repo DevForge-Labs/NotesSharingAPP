@@ -28,6 +28,36 @@ class ProfileViewModel(
     private val _editState = MutableStateFlow<EditProfileState>(EditProfileState.Idle)
     val editState: StateFlow<EditProfileState> = _editState.asStateFlow()
 
+    private val metadataRepository = com.pravor.notessharing.data.MetadataRepository()
+
+    private val _branches = MutableStateFlow<List<com.pravor.notessharing.data.BranchMetadata>>(emptyList())
+    val branches: StateFlow<List<com.pravor.notessharing.data.BranchMetadata>> = _branches.asStateFlow()
+
+    private val _isBranchesLoading = MutableStateFlow(false)
+    val isBranchesLoading: StateFlow<Boolean> = _isBranchesLoading.asStateFlow()
+
+    private val _branchesError = MutableStateFlow<String?>(null)
+    val branchesError: StateFlow<String?> = _branchesError.asStateFlow()
+
+    fun loadBranchesForCollege(collegeId: String) {
+        viewModelScope.launch {
+            _isBranchesLoading.value = true
+            _branchesError.value = null
+            try {
+                val list = metadataRepository.getBranchesForCollege(collegeId)
+                if (list.isEmpty()) {
+                    _branchesError.value = "Unable to load branches"
+                } else {
+                    _branches.value = list
+                }
+            } catch (e: Exception) {
+                _branchesError.value = "Unable to load branches"
+            } finally {
+                _isBranchesLoading.value = false
+            }
+        }
+    }
+
     init {
         loadUserProfile()
     }
@@ -59,7 +89,9 @@ class ProfileViewModel(
             profileRepository.observeProfile(currentFirebaseUser.uid)
                 .catch { throwable ->
                     // Fallback safely to current auth user details and defaults, never crash
-                    _uiState.update { ProfileUiState.Success(fallbackProfile) }
+                    val collegeName = metadataRepository.resolveCollegeName(fallbackProfile.college)
+                    val branchName = metadataRepository.resolveBranchName(fallbackProfile.college, fallbackProfile.branch)
+                    _uiState.update { ProfileUiState.Success(fallbackProfile, collegeName, branchName) }
                 }
                 .collect { profile ->
                     val baseProfile = profile ?: fallbackProfile
@@ -101,10 +133,14 @@ class ProfileViewModel(
                                 bookmarks = finalBookmarks,
                                 upvotes = finalUpvotes
                             )
-                            _uiState.update { ProfileUiState.Success(updatedProfile) }
+                            val collegeName = metadataRepository.resolveCollegeName(updatedProfile.college)
+                            val branchName = metadataRepository.resolveBranchName(updatedProfile.college, updatedProfile.branch)
+                            _uiState.update { ProfileUiState.Success(updatedProfile, collegeName, branchName) }
                         }
                     } catch (e: Exception) {
-                        _uiState.update { ProfileUiState.Success(baseProfile) }
+                        val collegeName = metadataRepository.resolveCollegeName(baseProfile.college)
+                        val branchName = metadataRepository.resolveBranchName(baseProfile.college, baseProfile.branch)
+                        _uiState.update { ProfileUiState.Success(baseProfile, collegeName, branchName) }
                     }
                 }
         }
@@ -114,6 +150,7 @@ class ProfileViewModel(
         name: String,
         semester: String,
         section: String,
+        branch: String,
         newLocalImageUri: String?,
         isImageRemoved: Boolean,
         onSuccess: () -> Unit
@@ -126,6 +163,11 @@ class ProfileViewModel(
 
         if (name.trim().isBlank() || name.trim().length < 2) {
             _editState.update { EditProfileState.Error("Name cannot be blank and must be at least 2 characters.") }
+            return
+        }
+
+        if (branch.trim().isBlank()) {
+            _editState.update { EditProfileState.Error("Branch cannot be blank.") }
             return
         }
 
@@ -158,7 +200,8 @@ class ProfileViewModel(
                     name = name.trim(),
                     semester = semester.trim(),
                     section = normalizedSection,
-                    profileImageUrl = finalImageUrl
+                    profileImageUrl = finalImageUrl,
+                    branch = branch.trim()
                 )
                 _editState.update { EditProfileState.Success }
                 onSuccess()

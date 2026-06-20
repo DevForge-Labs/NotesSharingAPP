@@ -43,6 +43,10 @@ import com.pravor.notessharing.ui.screens.auth.SignUpScreen
 import com.pravor.notessharing.auth.AuthViewModel
 import com.pravor.notessharing.state.SessionState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.pravor.notessharing.ui.components.loading.StartupLoadingScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Context
 import com.pravor.notessharing.updates.UpdatesScreen
@@ -121,6 +125,13 @@ fun NotesSharingApp(
     }
 
     val sessionState by authViewModel.sessionState.collectAsState()
+    var hasBootstrapped by rememberSaveable { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(sessionState) {
+        if (sessionState != SessionState.Checking) {
+            hasBootstrapped = true
+        }
+    }
 
     // Redundant LaunchedEffect removed. Intent checks handled directly in auth_gate and addOnNewIntentListener.
 
@@ -306,7 +317,11 @@ fun NotesSharingApp(
                 )
             ) {
                 composable("auth_gate") {
-                    // Start destination placeholder, navigation is managed by root-level LaunchedEffect
+                    if (sessionState == SessionState.Checking && !hasBootstrapped) {
+                        StartupLoadingScreen()
+                    } else {
+                        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
+                    }
                 }
                 composable("onboarding") {
                     val context = androidx.compose.ui.platform.LocalContext.current

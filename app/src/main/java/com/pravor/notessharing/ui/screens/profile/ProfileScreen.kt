@@ -177,6 +177,8 @@ fun ProfileScreen(
             is ProfileUiState.Error -> StatePanel("Profile unavailable", state.message, modifier = Modifier.padding(top = 96.dp))
             is ProfileUiState.Success -> ProfileContent(
                 profile = state.profile,
+                resolvedCollegeName = state.resolvedCollegeName,
+                resolvedBranchName = state.resolvedBranchName,
                 appSettings = appSettings,
                 onThemePreferenceChange = onThemePreferenceChange,
                 onNotificationPreferencesClick = onNotificationPreferencesClick,
@@ -193,6 +195,8 @@ fun ProfileScreen(
 @Composable
 private fun ProfileContent(
     profile: Profile,
+    resolvedCollegeName: String,
+    resolvedBranchName: String,
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationPreferencesClick: () -> Unit,
@@ -327,7 +331,12 @@ private fun ProfileContent(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item(key = "profile-header", contentType = "profile-header") {
-                ProfileHeaderCard(profile = profile, onClick = onEditProfileClick)
+                ProfileHeaderCard(
+                    profile = profile,
+                    resolvedCollegeName = resolvedCollegeName,
+                    resolvedBranchName = resolvedBranchName,
+                    onClick = onEditProfileClick
+                )
             }
             item(key = "contributor-summary", contentType = "contributor-summary") {
                 LiquidContributorCard(profile)

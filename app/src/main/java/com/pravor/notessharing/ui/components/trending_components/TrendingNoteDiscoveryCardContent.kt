@@ -19,6 +19,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -120,12 +121,52 @@ fun TrendingNoteDiscoveryCardContent(
                     }
                     if (isTitleValid) {
                         Spacer(Modifier.height(4.dp))
-                        SubjectBadge(
-                            subject = badgeSubject,
-                            isLarge = true,
-                            semester = doc.semester,
-                            disableNormalization = !doc.displaySubject.isNullOrBlank()
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SubjectBadge(
+                                subject = badgeSubject,
+                                isLarge = true,
+                                semester = doc.semester,
+                                disableNormalization = !doc.displaySubject.isNullOrBlank()
+                            )
+
+                            val rawDocType = doc.documentType.lowercase(java.util.Locale.ROOT).trim()
+                            val secDisp = doc.sectionDisplay?.trim() ?: ""
+                            if ((rawDocType == "assignment" || rawDocType == "assignments") && secDisp.isNotBlank()) {
+                                val normalizedSubject = remember(doc.subject) { com.pravor.notessharing.ui.components.utils.normalizeSubject(doc.subject) }
+                                val subjectColor = remember(normalizedSubject) { com.pravor.notessharing.ui.components.utils.getSubjectColor(normalizedSubject) }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = subjectColor.copy(alpha = 0.08f),
+                                    border = BorderStroke(1.dp, subjectColor.copy(alpha = 0.4f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.School,
+                                            contentDescription = null,
+                                            tint = subjectColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = secDisp,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = subjectColor,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(4.dp))
@@ -267,12 +308,52 @@ fun TrendingNoteDiscoveryCardContentFromNote(
                     }
                     if (isTitleValid) {
                         Spacer(Modifier.height(4.dp))
-                        SubjectBadge(
-                            subject = badgeSubject,
-                            isLarge = true,
-                            semester = note.semester,
-                            disableNormalization = !note.displaySubject.isNullOrBlank()
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SubjectBadge(
+                                subject = badgeSubject,
+                                isLarge = true,
+                                semester = note.semester,
+                                disableNormalization = !note.displaySubject.isNullOrBlank()
+                            )
+
+                            val rawDocType = note.documentType.lowercase(java.util.Locale.ROOT).trim()
+                            val secDisp = note.sectionDisplay?.trim() ?: ""
+                            if ((rawDocType == "assignment" || rawDocType == "assignments") && secDisp.isNotBlank()) {
+                                val normalizedSubject = remember(note.subject) { com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject) }
+                                val subjectColor = remember(normalizedSubject) { com.pravor.notessharing.ui.components.utils.getSubjectColor(normalizedSubject) }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = subjectColor.copy(alpha = 0.08f),
+                                    border = BorderStroke(1.dp, subjectColor.copy(alpha = 0.4f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.School,
+                                            contentDescription = null,
+                                            tint = subjectColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = secDisp,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = subjectColor,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(4.dp))
@@ -365,12 +446,52 @@ fun TrendingNoteDiscoveryCardContentFallback(
                     }
                     if (isTitleValid) {
                         Spacer(Modifier.height(4.dp))
-                        SubjectBadge(
-                            subject = badgeSubject,
-                            isLarge = true,
-                            semester = note.semester,
-                            disableNormalization = !note.displaySubject.isNullOrBlank()
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SubjectBadge(
+                                subject = badgeSubject,
+                                isLarge = true,
+                                semester = note.semester,
+                                disableNormalization = !note.displaySubject.isNullOrBlank()
+                            )
+
+                            val rawDocType = note.documentType.lowercase(java.util.Locale.ROOT).trim()
+                            val secDisp = note.sectionDisplay?.trim() ?: ""
+                            if ((rawDocType == "assignment" || rawDocType == "assignments") && secDisp.isNotBlank()) {
+                                val normalizedSubject = remember(note.subject) { com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject) }
+                                val subjectColor = remember(normalizedSubject) { com.pravor.notessharing.ui.components.utils.getSubjectColor(normalizedSubject) }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = subjectColor.copy(alpha = 0.08f),
+                                    border = BorderStroke(1.dp, subjectColor.copy(alpha = 0.4f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.School,
+                                            contentDescription = null,
+                                            tint = subjectColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = secDisp,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = subjectColor,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(4.dp))

@@ -10,7 +10,6 @@ import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.state.YoutubePreview
-import com.pravor.notessharing.viewmodel.DummyData
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -214,6 +213,11 @@ class UploadRepository(private val context: Context) {
             // Ignore
         }
 
+        val canonicalBranch = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(branch)
+        val canonicalCollege = college?.let {
+            com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(it)
+        }
+
         if (type == UploadType.Youtube) {
             val documentId = UUID.randomUUID().toString()
             val isPlaylist = youtubeResourceType == "playlist"
@@ -221,7 +225,7 @@ class UploadRepository(private val context: Context) {
             val doc = mutableMapOf<String, Any?>(
                 "documentId" to documentId,
                 "description" to description,
-                "branch" to branch,
+                "branch" to canonicalBranch,
                 "semester" to semester,
                 "subject" to displaySubject,
                 "displaySubject" to displaySubject,
@@ -275,8 +279,8 @@ class UploadRepository(private val context: Context) {
                 doc["youtubeVideoId"] = videoId
             }
             
-            if (college != null) {
-                doc["college"] = college
+            if (canonicalCollege != null) {
+                doc["college"] = canonicalCollege
             }
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
@@ -316,7 +320,7 @@ class UploadRepository(private val context: Context) {
                     "documentId" to documentId,
                     "title" to pyqFileName,
                     "description" to description,
-                    "branch" to branch,
+                    "branch" to canonicalBranch,
                     "semester" to semester,
                     "subject" to displaySubject,
                     "displaySubject" to displaySubject,
@@ -347,8 +351,8 @@ class UploadRepository(private val context: Context) {
 
                 doc["examYear"] = normalizedYear
                 doc["examType"] = normalizedExamType
-                if (college != null) {
-                    doc["college"] = college
+                if (canonicalCollege != null) {
+                    doc["college"] = canonicalCollege
                 }
                 firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             }
@@ -428,7 +432,7 @@ class UploadRepository(private val context: Context) {
                     "documentId" to documentId,
                     "title" to formattedTitle,
                     "description" to description,
-                    "branch" to branch,
+                    "branch" to canonicalBranch,
                     "semester" to semester,
                     "subject" to displaySubject,
                     "displaySubject" to displaySubject,
@@ -468,8 +472,8 @@ class UploadRepository(private val context: Context) {
                 if (sectionDisplay != null) doc["sectionDisplay"] = sectionDisplay
             }
 
-            if (college != null) {
-                doc["college"] = college
+            if (canonicalCollege != null) {
+                doc["college"] = canonicalCollege
             }
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
@@ -565,41 +569,6 @@ class UploadRepository(private val context: Context) {
             }
         } catch (e: Exception) {
             // Ignore
-        }
-
-        // Fallback to dummy data
-        val dummyFeed = DummyData.feedItems.find { it.id == id }
-        if (dummyFeed != null) {
-            val title = dummyFeed.title
-            val mockUrls = when (id) {
-                "feed-dbms-4" -> listOf(
-                    "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-                    "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500",
-                    "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=500"
-                )
-                "feed-cn-cheat" -> listOf("https://images.unsplash.com/photo-1517842645767-c639042777db?w=500")
-                "feed-coa-notes" -> listOf(
-                    "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500",
-                    "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=500"
-                )
-                else -> listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-            }
-            return title to mockUrls
-        }
-
-        val dummySaved = DummyData.savedFiles.find { it.id == id }
-        if (dummySaved != null) {
-            return dummySaved.title to listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-        }
-
-        val dummyUploaded = DummyData.uploadedFiles.find { it.id == id }
-        if (dummyUploaded != null) {
-            return dummyUploaded.title to listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-        }
-
-        val dummyTrending = DummyData.trendingNotes.find { it.id == id }
-        if (dummyTrending != null) {
-            return dummyTrending.title to listOf("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
         }
 
         return "Document" to emptyList()

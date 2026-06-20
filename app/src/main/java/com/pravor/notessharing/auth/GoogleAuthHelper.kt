@@ -35,23 +35,36 @@ object GoogleAuthHelper {
         return resolvedWebClientId
     }
 
+    @Volatile
+    private var isSigningIn = false
+
+    private fun findActivity(context: Context): android.app.Activity? {
+        var currentContext = context
+        while (currentContext is android.content.ContextWrapper) {
+            if (currentContext is android.app.Activity) {
+                return currentContext
+            }
+            currentContext = currentContext.baseContext
+        }
+        return null
+    }
+
     suspend fun performGoogleSignIn(
         context: Context,
         onTokenReceived: (String) -> Unit,
         onError: (String) -> Unit
     ) {
+        if (isSigningIn) {
+            Log.w(TAG, "[GoogleAuth] Sign-in request ignored: already in progress.")
+            return
+        }
+        isSigningIn = true
         try {
             Log.d(TAG, "[GoogleAuth] Starting Google Sign-In with Credential Manager...")
             val webClientId = getVerifiedWebClientId(context)
             val credentialManager = CredentialManager.create(context)
-
-            Log.d(TAG, "[GoogleAuth] Clearing cached Google Sign-In account...")
-            try {
-                credentialManager.clearCredentialState(ClearCredentialStateRequest())
-                Log.d(TAG, "[GoogleAuth] Cached Google Sign-In account cleared successfully.")
-            } catch (e: Exception) {
-                Log.w(TAG, "[GoogleAuth] Failed to clear credential state: ${e.message}")
-            }
+            val activityContext = findActivity(context)
+            val launchContext = activityContext ?: context
 
             Log.d(TAG, "[GoogleAuth] Configuring GetGoogleIdOption with server client ID...")
             val googleIdOption = GetGoogleIdOption.Builder()
@@ -66,7 +79,7 @@ object GoogleAuthHelper {
                 .build()
 
             Log.d(TAG, "[GoogleAuth] Launching Credential Manager UI picker...")
-            val result = credentialManager.getCredential(context, request)
+            val result = credentialManager.getCredential(launchContext, request)
             val credential = result.credential
 
             Log.d(TAG, "[GoogleAuth] Credential type retrieved: '${credential.type}'")
@@ -76,26 +89,26 @@ object GoogleAuthHelper {
                 val idToken = googleIdTokenCredential.idToken
                 
                 if (idToken.isNullOrBlank()) {
-                    val errorMsg = "Received empty Google ID Token."
-                    Log.e(TAG, "[GoogleAuth] $errorMsg")
-                    onError(errorMsg)
+                    Log.e(TAG, "[GoogleAuth] Received empty Google ID Token.")
+                    onError("Unable to start Google Sign-In. Please try again.")
                 } else {
                     Log.d(TAG, "[GoogleAuth] ID Token successfully retrieved. Passing to ViewModel.")
                     onTokenReceived(idToken)
                 }
             } else {
-                val errorMsg = "Unexpected credential type: '${credential.type}'"
-                Log.e(TAG, "[GoogleAuth] $errorMsg")
-                onError(errorMsg)
+                Log.e(TAG, "[GoogleAuth] Unexpected credential type: '${credential.type}'")
+                onError("Unable to start Google Sign-In. Please try again.")
             }
+        } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+            Log.d(TAG, "[GoogleAuth] Google Sign-In cancelled by user.")
         } catch (e: GetCredentialException) {
-            val errorMsg = "Credential Manager failed: ${e.message} (Type: ${e::class.java.simpleName})"
-            Log.e(TAG, "[GoogleAuth] $errorMsg", e)
-            onError(errorMsg)
+            Log.e(TAG, "[GoogleAuth] Credential Manager failed: ${e.message} (Type: ${e::class.java.simpleName})", e)
+            onError("Unable to start Google Sign-In. Please try again.")
         } catch (e: Exception) {
-            val errorMsg = "Google Sign-In Exception: ${e.message} (Type: ${e::class.java.simpleName})"
-            Log.e(TAG, "[GoogleAuth] $errorMsg", e)
-            onError(errorMsg)
+            Log.e(TAG, "[GoogleAuth] Google Sign-In Exception: ${e.message} (Type: ${e::class.java.simpleName})", e)
+            onError("Unable to start Google Sign-In. Please try again.")
+        } finally {
+            isSigningIn = false
         }
     }
 }

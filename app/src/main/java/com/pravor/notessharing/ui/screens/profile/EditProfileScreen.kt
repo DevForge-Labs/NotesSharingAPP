@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,9 +97,12 @@ fun EditProfileRoute(
         is ProfileUiState.Success -> {
             EditProfileScreen(
                 profile = state.profile,
+                resolvedCollegeName = state.resolvedCollegeName,
+                resolvedBranchName = state.resolvedBranchName,
+                viewModel = viewModel,
                 editState = editState,
-                onSaveChanges = { name, semester, section, localUri, isRemoved, onSuccess ->
-                    viewModel.updateProfile(name, semester, section, localUri, isRemoved, onSuccess)
+                onSaveChanges = { name, semester, section, branch, localUri, isRemoved, onSuccess ->
+                    viewModel.updateProfile(name, semester, section, branch, localUri, isRemoved, onSuccess)
                 },
                 clearEditState = { viewModel.clearEditState() },
                 onNavigateBack = onNavigateBack,
@@ -117,8 +121,11 @@ fun EditProfileRoute(
 @Composable
 fun EditProfileScreen(
     profile: Profile,
+    resolvedCollegeName: String,
+    resolvedBranchName: String,
+    viewModel: ProfileViewModel,
     editState: EditProfileState,
-    onSaveChanges: (String, String, String, String?, Boolean, () -> Unit) -> Unit,
+    onSaveChanges: (String, String, String, String, String?, Boolean, () -> Unit) -> Unit,
     clearEditState: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToProfile: () -> Unit,
@@ -134,6 +141,14 @@ fun EditProfileScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isImageRemoved by remember { mutableStateOf(false) }
 
+    val branches by viewModel.branches.collectAsState()
+    val isBranchesLoading by viewModel.isBranchesLoading.collectAsState()
+    val branchesError by viewModel.branchesError.collectAsState()
+
+    var selectedBranchId by remember { mutableStateOf(profile.branch) }
+    var selectedBranchName by remember { mutableStateOf(resolvedBranchName) }
+    var branchExpanded by remember { mutableStateOf(false) }
+
     var semesterExpanded by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
@@ -141,12 +156,18 @@ fun EditProfileScreen(
     var nameError by remember { mutableStateOf<String?>(null) }
     var semesterError by remember { mutableStateOf<String?>(null) }
     var sectionError by remember { mutableStateOf<String?>(null) }
+    var branchError by remember { mutableStateOf<String?>(null) }
 
     val hasChanges = fullName != profile.name ||
             semester != profile.semester ||
             section != profile.section ||
+            selectedBranchId != profile.branch ||
             selectedImageUri != null ||
             isImageRemoved
+
+    LaunchedEffect(profile.college) {
+        viewModel.loadBranchesForCollege(profile.college)
+    }
 
     // Intercept back actions
     BackHandler(enabled = hasChanges) {
@@ -410,6 +431,83 @@ fun EditProfileScreen(
                         }
                     }
 
+                    // College (Read-only)
+                    ReadOnlyRow(label = "College", value = resolvedCollegeName, icon = Icons.Default.School)
+
+                    // Branch Selector
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        ExposedDropdownMenuBox(
+                            expanded = branchExpanded,
+                            onExpandedChange = { branchExpanded = !branchExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = selectedBranchName,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Branch") },
+                                leadingIcon = {
+                                    Icon(imageVector = Icons.Default.Class, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = branchExpanded) },
+                                isError = branchError != null,
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = branchExpanded,
+                                onDismissRequest = { branchExpanded = false }
+                            ) {
+                                if (isBranchesLoading) {
+                                    DropdownMenuItem(
+                                        text = { Text("Loading branches...") },
+                                        onClick = {},
+                                        enabled = false
+                                    )
+                                } else if (branchesError != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(branchesError ?: "Error loading branches") },
+                                        onClick = {},
+                                        enabled = false
+                                    )
+                                } else if (branches.isEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { Text("No branches available") },
+                                        onClick = {},
+                                        enabled = false
+                                    )
+                                } else {
+                                    branches.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option.name) },
+                                            onClick = {
+                                                selectedBranchId = option.id
+                                                selectedBranchName = option.name
+                                                branchExpanded = false
+                                                branchError = null
+                                            },
+                                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        branchError?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 6.dp)
+                            )
+                        }
+                    }
+
                     // Semester Selector
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         val semesterOptions = listOf(
@@ -537,8 +635,13 @@ fun EditProfileScreen(
                     nameError = null
                     semesterError = null
                     sectionError = null
+                    branchError = null
                     if (fullName.trim().isBlank() || fullName.trim().length < 2) {
                         nameError = "Name cannot be blank and must be at least 2 characters."
+                        return@Button
+                    }
+                    if (selectedBranchId.trim().isBlank()) {
+                        branchError = "Branch is mandatory."
                         return@Button
                     }
                     if (semester.trim().isBlank()) {
@@ -554,6 +657,7 @@ fun EditProfileScreen(
                         fullName.trim(),
                         semester.trim(),
                         section.trim(),
+                        selectedBranchId.trim(),
                         selectedImageUri?.toString(),
                         isImageRemoved
                     ) {

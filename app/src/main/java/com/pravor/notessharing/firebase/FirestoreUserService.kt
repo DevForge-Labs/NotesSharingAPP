@@ -25,7 +25,7 @@ class FirestoreUserService {
                 val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
                 val notesUploaded = snapshot.getLong("notesUploaded")?.toInt() ?: 0
                 val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
-                val branch = snapshot.getString("branch")?.let { com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(it) } ?: "CS"
+                val branch = snapshot.getString("branch") ?: "cse"
                 val college = snapshot.getString("college") ?: "kiit"
                 val section = snapshot.getString("section") ?: ""
                 val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
@@ -84,7 +84,7 @@ class FirestoreUserService {
                     val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
                     val notesUploaded = snapshot.getLong("notesUploaded")?.toInt() ?: 0
                     val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
-                    val branch = snapshot.getString("branch")?.let { com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(it) } ?: "CS"
+                    val branch = snapshot.getString("branch") ?: "cse"
                     val college = snapshot.getString("college") ?: "kiit"
                     val section = snapshot.getString("section") ?: ""
                     val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
@@ -154,12 +154,13 @@ class FirestoreUserService {
         usersCollection.document(profile.uid).set(userMap).await()
     }
 
-    suspend fun updateProfileFields(uid: String, name: String, semester: String, section: String, profileImageUrl: String) {
+    suspend fun updateProfileFields(uid: String, name: String, semester: String, section: String, profileImageUrl: String, branch: String) {
         val updates = mapOf(
             "name" to name,
             "semester" to semester,
             "section" to section,
-            "profileImageUrl" to profileImageUrl
+            "profileImageUrl" to profileImageUrl,
+            "branch" to com.pravor.notessharing.util.NormalizationUtil.normalizeBranch(branch)
         )
         usersCollection.document(uid).update(updates).await()
     }
@@ -194,7 +195,8 @@ class FirestoreUserService {
             upvotes = 0,
             notesUploaded = 0,
             contributorLevel = 1,
-            branch = "Computer Science",
+            college = "kiit",
+            branch = "cse",
             createdAt = System.currentTimeMillis()
         )
         createUserProfile(newProfile)

@@ -30,7 +30,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         HomeUiState.Success(
             HomeContent(
                 selectedCategory = Category.Notes,
-                categories = DummyData.categories,
+                categories = Category.entries,
                 feedItems = emptyList(),
                 recentlyOpened = null,
                 isLoadingFeed = true
@@ -238,7 +238,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 HomeUiState.Success(
                     HomeContent(
                         selectedCategory = Category.Notes,
-                        categories = DummyData.categories,
+                        categories = Category.entries,
                         feedItems = emptyList(),
                         recentlyOpened = lastOpened,
                         isLoadingFeed = true
@@ -379,6 +379,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Feed assembly thread=${Thread.currentThread().name}")
                     val realItems = allDocs.mapNotNull { doc ->
                         val data = doc.data ?: return@mapNotNull null
+                        val id = data["documentId"] as? String ?: ""
+                        val title = data["title"] as? String ?: ""
+                        if (id.isBlank() || title.isBlank()) return@mapNotNull null
                         val item = documentToFeedItem(data)
                         val timestamp = data["uploadedAt"] as? Long ?: 0L
                         item to timestamp
@@ -387,11 +390,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             .thenByDescending { it.second }
                     ).map { it.first }
                     
-                    val mergedFeedItems = if (hasSemester) {
-                        realItems.distinctBy { it.id }
-                    } else {
-                        (realItems + DummyData.feedItems).distinctBy { it.id }
-                    }
+                    val mergedFeedItems = realItems.distinctBy { it.id }
                     
                     val finalFeedItems = mergedFeedItems.map { item ->
                         item.copy(isSaved = bookmarkedIds.contains(item.id))
@@ -411,7 +410,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             HomeUiState.Success(
                                 HomeContent(
                                     selectedCategory = Category.Notes,
-                                    categories = DummyData.categories,
+                                    categories = Category.entries,
                                     feedItems = finalFeedItems,
                                     recentlyOpened = lastOpened,
                                     isLoadingFeed = false
@@ -448,9 +447,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     
                     _uiState.update { current ->
                         val lastOpened = recentlyOpenedRepository.getLastOpened()
-                        val fallbackItems = if (hasSemester) emptyList() else DummyData.feedItems.map { item ->
-                            item.copy(isSaved = bookmarkedIds.contains(item.id))
-                        }
+                        val fallbackItems = emptyList<FeedItem>()
                         if (current is HomeUiState.Success) {
                             current.copy(content = current.content.copy(
                                 feedItems = fallbackItems,
@@ -461,7 +458,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             HomeUiState.Success(
                                 HomeContent(
                                     selectedCategory = Category.Notes,
-                                    categories = DummyData.categories,
+                                    categories = Category.entries,
                                     feedItems = fallbackItems,
                                     recentlyOpened = lastOpened,
                                     isLoadingFeed = false
