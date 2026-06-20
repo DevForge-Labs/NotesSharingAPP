@@ -53,7 +53,8 @@ fun RelatedDocumentsSection(
                     thumbnailGenerated = relatedDoc.thumbnailGenerated,
                     thumbnailType = relatedDoc.thumbnailType,
                     documentType = relatedDoc.documentType,
-                    displaySubject = relatedDoc.displaySubject
+                    displaySubject = relatedDoc.displaySubject,
+                    sectionDisplay = relatedDoc.sectionDisplay
                 )
                 TrendingNoteCard(
                     note = trendingNote,

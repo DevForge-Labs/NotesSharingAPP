@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.state.CatalogSubject
 import com.pravor.notessharing.ui.components.StatePanel
+import com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator
 import com.pravor.notessharing.ui.components.explore_components.ExploreSuccessContent
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 import com.pravor.notessharing.model.TrendingNote
@@ -288,7 +289,13 @@ fun ExploreScreen(
                     }
             ) { type ->
                 when (type) {
-                    "loading" -> StatePanel("Finding topics", "Scanning campus trends", loading = true, modifier = Modifier.padding(top = 96.dp))
+                    "loading" -> {
+                        StudyLoadingIndicator(
+                            text = "Loading Explore...",
+                            subtitle = "Discovering resources for you",
+                            modifier = Modifier.padding(top = 96.dp)
+                        )
+                    }
                     "empty" -> StatePanel("Nothing trending", "Explore content will appear here", modifier = Modifier.padding(top = 96.dp))
                     "error" -> {
                         val errorState = uiState as? ExploreUiState.Error

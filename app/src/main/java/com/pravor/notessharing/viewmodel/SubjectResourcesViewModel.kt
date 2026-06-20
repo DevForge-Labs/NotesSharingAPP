@@ -143,6 +143,10 @@ class SubjectResourcesViewModel(
 
                     val id = data["documentId"] as? String ?: ""
                     val title = data["title"] as? String ?: ""
+                    val uploaderId = data["uploaderId"] as? String
+                    if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") {
+                        return@mapNotNull null
+                    }
                     val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
                     val displaySubjectVal = data["displaySubject"] as? String
                     val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()

@@ -66,7 +66,7 @@ sealed interface ProfileUiState {
     data object Loading : ProfileUiState
     data object Empty : ProfileUiState
     data class Error(val message: String) : ProfileUiState
-    data class Success(val profile: Profile) : ProfileUiState
+    data class Success(val profile: Profile, val resolvedCollegeName: String = "", val resolvedBranchName: String = "") : ProfileUiState
 }
 
 @Immutable

@@ -3,21 +3,9 @@ package com.pravor.notessharing.model
 import java.util.Locale
 
 object AcademicCatalog {
-    val branches = listOf(
-        "CS",
-        "IT",
-        "CSC",
-        "CSS",
-        "ECE",
-        "Electrical",
-        "Mechanical",
-        "Civil",
-        "Biotechnology"
-    )
+    val branches = emptyList<String>()
 
-    val colleges = listOf(
-        "KIIT"
-    )
+    val colleges = emptyList<String>()
 
     val semesters = listOf(
         "Semester 1",

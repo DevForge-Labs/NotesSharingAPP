@@ -41,8 +41,10 @@ class MainActivity : ComponentActivity() {
             android.util.Log.e("MainActivity", "Widget update error: ${ex.message}", ex)
         }
         
+        val startTime = System.currentTimeMillis()
         splashScreen.setKeepOnScreenCondition {
-            authViewModel.sessionState.value == SessionState.Checking
+            val elapsedTime = System.currentTimeMillis() - startTime
+            authViewModel.sessionState.value == SessionState.Checking && elapsedTime < 2500
         }
         enableEdgeToEdge(
             navigationBarStyle = SystemBarStyle.auto(

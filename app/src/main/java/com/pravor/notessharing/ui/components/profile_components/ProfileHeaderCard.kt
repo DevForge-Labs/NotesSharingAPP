@@ -113,6 +113,21 @@ private fun hsvToComposeColor(hue: Float, saturation: Float, value: Float): Colo
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
+private fun getBranchAbbreviation(branchIdOrName: String): String {
+    val clean = branchIdOrName.trim().lowercase(java.util.Locale.ROOT)
+    if (clean.contains("computer science") || clean == "cs" || clean == "cse") return "CSE"
+    if (clean.contains("information technology") || clean == "it") return "IT"
+    if (clean.contains("electronics") || clean == "ece") return "ECE"
+    if (clean.contains("electrical") || clean == "eee") return "EEE"
+    if (clean.contains("mechanical") || clean == "mech" || clean == "me") return "ME"
+    if (clean.contains("civil") || clean == "ce") return "CE"
+    if (clean.contains("biotech") || clean == "bt") return "BT"
+    
+    // Fallback: resolve canonical ID and uppercase it
+    val resolvedId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(branchIdOrName)
+    return resolvedId.uppercase(java.util.Locale.ROOT)
+}
+
 private fun formatSection(section: String): String {
     val trimmed = section.trim()
     if (trimmed.isEmpty()) return ""
@@ -123,7 +138,7 @@ private fun formatSection(section: String): String {
     return if (matchResult != null) {
         val letters = matchResult.groupValues[1].uppercase()
         val numbers = matchResult.groupValues[2]
-        "$letters - $numbers"
+        "$letters-$numbers"
     } else {
         trimmed.uppercase()
     }
@@ -132,6 +147,8 @@ private fun formatSection(section: String): String {
 @Composable
 fun ProfileHeaderCard(
     profile: Profile,
+    resolvedCollegeName: String,
+    resolvedBranchName: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -384,15 +401,16 @@ fun ProfileHeaderCard(
 
             // Premium Metadata Capsule Pill (Content Width Centered Pill)
             val academicText = remember(profile.branch, profile.semester, profile.section) {
-                val branchDisplay = com.pravor.notessharing.model.AcademicCatalog.getDisplayBranch(profile.branch).uppercase()
-                val semesterDisplay = profile.semester.uppercase()
+                val branchDisplay = getBranchAbbreviation(profile.branch)
+                val semNum = profile.semester.filter { it.isDigit() }
+                val semesterDisplay = if (semNum.isNotEmpty()) "Sem-$semNum" else profile.semester
                 val sectionDisplay = formatSection(profile.section)
 
                 buildList {
                     if (branchDisplay.isNotBlank()) add(branchDisplay)
                     if (semesterDisplay.isNotBlank()) add(semesterDisplay)
                     if (sectionDisplay.isNotBlank()) add(sectionDisplay)
-                }.joinToString(" • ")
+                }.joinToString(" | ")
             }
 
             Box(

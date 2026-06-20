@@ -553,8 +553,17 @@ fun DocumentDetailSuccessContent(
                     val docTypeTag = when (rawDocType) {
                         "pyq" -> if (!doc.examYear.isNullOrBlank()) "PYQ | ${doc.examYear}" else "PYQ"
                         "assignment" -> {
-                            val sec = doc.sectionDisplay ?: doc.section
-                            if (!sec.isNullOrBlank()) "ASSIGNMENT | $sec" else "ASSIGNMENT"
+                            buildList {
+                                add("ASSIGNMENT")
+                                val examType = doc.examType?.trim() ?: ""
+                                if (examType.isNotBlank()) {
+                                    add(examType.uppercase(java.util.Locale.ROOT))
+                                }
+                                val secDisp = doc.sectionDisplay?.trim() ?: ""
+                                if (secDisp.isNotBlank()) {
+                                    add(secDisp)
+                                }
+                            }.joinToString(" | ")
                         }
                         "cheatsheet", "cheat sheet" -> "CHEAT SHEET"
                         else -> doc.documentType.uppercase(java.util.Locale.ROOT)

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Button
@@ -317,6 +318,40 @@ fun TrendingNoteCard(
                     subject = badgeSubject,
                     disableNormalization = !note.displaySubject.isNullOrBlank()
                 )
+
+                // Conditional Section Badge for Assignment documents (Aligned Far Right)
+                val secDisp = note.sectionDisplay?.trim() ?: ""
+                if (docType == "Assignment" && secDisp.isNotBlank()) {
+                    val normalizedSubject = remember(note.subject) { com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject) }
+                    val subjectColor = remember(normalizedSubject) { com.pravor.notessharing.ui.components.utils.getSubjectColor(normalizedSubject) }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = subjectColor.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, subjectColor.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = null,
+                                tint = subjectColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = secDisp,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = subjectColor,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
 
                 // Conditional Year Badge for PYQ documents (Aligned Far Right)
                 if (docType == "PYQ" && !note.examYear.isNullOrBlank()) {
