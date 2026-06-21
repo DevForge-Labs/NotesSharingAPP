@@ -19,6 +19,8 @@ import com.pravor.notessharing.ui.components.trending_components.TrendingNoteDis
 import com.pravor.notessharing.data.DocumentDetailRepository
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 
+import com.pravor.notessharing.model.ResourceType
+
 @Composable
 fun ExamPrepRoute(
     onBackClick: () -> Unit,
@@ -101,19 +103,14 @@ fun ExamPrepScreen(
         ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here")
         is ExploreUiState.Error -> StatePanel("Explore failed", uiState.message)
         is ExploreUiState.Success -> {
-            val allTrendingNotes = uiState.content.trendingNotes
+            val allTrendingNotes = uiState.content.examPrep
 
-            // Frontend filtering of Exam Prep resources
+            // Frontend filtering of Exam Prep resources using pre-ranked dataset
             val examPrepNotes = remember(allTrendingNotes, selectedBranch, selectedType) {
                 allTrendingNotes.filter { note ->
-                    val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                    
-                    // Match PYQs and Cheat Sheets
-                    val isPyq = docType == "pyq" || docType == "pyqs"
-                    val isCheatSheet = docType == "cheatsheet" || docType == "cheat sheet" || docType == "cheatsheets"
-                    
-                    if (!isPyq && !isCheatSheet) return@filter false
-                    
+                    val isPyq = note.resourceType == ResourceType.PYQ
+                    val isCheatSheet = note.resourceType == ResourceType.CHEAT_SHEET
+
                     // Apply selective type filtering
                     if (selectedType == "PYQ" && !isPyq) return@filter false
                     if (selectedType == "Cheat Sheet" && !isCheatSheet) return@filter false

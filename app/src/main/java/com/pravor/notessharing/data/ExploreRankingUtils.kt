@@ -1,12 +1,37 @@
 package com.pravor.notessharing.data
 
 import com.google.firebase.firestore.DocumentSnapshot
+import com.pravor.notessharing.model.ResourceType
+import com.pravor.notessharing.model.TrendingNote
 
 object ExploreRankingUtils {
+    val trendingNoteComparator = compareByDescending<TrendingNote> { it.trendingScore }
+        .thenByDescending { it.uploadedAt }
+
     val documentSnapshotComparator = compareByDescending<DocumentSnapshot> { doc ->
         (doc.data?.get("trendingScore") as? Number)?.toDouble() ?: 0.0
     }.thenByDescending { doc ->
         doc.getLong("uploadedAt") ?: 0L
+    }
+
+    fun sortResources(list: List<TrendingNote>): List<TrendingNote> {
+        return list.sortedWith(trendingNoteComparator)
+    }
+
+    fun filterNotes(list: List<TrendingNote>): List<TrendingNote> {
+        return list.filter { it.resourceType == ResourceType.NOTE }
+    }
+
+    fun filterExamPrep(list: List<TrendingNote>): List<TrendingNote> {
+        return list.filter { it.resourceType == ResourceType.PYQ || it.resourceType == ResourceType.CHEAT_SHEET }
+    }
+
+    fun filterAssignments(list: List<TrendingNote>): List<TrendingNote> {
+        return list.filter { it.resourceType == ResourceType.ASSIGNMENT }
+    }
+
+    fun filterVideos(list: List<TrendingNote>): List<TrendingNote> {
+        return list.filter { it.resourceType == ResourceType.VIDEO || it.resourceType == ResourceType.PLAYLIST }
     }
 
     fun <T> sortWithTieBreak(list: List<T>, comparator: Comparator<T>): List<T> {

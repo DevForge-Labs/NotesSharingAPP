@@ -100,18 +100,11 @@ fun AssignmentsScreen(
         ExploreUiState.Empty -> StatePanel("Nothing trending", "Explore content will appear here")
         is ExploreUiState.Error -> StatePanel("Explore failed", uiState.message)
         is ExploreUiState.Success -> {
-            val allTrendingNotes = uiState.content.trendingNotes
+            val allTrendingNotes = uiState.content.assignments
 
-            // Frontend filtering of Assignments resources
+            // Frontend filtering of Assignments resources using pre-ranked dataset
             val assignmentNotes = remember(allTrendingNotes, selectedBranch) {
                 allTrendingNotes.filter { note ->
-                    val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                    
-                    // Match Assignments
-                    val isAssignment = docType == "assignment" || docType == "assignments"
-                    
-                    if (!isAssignment) return@filter false
-
                     // Apply selective branch filtering
                     if (selectedBranch.isNotEmpty()) {
                         val noteBranch = note.branch.lowercase(java.util.Locale.ROOT)

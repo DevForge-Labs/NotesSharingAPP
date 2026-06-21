@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.model.VideoRecommendation
+import com.pravor.notessharing.model.ResourceType
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.SectionHeader
@@ -94,62 +95,42 @@ fun ExploreSuccessContent(
     val assignmentsColor = if (isDark) Color(0xFF7CB7FF) else Color(0xFF1B67B3)
     val subjectsColor = if (isDark) Color(0xFF73E0B1) else Color(0xFF167356)
 
-    // 1. Strictly filter Trending Notes to only show Notes and Documents
-    val filteredTrending = remember(content.trendingNotes) {
-        content.trendingNotes.filter { it.isTrendingNote() }
-    }
+    // 1. Trending Notes (Preview takes 7)
+    val filteredTrending = content.notes
     val visibleTrendingNotes = remember(filteredTrending) {
         filteredTrending.take(7)
     }
 
-    // 2. Curated Recommended Videos / Playlists
-    val visibleRecommendedVideos = remember(content.videoRecommendations) {
-        content.videoRecommendations.take(3)
+    // 2. Curated Recommended Videos / Playlists (Preview takes 3)
+    val visibleRecommendedVideos = remember(content.videos) {
+        content.videos.take(3)
     }
 
-    // 3. Strictly filter Exam Prep resources to only show PYQs and Cheat Sheets
-    val filteredExamPrep = remember(content.trendingNotes) {
-        content.trendingNotes.filter { note ->
-            val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-            docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet"
-        }
-    }
+    // 3. Exam Prep resources (Preview takes 7)
+    val filteredExamPrep = content.examPrep
     val visibleExamPrep = remember(filteredExamPrep) {
         filteredExamPrep.take(7)
     }
 
-    // 4. Strictly filter Assignments to only show Assignments
-    val filteredAssignments = remember(content.trendingNotes) {
-        content.trendingNotes.filter { note ->
-            val docType = note.documentType.ifBlank { note.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-            docType == "assignment" || docType == "assignments"
-        }
-    }
+    // 4. Assignments (Preview takes 7)
+    val filteredAssignments = content.assignments
     val visibleAssignments = remember(filteredAssignments) {
         filteredAssignments.take(7)
     }
 
-    // 5. Subject Hero Section resources grouping (semester-aware and catalog-driven)
-    val resourcesBySubject = remember(content.trendingNotes, content.videoRecommendations, allowedSubjects) {
+    // 5. Subject Section resources grouping (semester-aware and catalog-driven)
+    val resourcesBySubject = remember(content.notes, content.examPrep, content.assignments, content.videos, allowedSubjects) {
         allowedSubjects.map { catalogSubject ->
             val matchingResources = mutableListOf<Any>()
             val normalizedCatId = com.pravor.notessharing.ui.components.utils.normalizeSubject(catalogSubject.id)
             val normalizedCatName = com.pravor.notessharing.ui.components.utils.normalizeSubject(catalogSubject.name)
 
-            content.trendingNotes.forEach { note ->
+            val allItems = content.notes + content.examPrep + content.assignments + content.videos
+            allItems.forEach { note ->
                 if (note.subject.isNotBlank()) {
                     val normalizedRes = com.pravor.notessharing.ui.components.utils.normalizeSubject(note.subject)
                     if (normalizedRes == normalizedCatId || normalizedRes == normalizedCatName) {
                         matchingResources.add(note)
-                    }
-                }
-            }
-
-            content.videoRecommendations.forEach { video ->
-                if (video.subject.isNotBlank()) {
-                    val normalizedRes = com.pravor.notessharing.ui.components.utils.normalizeSubject(video.subject)
-                    if (normalizedRes == normalizedCatId || normalizedRes == normalizedCatName) {
-                        matchingResources.add(video)
                     }
                 }
             }
@@ -284,10 +265,10 @@ fun ExploreSuccessContent(
                                         { onUpvoteClick(video.id, video.documentType, video.upvotes) }
                                     }
                                     val onBookmarkClickRemembered = remember(video.id) {
-                                        { onVideoBookmarkClick(video) }
+                                        { onVideoBookmarkClick(video.toVideoRecommendation()) }
                                     }
                                     VideoRecommendationCard(
-                                        video = video,
+                                        video = video.toVideoRecommendation(),
                                         isUpvoted = video.isUpvoted,
                                         onClick = onClickRemembered,
                                         onUpvoteClick = onUpvoteClickRemembered,
@@ -296,7 +277,7 @@ fun ExploreSuccessContent(
                                 }
                             }
                             
-                            if (content.videoRecommendations.size > 3) {
+                            if (content.videos.size > 3) {
                                 FilledTonalButton(
                                     onClick = onRecommendedVideosSeeMoreClick,
                                     modifier = Modifier.fillMaxWidth()
@@ -507,14 +488,18 @@ fun SubjectHeroCard(
                 resources.take(4).forEachIndexed { index, res ->
                     val (title, icon, onClick) = when (res) {
                         is TrendingNote -> {
-                            val docType = res.documentType.ifBlank { res.type ?: "Notes" }.lowercase(java.util.Locale.ROOT).trim()
-                            val resIcon = when {
-                                docType.contains("pyq") -> Icons.Default.Help
-                                docType.contains("assignment") -> Icons.Default.Assignment
-                                docType.contains("cheat") -> Icons.Default.Bolt
-                                else -> Icons.Default.Description
+                            if (res.resourceType == ResourceType.VIDEO || res.resourceType == ResourceType.PLAYLIST) {
+                                Triple(res.title, Icons.Default.PlayArrow, { onVideoClick(res.id) })
+                            } else {
+                                val docType = res.documentType.ifBlank { res.type ?: "Notes" }.lowercase(java.util.Locale.ROOT).trim()
+                                val resIcon = when {
+                                    docType.contains("pyq") -> Icons.Default.Help
+                                    docType.contains("assignment") -> Icons.Default.Assignment
+                                    docType.contains("cheat") -> Icons.Default.Bolt
+                                    else -> Icons.Default.Description
+                                }
+                                Triple(res.title.ifBlank { res.subject }, resIcon, { onDocumentClick(res.id) })
                             }
-                            Triple(res.title.ifBlank { res.subject }, resIcon, { onDocumentClick(res.id) })
                         }
                         is VideoRecommendation -> {
                             Triple(res.title, Icons.Default.PlayArrow, { onVideoClick(res.id) })

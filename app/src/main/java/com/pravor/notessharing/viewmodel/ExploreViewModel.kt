@@ -162,10 +162,16 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val bookmarkedIds = bookmarks.map { it.id }.toSet()
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
-                        val updatedTrending = current.content.trendingNotes.map { note ->
+                        val updatedNotes = current.content.notes.map { note ->
                             note.copy(isBookmarked = bookmarkedIds.contains(note.id))
                         }
-                        val updatedVideos = current.content.videoRecommendations.map { video ->
+                        val updatedExamPrep = current.content.examPrep.map { note ->
+                            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                        }
+                        val updatedAssignments = current.content.assignments.map { note ->
+                            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                        }
+                        val updatedVideos = current.content.videos.map { video ->
                             val isBookmarkedNow = bookmarkedIds.contains(video.id)
                             val originalIsBookmarked = video.isBookmarked
                             val bookmarksCount = if (isBookmarkedNow && !originalIsBookmarked) {
@@ -178,8 +184,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             video.copy(isBookmarked = isBookmarkedNow, bookmarks = bookmarksCount)
                         }
                         ExploreUiState.Success(current.content.copy(
-                            trendingNotes = updatedTrending,
-                            videoRecommendations = updatedVideos
+                            notes = updatedNotes,
+                            examPrep = updatedExamPrep,
+                            assignments = updatedAssignments,
+                            videos = updatedVideos
                         ))
                     } else {
                         current
@@ -202,20 +210,32 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             val count = upvoteCountsMap[item.id] ?: item.upvotes
                             item.copy(isUpvoted = isUpvoted, upvotes = count)
                         }
-                        val updatedTrending = current.content.trendingNotes.map { note ->
+                        val updatedNotes = current.content.notes.map { note ->
                             val isUpvoted = upvotesMap[note.id] ?: false
                             val count = upvoteCountsMap[note.id] ?: note.upvotes
                             note.copy(isUpvoted = isUpvoted, upvotes = count)
                         }
-                        val updatedVideos = current.content.videoRecommendations.map { video ->
+                        val updatedExamPrep = current.content.examPrep.map { note ->
+                            val isUpvoted = upvotesMap[note.id] ?: false
+                            val count = upvoteCountsMap[note.id] ?: note.upvotes
+                            note.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        val updatedAssignments = current.content.assignments.map { note ->
+                            val isUpvoted = upvotesMap[note.id] ?: false
+                            val count = upvoteCountsMap[note.id] ?: note.upvotes
+                            note.copy(isUpvoted = isUpvoted, upvotes = count)
+                        }
+                        val updatedVideos = current.content.videos.map { video ->
                             val isUpvoted = upvotesMap[video.id] ?: false
                             val count = upvoteCountsMap[video.id] ?: video.upvotes
                             video.copy(isUpvoted = isUpvoted, upvotes = count)
                         }
                         ExploreUiState.Success(current.content.copy(
                             popularUploads = updatedPopular,
-                            trendingNotes = updatedTrending,
-                            videoRecommendations = updatedVideos
+                            notes = updatedNotes,
+                            examPrep = updatedExamPrep,
+                            assignments = updatedAssignments,
+                            videos = updatedVideos
                         ))
                     } else {
                         current
@@ -232,9 +252,21 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             val count = downloadCountsMap[item.id] ?: item.downloadsCount
                             item.copy(downloadsCount = count)
                         }
-                        val updatedTrending = current.content.trendingNotes.map { note ->
+                        val updatedNotes = current.content.notes.map { note ->
                             val count = downloadCountsMap[note.id] ?: note.downloadsCount
                             note.copy(downloadsCount = count)
+                        }
+                        val updatedExamPrep = current.content.examPrep.map { note ->
+                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+                            note.copy(downloadsCount = count)
+                        }
+                        val updatedAssignments = current.content.assignments.map { note ->
+                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+                            note.copy(downloadsCount = count)
+                        }
+                        val updatedVideos = current.content.videos.map { video ->
+                            val count = downloadCountsMap[video.id] ?: video.downloadsCount
+                            video.copy(downloadsCount = count)
                         }
                         val updatedDiscover = current.content.discoverItems.map { item ->
                             if (item is com.pravor.notessharing.model.DiscoverFeedItem.Note) {
@@ -246,7 +278,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         }
                         ExploreUiState.Success(current.content.copy(
                             popularUploads = updatedPopular,
-                            trendingNotes = updatedTrending,
+                            notes = updatedNotes,
+                            examPrep = updatedExamPrep,
+                            assignments = updatedAssignments,
+                            videos = updatedVideos,
                             discoverItems = updatedDiscover
                         ))
                     } else {
@@ -262,11 +297,19 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     val content = state.content
                     val paths = mutableListOf<Pair<String, String>>()
                     
-                    for (note in content.trendingNotes) {
+                    for (note in content.notes) {
                         val col = upvoteRepository.getCollectionForDocType(note.documentType)
                         paths.add(note.id to col)
                     }
-                    for (video in content.videoRecommendations) {
+                    for (note in content.examPrep) {
+                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
+                        paths.add(note.id to col)
+                    }
+                    for (note in content.assignments) {
+                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
+                        paths.add(note.id to col)
+                    }
+                    for (video in content.videos) {
                         val col = upvoteRepository.getCollectionForDocType(video.documentType ?: "video")
                         paths.add(video.id to col)
                     }

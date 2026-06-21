@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.pravor.notessharing.data.mapper.ExploreMapper
 import com.pravor.notessharing.model.TrendingNote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -186,29 +187,6 @@ class TrendingFeedRepository(private val context: Context) {
         return collections.all { isCollectionEnd[it] == true }
     }
 
-    private fun isVideoResource(data: Map<String, Any>): Boolean {
-        val docType = (data["documentType"] as? String ?: data["type"] as? String ?: "").trim()
-        val contentType = (data["contentType"] as? String ?: "").trim()
-        val hasYoutubeLink = (data["hasYoutubeLink"] as? Boolean) == true || (data["hasYoutubeLink"] as? String)?.lowercase() == "true"
-        val sourceType = (data["sourceType"] as? String ?: "").trim()
-        val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
-        val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
-        val resourceType = (data["resourceType"] as? String ?: "").trim()
-        val source = (data["source"] as? String ?: "").trim()
-
-        return docType.equals("VIDEO", ignoreCase = true) ||
-                docType.equals("YouTube Resource", ignoreCase = true) ||
-                docType.equals("Videos", ignoreCase = true) ||
-                contentType.equals("VIDEO", ignoreCase = true) ||
-                hasYoutubeLink ||
-                sourceType.equals("youtube", ignoreCase = true) ||
-                sourceType.equals("video", ignoreCase = true) ||
-                youtubeUrl.isNotBlank() ||
-                youtubeVideoId.isNotBlank() ||
-                resourceType.equals("VIDEO", ignoreCase = true) ||
-                source.equals("YOUTUBE", ignoreCase = true)
-    }
-
     private suspend fun fetchPageFromFirestore(isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
@@ -267,7 +245,7 @@ class TrendingFeedRepository(private val context: Context) {
                             val isTitleBlank = title.isNullOrBlank()
                             val isDummyUploader = uploaderId == "dummy-uid"
 
-                            !isVideoResource(data) && !isIdBlank && !isTitleBlank && !isDummyUploader
+                            !ExploreMapper.isVideoResource(data) && !isIdBlank && !isTitleBlank && !isDummyUploader
                         }
 
                         val advanceCursorTo = if (nonVideoDocs.isEmpty() && docs.isNotEmpty()) {
@@ -300,14 +278,10 @@ class TrendingFeedRepository(private val context: Context) {
         }
 
         val sortingStartTime = System.currentTimeMillis()
-        // Sort all candidates by trendingScore descending, then by uploadedAt descending
-        allCandidates.sortWith(
-            compareByDescending<Pair<DocumentSnapshot, String>> { (doc, _) ->
-                (doc.data?.get("trendingScore") as? Number)?.toDouble() ?: 0.0
-            }.thenByDescending { (doc, _) ->
-                doc.getLong("uploadedAt") ?: 0L
-            }
-        )
+        // Sort all candidates by trendingScore descending, then by uploadedAt descending using the centralized comparator
+        allCandidates.sortWith { a, b ->
+            ExploreRankingUtils.documentSnapshotComparator.compare(a.first, b.first)
+        }
 
         // Take the top PAGE_SIZE (10)
         val selected = allCandidates.take(PAGE_SIZE)
@@ -359,64 +333,8 @@ class TrendingFeedRepository(private val context: Context) {
             android.util.Log.d("PERF", "[PERF] ResolveContributorLevels cacheHits=$cacheHits")
         }
 
-        val mappedNotes = selected.map { (doc, _) ->
-            val data = doc.data ?: emptyMap<String, Any>()
-            val id = doc.id
-            val title = data["title"] as? String ?: "Untitled Document"
-            val subject = data["subject"] as? String ?: "General"
-            val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
-            val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
-            val thumbnailUrl = data["thumbnailUrl"] as? String
-            val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
-            val thumbnailType = data["thumbnailType"] as? String
-
-            val description = data["description"] as? String ?: ""
-            val uploaderId = data["uploaderId"] as? String ?: ""
-            val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
-            val uploaderPhotoUrl = data["uploaderPhotoUrl"] as? String ?: ""
-            val documentTypeField = data["documentType"] as? String
-            val typeField = data["type"] as? String
-            val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
-            val semester = data["semester"] as? String ?: ""
-            val examYear = (data["examYear"] ?: data["year"])?.toString()
-            val examType = data["examType"]?.toString()
-            val trendingScore = (data["trendingScore"] as? Number)?.toDouble() ?: 0.0
-            val displaySubjectVal = data["displaySubject"] as? String
-
-            val contributorLevel = if (uploaderId.isNotEmpty()) {
-                if (uploaderId == "dummy-uid") {
-                    "Gold Contributor"
-                } else {
-                    resolvedLevels[uploaderId] ?: "Bronze Contributor"
-                }
-            } else {
-                "Bronze Contributor"
-            }
-
-            TrendingNote(
-                id = id,
-                title = title,
-                subject = subject,
-                downloadsCount = downloadsCount,
-                rating = 4.5,
-                upvotes = upvotes,
-                isBookmarked = false,
-                thumbnailUrl = thumbnailUrl,
-                thumbnailGenerated = thumbnailGenerated,
-                thumbnailType = thumbnailType,
-                description = description,
-                uploaderName = uploaderName,
-                uploaderPhotoUrl = uploaderPhotoUrl,
-                contributorLevel = contributorLevel,
-                documentType = documentTypeField ?: "",
-                type = typeField,
-                bookmarks = bookmarks,
-                semester = semester,
-                examYear = examYear,
-                examType = examType,
-                trendingScore = trendingScore,
-                displaySubject = displaySubjectVal
-            )
+        val mappedNotes = selected.mapNotNull { (doc, _) ->
+            ExploreMapper.documentToTrendingNote(doc, emptySet(), resolvedLevels)
         }
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
             val mappingTotalDuration = System.currentTimeMillis() - mappingStartTime
