@@ -128,13 +128,14 @@ private fun getBranchAbbreviation(branchIdOrName: String): String {
     return resolvedId.uppercase(java.util.Locale.ROOT)
 }
 
+private val SectionFormatRegex = Regex("([a-zA-Z]+)\\s*[-–—]?\\s*(\\d+)")
+
 private fun formatSection(section: String): String {
     val trimmed = section.trim()
     if (trimmed.isEmpty()) return ""
     
     // Matches letters, optional spaces/dash, then numbers (e.g. cse-28, CSE-28, cse - 28)
-    val regex = Regex("([a-zA-Z]+)\\s*[-–—]?\\s*(\\d+)")
-    val matchResult = regex.find(trimmed)
+    val matchResult = SectionFormatRegex.find(trimmed)
     return if (matchResult != null) {
         val letters = matchResult.groupValues[1].uppercase()
         val numbers = matchResult.groupValues[2]

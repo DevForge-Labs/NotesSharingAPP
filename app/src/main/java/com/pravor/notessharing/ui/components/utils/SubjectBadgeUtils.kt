@@ -26,10 +26,12 @@ import androidx.compose.ui.window.PopupProperties
  * 3. Replacing multiple internal spaces with a single space.
  * 4. Resolving common subject aliases.
  */
+private val MultipleSpacesRegex = Regex("\\s+")
+
 fun normalizeSubject(subject: String): String {
     val normalized = subject.lowercase()
         .trim()
-        .replace(Regex("\\s+"), " ")
+        .replace(MultipleSpacesRegex, " ")
 
     return when (normalized) {
         "ds", "data structure", "data structures" -> "ds"
@@ -64,6 +66,26 @@ fun normalizeSubject(subject: String): String {
     }
 }
 
+private val FallbackColors = listOf(
+    Color(0xFF1E88E5), // Blue
+    Color(0xFF43A047), // Green
+    Color(0xFFFB8C00), // Orange
+    Color(0xFF8E24AA), // Purple
+    Color(0xFF00ACC1), // Cyan
+    Color(0xFFD81B60), // Pink
+    Color(0xFF3949AB), // Indigo
+    Color(0xFF7C4DFF), // Violet
+    Color(0xFF00897B), // Emerald / Teal-Green
+    Color(0xFF00C853), // Bright Green
+    Color(0xFFE65100), // Dark Orange
+    Color(0xFF0277BD), // Light Blue
+    Color(0xFF0097A7), // Cyan/Teal
+    Color(0xFF009688), // Teal
+    Color(0xFF558B2F), // Light Green
+    Color(0xFF1565C0), // Dark Blue
+    Color(0xFFC62828)  // Red
+)
+
 /**
  * Maps normalized subject names to fixed colors.
  * Fallback color is a neutral Slate/Gray.
@@ -90,27 +112,8 @@ fun getSubjectColor(normalizedSubject: String): Color {
         "cyber security" -> Color(0xFFC62828) // Red
         "STW" -> Color(0xFFFFF334)
         else -> {
-            val colorsList = listOf(
-                Color(0xFF1E88E5), // Blue
-                Color(0xFF43A047), // Green
-                Color(0xFFFB8C00), // Orange
-                Color(0xFF8E24AA), // Purple
-                Color(0xFF00ACC1), // Cyan
-                Color(0xFFD81B60), // Pink
-                Color(0xFF3949AB), // Indigo
-                Color(0xFF7C4DFF), // Violet
-                Color(0xFF00897B), // Emerald / Teal-Green
-                Color(0xFF00C853), // Bright Green
-                Color(0xFFE65100), // Dark Orange
-                Color(0xFF0277BD), // Light Blue
-                Color(0xFF0097A7), // Cyan/Teal
-                Color(0xFF009688), // Teal
-                Color(0xFF558B2F), // Light Green
-                Color(0xFF1565C0), // Dark Blue
-                Color(0xFFC62828)  // Red
-            )
-            val index = java.lang.Math.abs(normalizedSubject.hashCode()) % colorsList.size
-            colorsList[index]
+            val index = java.lang.Math.abs(normalizedSubject.hashCode()) % FallbackColors.size
+            FallbackColors[index]
         }
     }
 }

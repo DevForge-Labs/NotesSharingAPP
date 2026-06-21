@@ -41,7 +41,6 @@ class TrendingFeedRepository(private val context: Context) {
         private const val KEY_FEED = "cached_trending_notes"
         private const val CACHE_LIMIT = 100
         private const val PAGE_SIZE = 10
-        private val contributorMemoryCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     }
 
     init {
@@ -212,7 +211,9 @@ class TrendingFeedRepository(private val context: Context) {
 
     private suspend fun fetchPageFromFirestore(isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
-        android.util.Log.d("PERF", "[PERF] Trending page fetch START thread=${Thread.currentThread().name}")
+        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+            android.util.Log.d("PERF", "[PERF] Trending page fetch START thread=${Thread.currentThread().name}")
+        }
         val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "documents")
 
         if (isRefresh) {
@@ -238,10 +239,14 @@ class TrendingFeedRepository(private val context: Context) {
                         }
 
                         val firestoreQueryStartTime = System.currentTimeMillis()
-                        android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
+                        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
+                        }
                         val snap = query.get().await()
-                        val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                        android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${snap.size()} thread=${Thread.currentThread().name}")
+                        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${snap.size()} thread=${Thread.currentThread().name}")
+                        }
 
                         if (snap.isEmpty) {
                             isCollectionEnd[col] = true
@@ -289,8 +294,10 @@ class TrendingFeedRepository(private val context: Context) {
                 }
             }
         }
-        val candidatesDuration = System.currentTimeMillis() - candidatesStartTime
-        android.util.Log.d("PERF", "[PERF] Trending stage=FetchCandidates duration=${candidatesDuration}ms")
+        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+            val candidatesDuration = System.currentTimeMillis() - candidatesStartTime
+            android.util.Log.d("PERF", "[PERF] Trending stage=FetchCandidates duration=${candidatesDuration}ms")
+        }
 
         val sortingStartTime = System.currentTimeMillis()
         // Sort all candidates by trendingScore descending, then by uploadedAt descending
@@ -309,12 +316,16 @@ class TrendingFeedRepository(private val context: Context) {
         selected.forEach { (doc, col) ->
             lastSnapshots[col] = doc
         }
-        val sortingDuration = System.currentTimeMillis() - sortingStartTime
-        android.util.Log.d("PERF", "[PERF] Trending stage=Sorting duration=${sortingDuration}ms")
+        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+            val sortingDuration = System.currentTimeMillis() - sortingStartTime
+            android.util.Log.d("PERF", "[PERF] Trending stage=Sorting duration=${sortingDuration}ms")
+        }
 
         // Now map the selected DocumentSnapshots to TrendingNote
         val mappingStartTime = System.currentTimeMillis()
-        android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Trending feed assembly thread=${Thread.currentThread().name}")
+        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+            android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Trending feed assembly thread=${Thread.currentThread().name}")
+        }
 
         val detailRepository = DocumentDetailRepository()
 
@@ -333,29 +344,20 @@ class TrendingFeedRepository(private val context: Context) {
         val resolvedLevels = coroutineScope {
             uploaderIds.map { uid ->
                 async {
-                    val cached = contributorMemoryCache[uid]
-                    if (cached != null) {
-                        uid to Pair(cached, true)
-                    } else {
-                        val level = detailRepository.getUploaderContributorLevel(uid) ?: "Bronze Contributor"
-                        contributorMemoryCache[uid] = level
-                        uid to Pair(level, false)
-                    }
+                    val level = detailRepository.getUploaderContributorLevel(uid) ?: "Bronze Contributor"
+                    uid to level
                 }
             }.awaitAll().toMap()
         }
         val totalContributorLevelDuration = System.currentTimeMillis() - contributorStartTime
 
-        resolvedLevels.values.forEach { (_, isHit) ->
-            if (isHit) cacheHits++ else cacheMisses++
-        }
-        userFetchCount = cacheMisses
-
         // Add requested contributor resolution logging
-        android.util.Log.d("PERF", "[PERF] uniqueContributorCount=$uniqueContributorCount userFetchCount=$userFetchCount cacheHits=$cacheHits cacheMisses=$cacheMisses")
-        android.util.Log.d("PERF", "[PERF] ResolveContributorLevels uniqueContributors=$uniqueContributorCount")
-        android.util.Log.d("PERF", "[PERF] ResolveContributorLevels userFetches=$userFetchCount")
-        android.util.Log.d("PERF", "[PERF] ResolveContributorLevels cacheHits=$cacheHits")
+        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+            android.util.Log.d("PERF", "[PERF] uniqueContributorCount=$uniqueContributorCount userFetchCount=$userFetchCount cacheHits=$cacheHits cacheMisses=$cacheMisses")
+            android.util.Log.d("PERF", "[PERF] ResolveContributorLevels uniqueContributors=$uniqueContributorCount")
+            android.util.Log.d("PERF", "[PERF] ResolveContributorLevels userFetches=$userFetchCount")
+            android.util.Log.d("PERF", "[PERF] ResolveContributorLevels cacheHits=$cacheHits")
+        }
 
         val mappedNotes = selected.map { (doc, _) ->
             val data = doc.data ?: emptyMap<String, Any>()
@@ -385,7 +387,7 @@ class TrendingFeedRepository(private val context: Context) {
                 if (uploaderId == "dummy-uid") {
                     "Gold Contributor"
                 } else {
-                    resolvedLevels[uploaderId]?.first ?: "Bronze Contributor"
+                    resolvedLevels[uploaderId] ?: "Bronze Contributor"
                 }
             } else {
                 "Bronze Contributor"
@@ -416,15 +418,17 @@ class TrendingFeedRepository(private val context: Context) {
                 displaySubject = displaySubjectVal
             )
         }
-        val mappingTotalDuration = System.currentTimeMillis() - mappingStartTime
-        android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Trending feed assembly duration=${mappingTotalDuration}ms thread=${Thread.currentThread().name}")
-        android.util.Log.d("PERF", "[PERF] Trending stage=ResolveContributorLevels duration=${totalContributorLevelDuration}ms")
-        android.util.Log.d("PERF", "[PERF] Trending stage=FetchDocumentDetails duration=0ms")
-        android.util.Log.d("PERF", "[PERF] Trending stage=ScoreCalculation duration=0ms")
-        android.util.Log.d("PERF", "[PERF] Trending stage=Mapping duration=${mappingTotalDuration - totalContributorLevelDuration}ms")
+        if (com.pravor.notessharing.BuildConfig.DEBUG) {
+            val mappingTotalDuration = System.currentTimeMillis() - mappingStartTime
+            android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Trending feed assembly duration=${mappingTotalDuration}ms thread=${Thread.currentThread().name}")
+            android.util.Log.d("PERF", "[PERF] Trending stage=ResolveContributorLevels duration=${totalContributorLevelDuration}ms")
+            android.util.Log.d("PERF", "[PERF] Trending stage=FetchDocumentDetails duration=0ms")
+            android.util.Log.d("PERF", "[PERF] Trending stage=ScoreCalculation duration=0ms")
+            android.util.Log.d("PERF", "[PERF] Trending stage=Mapping duration=${mappingTotalDuration - totalContributorLevelDuration}ms")
 
-        val duration = System.currentTimeMillis() - startTime
-        android.util.Log.d("PERF", "[PERF] Trending TOTAL duration=${duration}ms")
+            val duration = System.currentTimeMillis() - startTime
+            android.util.Log.d("PERF", "[PERF] Trending TOTAL duration=${duration}ms")
+        }
         mappedNotes
     }
 }

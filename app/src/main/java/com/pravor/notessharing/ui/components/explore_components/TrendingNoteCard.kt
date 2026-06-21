@@ -88,6 +88,14 @@ object TrendingCardDiagnostics {
     val cacheMisses = java.util.concurrent.atomic.AtomicInteger(0)
 }
 
+private val OverlayShadingBrush = Brush.verticalGradient(
+    colors = listOf(
+        Color.Transparent,
+        Color.Black.copy(alpha = 0.2f),
+        Color.Black.copy(alpha = 0.4f)
+    )
+)
+
 @Composable
 fun TrendingNoteCard(
     note: TrendingNote,
@@ -95,10 +103,6 @@ fun TrendingNoteCard(
     onClick: () -> Unit = {},
     onUpvoteClick: () -> Unit = {}
 ) {
-    val recompositionCount = remember { java.util.concurrent.atomic.AtomicInteger(0) }
-    SideEffect {
-        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] TrendingNoteCard id=${note.id} count=${recompositionCount.incrementAndGet()}")
-    }
 
     val cached = remember(note.id, note.thumbnailUrl) {
         val res = if (!note.thumbnailUrl.isNullOrBlank()) {
@@ -108,7 +112,9 @@ fun TrendingNoteCard(
         }
         if (res == null) {
             val misses = TrendingCardDiagnostics.cacheMisses.incrementAndGet()
-            android.util.Log.d("PERF", "[PERF] Metadata cache MISS id=${note.id}")
+            if (com.pravor.notessharing.BuildConfig.DEBUG) {
+                android.util.Log.d("PERF", "[PERF] Metadata cache MISS id=${note.id}")
+            }
         }
         res
     }
@@ -160,29 +166,48 @@ fun TrendingNoteCard(
         }
     }
 
-    val documentTypeField = if (note.documentType.isNotBlank()) note.documentType else null
-    val typeField = note.type
+    val docInfo = remember(note.documentType, note.type, note.title) {
+        val documentTypeField = if (note.documentType.isNotBlank()) note.documentType else null
+        val typeField = note.type
 
-    val rawDocType = (documentTypeField ?: typeField)
-        ?.lowercase(java.util.Locale.ROOT)?.trim()
+        val rawDocType = (documentTypeField ?: typeField)
+            ?.lowercase(java.util.Locale.ROOT)?.trim()
 
-    val docType = when (rawDocType) {
-        "pyq" -> "PYQ"
-        "cheatsheet", "cheat sheet" -> "Cheat Sheet"
-        "assignment" -> "Assignment"
-        "notes" -> "Notes"
-        else -> getDocumentTypeFromTitle(note.title)
+        val docType = when (rawDocType) {
+            "pyq" -> "PYQ"
+            "cheatsheet", "cheat sheet" -> "Cheat Sheet"
+            "assignment" -> "Assignment"
+            "notes" -> "Notes"
+            else -> getDocumentTypeFromTitle(note.title)
+        }
+        
+        val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(docType)
+        val previewIcon = when (docType) {
+            "PYQ" -> Icons.Default.Help
+            "Assignment" -> Icons.Default.Assignment
+            "Cheat Sheet" -> Icons.Default.Bolt
+            else -> Icons.Default.Description
+        }
+        Triple(docType, theme, previewIcon)
     }
-    
-    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(docType)
+
+    val docType = docInfo.first
+    val theme = docInfo.second
+    val previewIcon = docInfo.third
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 
-    val previewIcon = when (docType) {
-        "PYQ" -> Icons.Default.Help
-        "Assignment" -> Icons.Default.Assignment
-        "Cheat Sheet" -> Icons.Default.Bolt
-        else -> Icons.Default.Description
+    val displayTitle = remember(note.title, note.subject) {
+        val isTitleValid = note.title.isNotBlank() && note.title != "Untitled Document"
+        if (isTitleValid) note.title else note.subject
+    }
+
+    val badgeSubject = remember(note.displaySubject, note.subject) {
+        when {
+            !note.displaySubject.isNullOrBlank() -> note.displaySubject
+            note.subject.isNotBlank() -> note.subject
+            else -> "Unknown"
+        }
     }
 
     PressScaleSurface(
@@ -200,9 +225,7 @@ fun TrendingNoteCard(
                     .fillMaxWidth()
                     .height(108.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        Brush.linearGradient(theme.gradientColors)
-                    )
+                    .background(theme.thumbnailBrush)
                     .border(
                         BorderStroke(1.dp, accentColor.copy(alpha = 0.15f)),
                         RoundedCornerShape(20.dp)
@@ -219,7 +242,7 @@ fun TrendingNoteCard(
                         var imageLoadError by remember { mutableStateOf(false) }
                         if (!imageLoadError) {
                             val context = LocalContext.current
-                            val imageRequest = remember(firstAttachmentUrl) {
+                            val imageRequest = remember(firstAttachmentUrl, context) {
                                 ImageRequest.Builder(context)
                                     .data(firstAttachmentUrl)
                                     .crossfade(true)
@@ -242,15 +265,7 @@ fun TrendingNoteCard(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(
-                                                    Color.Transparent,
-                                                    Color.Black.copy(alpha = 0.2f),
-                                                    Color.Black.copy(alpha = 0.4f)
-                                                )
-                                            )
-                                        )
+                                        .background(OverlayShadingBrush)
                                 )
                             }
                         }
@@ -288,10 +303,6 @@ fun TrendingNoteCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // 2. SUBJECT NAME (Main Title)
-            val isTitleValid = note.title.isNotBlank() && note.title != "Untitled Document"
-            val displayTitle = if (isTitleValid) note.title else note.subject
-
             Text(
                 text = displayTitle,
                 style = MaterialTheme.typography.titleMedium,
@@ -309,11 +320,6 @@ fun TrendingNoteCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val badgeSubject = when {
-                    !note.displaySubject.isNullOrBlank() -> note.displaySubject
-                    note.subject.isNotBlank() -> note.subject
-                    else -> "Unknown"
-                }
                 SubjectBadge(
                     subject = badgeSubject,
                     disableNormalization = !note.displaySubject.isNullOrBlank()

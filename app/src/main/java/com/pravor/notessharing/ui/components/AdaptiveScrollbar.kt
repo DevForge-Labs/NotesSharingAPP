@@ -85,10 +85,6 @@ fun BoxScope.AdaptiveScrollbar(
         targetValue = if (scrollbarState.isVisible) 0.75f else 0f,
         label = "scrollbar-alpha"
     )
-    val animatedProgress by animateFloatAsState(
-        targetValue = scrollbarState.progress,
-        label = "scrollbar-progress"
-    )
     val density = LocalDensity.current
     val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
     val thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
@@ -108,7 +104,7 @@ fun BoxScope.AdaptiveScrollbar(
             val maxOffset = (trackHeightPx - with(density) { thumbHeight.toPx() }).coerceAtLeast(0f)
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(0, (maxOffset * animatedProgress).roundToInt()) }
+                    .offset { IntOffset(0, (maxOffset * scrollbarState.progress).roundToInt()) }
                     .width(thickness)
                     .height(thumbHeight)
                     .background(thumbColor, RoundedCornerShape(99.dp))
@@ -129,7 +125,7 @@ fun BoxScope.AdaptiveScrollbar(
             val maxOffset = (trackWidthPx - with(density) { thumbWidth.toPx() }).coerceAtLeast(0f)
             Box(
                 modifier = Modifier
-                    .offset { IntOffset((maxOffset * animatedProgress).roundToInt(), 0) }
+                    .offset { IntOffset((maxOffset * scrollbarState.progress).roundToInt(), 0) }
                     .height(thickness)
                     .width(thumbWidth)
                     .background(thumbColor, RoundedCornerShape(99.dp))
