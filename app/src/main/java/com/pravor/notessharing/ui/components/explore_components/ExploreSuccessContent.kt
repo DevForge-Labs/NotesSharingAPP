@@ -41,6 +41,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +79,15 @@ fun ExploreSuccessContent(
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     val isDark = isSystemInDarkTheme()
+
+    val trendingRowState = rememberLazyListState()
+    var isTrendingScrollable by remember { mutableStateOf(false) }
+
+    val examPrepRowState = rememberLazyListState()
+    var isExamPrepScrollable by remember { mutableStateOf(false) }
+
+    val assignmentsRowState = rememberLazyListState()
+    var isAssignmentsScrollable by remember { mutableStateOf(false) }
     val trendingColor = if (isDark) Color(0xFFFF9F55) else Color(0xFFE65100)
     val videosColor = if (isDark) Color(0xFFFF6B6B) else Color(0xFFC0392B)
     val examPrepColor = if (isDark) Color(0xFFC7A6FF) else Color(0xFF8E44AD)
@@ -163,7 +177,7 @@ fun ExploreSuccessContent(
                     title = "Trending Notes",
                     icon = Icons.Rounded.LocalFireDepartment,
                     iconTint = trendingColor,
-                    onSeeMoreClick = if (filteredTrending.size > visibleTrendingNotes.size) onTrendingSeeMoreClick else null
+                    onSeeMoreClick = if (filteredTrending.size > visibleTrendingNotes.size && !isTrendingScrollable) onTrendingSeeMoreClick else null
                 )
             }
             if (visibleTrendingNotes.isEmpty()) {
@@ -176,7 +190,12 @@ fun ExploreSuccessContent(
                 }
             } else {
                 item(key = "trending-carousel", contentType = "carousel") {
-                    ScrollableRowWithIndicator {
+                    ScrollableRowWithIndicator(
+                        state = trendingRowState,
+                        onSeeMoreClick = if (filteredTrending.size > visibleTrendingNotes.size) onTrendingSeeMoreClick else null,
+                        accentColor = trendingColor,
+                        onScrollableChanged = { isTrendingScrollable = it }
+                    ) {
                         itemsIndexed(
                             items = visibleTrendingNotes,
                             key = { index, note -> note.id.ifBlank { "trending_note_$index" } },
@@ -299,7 +318,7 @@ fun ExploreSuccessContent(
                     title = "Exam Prep",
                     icon = Icons.Rounded.EditNote,
                     iconTint = examPrepColor,
-                    onSeeMoreClick = if (filteredExamPrep.size > visibleExamPrep.size) onExamPrepSeeMoreClick else null
+                    onSeeMoreClick = if (filteredExamPrep.size > visibleExamPrep.size && !isExamPrepScrollable) onExamPrepSeeMoreClick else null
                 )
             }
             if (visibleExamPrep.isEmpty()) {
@@ -312,7 +331,12 @@ fun ExploreSuccessContent(
                 }
             } else {
                 item(key = "examprep-carousel", contentType = "carousel") {
-                    ScrollableRowWithIndicator {
+                    ScrollableRowWithIndicator(
+                        state = examPrepRowState,
+                        onSeeMoreClick = if (filteredExamPrep.size > visibleExamPrep.size) onExamPrepSeeMoreClick else null,
+                        accentColor = examPrepColor,
+                        onScrollableChanged = { isExamPrepScrollable = it }
+                    ) {
                         itemsIndexed(
                             items = visibleExamPrep,
                             key = { index, note -> note.id.ifBlank { "examprep_note_$index" } },
@@ -344,7 +368,7 @@ fun ExploreSuccessContent(
                     title = "Assignments",
                     icon = Icons.AutoMirrored.Rounded.Assignment,
                     iconTint = assignmentsColor,
-                    onSeeMoreClick = if (filteredAssignments.size > visibleAssignments.size) onAssignmentsSeeMoreClick else null
+                    onSeeMoreClick = if (filteredAssignments.size > visibleAssignments.size && !isAssignmentsScrollable) onAssignmentsSeeMoreClick else null
                 )
             }
             if (visibleAssignments.isEmpty()) {
@@ -357,7 +381,12 @@ fun ExploreSuccessContent(
                 }
             } else {
                 item(key = "assignments-carousel", contentType = "carousel") {
-                    ScrollableRowWithIndicator {
+                    ScrollableRowWithIndicator(
+                        state = assignmentsRowState,
+                        onSeeMoreClick = if (filteredAssignments.size > visibleAssignments.size) onAssignmentsSeeMoreClick else null,
+                        accentColor = assignmentsColor,
+                        onScrollableChanged = { isAssignmentsScrollable = it }
+                    ) {
                         itemsIndexed(
                             items = visibleAssignments,
                             key = { index, note -> note.id.ifBlank { "assignment_note_$index" } },
