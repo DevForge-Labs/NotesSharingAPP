@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +24,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Assignment
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.PlayCircleFilled
+import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Assignment
@@ -35,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,15 +73,25 @@ fun ExploreSuccessContent(
     onSearchClick: () -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
+    val isDark = isSystemInDarkTheme()
+    val trendingColor = if (isDark) Color(0xFFFF9F55) else Color(0xFFE65100)
+    val videosColor = if (isDark) Color(0xFFFF6B6B) else Color(0xFFC0392B)
+    val examPrepColor = if (isDark) Color(0xFFC7A6FF) else Color(0xFF8E44AD)
+    val assignmentsColor = if (isDark) Color(0xFF7CB7FF) else Color(0xFF1B67B3)
+    val subjectsColor = if (isDark) Color(0xFF73E0B1) else Color(0xFF167356)
 
     // 1. Strictly filter Trending Notes to only show Notes and Documents
     val filteredTrending = remember(content.trendingNotes) {
         content.trendingNotes.filter { it.isTrendingNote() }
     }
-    val visibleTrendingNotes = filteredTrending.take(7)
+    val visibleTrendingNotes = remember(filteredTrending) {
+        filteredTrending.take(7)
+    }
 
     // 2. Curated Recommended Videos / Playlists
-    val visibleRecommendedVideos = content.videoRecommendations.take(4)
+    val visibleRecommendedVideos = remember(content.videoRecommendations) {
+        content.videoRecommendations.take(3)
+    }
 
     // 3. Strictly filter Exam Prep resources to only show PYQs and Cheat Sheets
     val filteredExamPrep = remember(content.trendingNotes) {
@@ -83,7 +100,9 @@ fun ExploreSuccessContent(
             docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet"
         }
     }
-    val visibleExamPrep = filteredExamPrep.take(7)
+    val visibleExamPrep = remember(filteredExamPrep) {
+        filteredExamPrep.take(7)
+    }
 
     // 4. Strictly filter Assignments to only show Assignments
     val filteredAssignments = remember(content.trendingNotes) {
@@ -92,7 +111,9 @@ fun ExploreSuccessContent(
             docType == "assignment" || docType == "assignments"
         }
     }
-    val visibleAssignments = filteredAssignments.take(7)
+    val visibleAssignments = remember(filteredAssignments) {
+        filteredAssignments.take(7)
+    }
 
     // 5. Subject Hero Section resources grouping (semester-aware and catalog-driven)
     val resourcesBySubject = remember(content.trendingNotes, content.videoRecommendations, allowedSubjects) {
@@ -138,17 +159,12 @@ fun ExploreSuccessContent(
 
             // Trending Notes Section
             item(key = "trending-title", contentType = "section") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionHeader("🔥 Trending Notes", modifier = Modifier.weight(1f))
-                    if (filteredTrending.size > visibleTrendingNotes.size) {
-                        TextButton(onClick = onTrendingSeeMoreClick) {
-                            Text("See More")
-                        }
-                    }
-                }
+                SectionHeader(
+                    title = "Trending Notes",
+                    icon = Icons.Rounded.LocalFireDepartment,
+                    iconTint = trendingColor,
+                    onSeeMoreClick = if (filteredTrending.size > visibleTrendingNotes.size) onTrendingSeeMoreClick else null
+                )
             }
             if (visibleTrendingNotes.isEmpty()) {
                 item(key = "trending-empty", contentType = "empty") {
@@ -188,7 +204,12 @@ fun ExploreSuccessContent(
 
             // Recommended Videos Section
             item(key = "videos-title", contentType = "section") {
-                SectionHeader("📺 Recommended Videos")
+                SectionHeader(
+                    title = "Recommended Videos",
+                    icon = Icons.Rounded.PlayCircleFilled,
+                    iconTint = videosColor,
+                    onSeeMoreClick = null
+                )
             }
             if (visibleRecommendedVideos.isEmpty()) {
                 item(key = "videos-empty", contentType = "empty") {
@@ -221,35 +242,52 @@ fun ExploreSuccessContent(
                     }
                 }
             } else {
-                itemsIndexed(
-                    items = visibleRecommendedVideos,
-                    key = { index, video -> video.id.ifBlank { "video_$index" } },
-                    contentType = { _, _ -> "video" }
-                ) { _, video ->
-                    val onClickRemembered = remember(video.id) {
-                        { onVideoClick(video.id) }
-                    }
-                    val onUpvoteClickRemembered = remember(video.id, video.documentType, video.upvotes) {
-                        { onUpvoteClick(video.id, video.documentType, video.upvotes) }
-                    }
-                    val onBookmarkClickRemembered = remember(video.id) {
-                        { onVideoBookmarkClick(video) }
-                    }
-                    VideoRecommendationCard(
-                        video = video,
-                        isUpvoted = video.isUpvoted,
-                        onClick = onClickRemembered,
-                        onUpvoteClick = onUpvoteClickRemembered,
-                        onBookmarkClick = onBookmarkClickRemembered
-                    )
-                }
-                if (content.videoRecommendations.size > visibleRecommendedVideos.size) {
-                    item(key = "videos-see-more", contentType = "action") {
-                        TextButton(
-                            onClick = onRecommendedVideosSeeMoreClick,
-                            modifier = Modifier.fillMaxWidth()
+                item(key = "videos-container", contentType = "videos_container") {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text("See More")
+                            visibleRecommendedVideos.forEach { video ->
+                                androidx.compose.runtime.key(video.id) {
+                                    val onClickRemembered = remember(video.id) {
+                                        { onVideoClick(video.id) }
+                                    }
+                                    val onUpvoteClickRemembered = remember(video.id, video.documentType, video.upvotes) {
+                                        { onUpvoteClick(video.id, video.documentType, video.upvotes) }
+                                    }
+                                    val onBookmarkClickRemembered = remember(video.id) {
+                                        { onVideoBookmarkClick(video) }
+                                    }
+                                    VideoRecommendationCard(
+                                        video = video,
+                                        isUpvoted = video.isUpvoted,
+                                        onClick = onClickRemembered,
+                                        onUpvoteClick = onUpvoteClickRemembered,
+                                        onBookmarkClick = onBookmarkClickRemembered
+                                    )
+                                }
+                            }
+                            
+                            if (content.videoRecommendations.size > 3) {
+                                FilledTonalButton(
+                                    onClick = onRecommendedVideosSeeMoreClick,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "See More Videos",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -257,17 +295,12 @@ fun ExploreSuccessContent(
 
             // Exam Prep Section
             item(key = "examprep-title", contentType = "section") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionHeader("✍️ Exam Prep", modifier = Modifier.weight(1f))
-                    if (filteredExamPrep.size > visibleExamPrep.size) {
-                        TextButton(onClick = onExamPrepSeeMoreClick) {
-                            Text("See More")
-                        }
-                    }
-                }
+                SectionHeader(
+                    title = "Exam Prep",
+                    icon = Icons.Rounded.EditNote,
+                    iconTint = examPrepColor,
+                    onSeeMoreClick = if (filteredExamPrep.size > visibleExamPrep.size) onExamPrepSeeMoreClick else null
+                )
             }
             if (visibleExamPrep.isEmpty()) {
                 item(key = "examprep-empty", contentType = "empty") {
@@ -307,17 +340,12 @@ fun ExploreSuccessContent(
 
             // Assignments Section
             item(key = "assignments-title", contentType = "section") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionHeader("📝 Assignments", modifier = Modifier.weight(1f))
-                    if (filteredAssignments.size > visibleAssignments.size) {
-                        TextButton(onClick = onAssignmentsSeeMoreClick) {
-                            Text("See More")
-                        }
-                    }
-                }
+                SectionHeader(
+                    title = "Assignments",
+                    icon = Icons.AutoMirrored.Rounded.Assignment,
+                    iconTint = assignmentsColor,
+                    onSeeMoreClick = if (filteredAssignments.size > visibleAssignments.size) onAssignmentsSeeMoreClick else null
+                )
             }
             if (visibleAssignments.isEmpty()) {
                 item(key = "assignments-empty", contentType = "empty") {
@@ -357,7 +385,11 @@ fun ExploreSuccessContent(
 
             // Subject Hero Section (All-in-one grouped by subject)
             item(key = "subjecthero-title", contentType = "section") {
-                SectionHeader("🎓 Subjects")
+                SectionHeader(
+                    title = "Subjects",
+                    icon = Icons.Rounded.School,
+                    iconTint = subjectsColor
+                )
             }
             if (resourcesBySubject.isEmpty()) {
                 item(key = "subjecthero-empty", contentType = "empty") {

@@ -66,7 +66,9 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.List
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import com.pravor.notessharing.model.Category
 import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.model.FileType
@@ -160,51 +162,118 @@ fun NotesSearchBar(
 @Composable
 fun SectionHeader(
     title: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    onSeeMoreClick: (() -> Unit)? = null
 ) {
-    val accentColor = when {
-        title.contains("Continue Reading", ignoreCase = true) -> Color(0xFF58D6D1)
-        title.contains("For You", ignoreCase = true) -> Color(0xFFC7A6FF)
-        title.contains("Study Hub", ignoreCase = true) -> Color(0xFFFFB45C)
-        title.contains("Trending", ignoreCase = true) -> Color(0xFFFFB45C)
-        title.contains("Video", ignoreCase = true) -> Color(0xFFFF6B6B)
-        title.contains("Collection", ignoreCase = true) -> Color(0xFF7AD7FF)
-        title.contains("Revision", ignoreCase = true) -> Color(0xFFC7A6FF)
-        title.contains("Discover", ignoreCase = true) -> Color(0xFF58D6D1)
-        else -> Color(0xFF94A3B8)
-    }
+    if (icon != null) {
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.15.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
 
-    val widthScale = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        widthScale.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
-        )
-    }
+                if (onSeeMoreClick != null) {
+                    Text(
+                        text = "See More",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100.dp))
+                            .clickable(onClick = onSeeMoreClick)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+    } else {
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val accentColor = when {
+                title.contains("Continue Reading", ignoreCase = true) -> Color(0xFF58D6D1)
+                title.contains("For You", ignoreCase = true) -> Color(0xFFC7A6FF)
+                title.contains("Study Hub", ignoreCase = true) -> Color(0xFFFFB45C)
+                title.contains("Trending", ignoreCase = true) -> Color(0xFFFFB45C)
+                title.contains("Video", ignoreCase = true) -> Color(0xFFFF6B6B)
+                title.contains("Collection", ignoreCase = true) -> Color(0xFF7AD7FF)
+                title.contains("Revision", ignoreCase = true) -> Color(0xFFC7A6FF)
+                title.contains("Discover", ignoreCase = true) -> Color(0xFF58D6D1)
+                else -> Color(0xFF94A3B8)
+            }
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .width(16.dp * widthScale.value)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(accentColor)
-        )
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.15.sp,
-                fontSize = 18.sp
-            ),
-            color = Color(0xFFE2E8F0)
-        )
+            val widthScale = remember { Animatable(0f) }
+            LaunchedEffect(Unit) {
+                widthScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(16.dp * widthScale.value)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accentColor)
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.15.sp,
+                    fontSize = 18.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (onSeeMoreClick != null) {
+                Text(
+                    text = "See More",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100.dp))
+                        .clickable(onClick = onSeeMoreClick)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        }
     }
 }
 
@@ -705,51 +774,60 @@ data class StudyResourceTheme(
     val accentColor: Color,
     val gradientColors: List<Color>
 ) {
-    val cardBrush: Brush get() = Brush.verticalGradient(gradientColors)
+    val cardBrush: Brush = Brush.verticalGradient(gradientColors)
+    val thumbnailBrush: Brush = Brush.linearGradient(gradientColors)
+}
+
+object StudyResourceThemeCache {
+    private val themes = java.util.concurrent.ConcurrentHashMap<String, StudyResourceTheme>()
+
+    fun getTheme(documentType: String?): StudyResourceTheme {
+        val rawDocType = (documentType ?: "").lowercase(java.util.Locale.ROOT).trim()
+        val isPlaylist = rawDocType.contains("playlist")
+        val isVideo = rawDocType.contains("video") || rawDocType.contains("youtube")
+        val isVideoOnly = isVideo && !isPlaylist
+
+        val isPyq = rawDocType.contains("pyq")
+        val isCheatSheet = rawDocType.contains("cheat") || rawDocType.contains("formula")
+        val isAssignment = rawDocType.contains("assignment")
+        val isNotes = rawDocType.contains("notes")
+
+        val key = when {
+            isPlaylist -> "Playlist"
+            isVideoOnly -> "Video"
+            isPyq -> "PYQ"
+            isAssignment -> "Assignment"
+            isCheatSheet -> "Cheat Sheet"
+            isNotes -> "Notes"
+            else -> "PDF"
+        }
+
+        return themes.getOrPut(key) {
+            val accentColor = when (key) {
+                "Video" -> Color(0xFFFF6B6B)
+                "Playlist" -> Color(0xFFFF6B6B)
+                "Notes" -> Color(0xFF58D6D1)
+                "PYQ" -> Color(0xFFFFB45C)
+                "Assignment" -> Color(0xFF7AD7FF)
+                "Cheat Sheet" -> Color(0xFFC7A6FF)
+                else -> Color(0xFFCFD8DC)
+            }
+            val gradientColors = when (key) {
+                "Video" -> listOf(Color(0x9F2D191B), Color(0xFF1A0E10))
+                "Playlist" -> listOf(Color(0x9F2D191B), Color(0xFF1A0E10))
+                "Notes" -> listOf(Color(0xFF13201F), Color(0xFF0C1312))
+                "PYQ" -> listOf(Color(0xFF241C15), Color(0xFF16110D))
+                "Cheat Sheet" -> listOf(Color(0xFF1E1724), Color(0xFF120E16))
+                "Assignment" -> listOf(Color(0xFF141F23), Color(0xFF0C1316))
+                else -> listOf(Color(0xFF1D2124), Color(0xFF111315))
+            }
+            StudyResourceTheme(key, accentColor, gradientColors)
+        }
+    }
 }
 
 fun getStudyResourceTheme(documentType: String?): StudyResourceTheme {
-    val rawDocType = (documentType ?: "").lowercase(java.util.Locale.ROOT).trim()
-    val isPlaylist = rawDocType.contains("playlist")
-    val isVideo = rawDocType.contains("video") || rawDocType.contains("youtube")
-    val isVideoOnly = isVideo && !isPlaylist
-
-    val isPyq = rawDocType.contains("pyq")
-    val isCheatSheet = rawDocType.contains("cheat") || rawDocType.contains("formula")
-    val isAssignment = rawDocType.contains("assignment")
-    val isNotes = rawDocType.contains("notes")
-
-    val docTypeStr = when {
-        isPlaylist -> "Playlist"
-        isVideoOnly -> "Video"
-        isPyq -> "PYQ"
-        isAssignment -> "Assignment"
-        isCheatSheet -> "Cheat Sheet"
-        isNotes -> "Notes"
-        else -> "PDF"
-    }
-
-    val accentColor = when {
-        isVideoOnly -> Color(0xFFFF6B6B)
-        isPlaylist -> Color(0xFFFF6B6B)
-        isNotes -> Color(0xFF58D6D1)
-        isPyq -> Color(0xFFFFB45C)
-        isAssignment -> Color(0xFF7AD7FF)
-        isCheatSheet -> Color(0xFFC7A6FF)
-        else -> Color(0xFFCFD8DC)
-    }
-
-    val gradientColors = when {
-        isVideoOnly -> listOf(Color(0x9F2D191B), Color(0xFF1A0E10))
-        isPlaylist -> listOf(Color(0x9F2D191B), Color(0xFF1A0E10))
-        isNotes -> listOf(Color(0xFF13201F), Color(0xFF0C1312))
-        isPyq -> listOf(Color(0xFF241C15), Color(0xFF16110D))
-        isCheatSheet -> listOf(Color(0xFF1E1724), Color(0xFF120E16))
-        isAssignment -> listOf(Color(0xFF141F23), Color(0xFF0C1316))
-        else -> listOf(Color(0xFF1D2124), Color(0xFF111315))
-    }
-
-    return StudyResourceTheme(docTypeStr, accentColor, gradientColors)
+    return StudyResourceThemeCache.getTheme(documentType)
 }
 
 @Composable

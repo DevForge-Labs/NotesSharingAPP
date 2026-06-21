@@ -28,12 +28,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.pravor.notessharing.model.VideoRecommendation
 import com.pravor.notessharing.ui.components.StatItem
 import com.pravor.notessharing.ui.components.VideoPlaceholder
 import com.pravor.notessharing.ui.components.utils.SubjectBadge
 
-private const val THUMBNAIL_QUALITY_HQ = "hqdefault"
+private val CardShape = RoundedCornerShape(24.dp)
+private val BadgeShape = RoundedCornerShape(12.dp)
+private val DurationShape = RoundedCornerShape(4.dp)
+private val OverlayPlayColor = Color.Black.copy(alpha = 0.4f)
+private val OverlayDurationColor = Color.Black.copy(alpha = 0.75f)
 
 @Composable
 fun VideoRecommendationCard(
@@ -43,19 +50,28 @@ fun VideoRecommendationCard(
     onBookmarkClick: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
-    val isYouTubePlaylist = video.youtubeVideoId.isBlank() || 
+    val isYouTubePlaylist = remember(video.youtubeVideoId, video.youtubeUrl) {
+        video.youtubeVideoId.isBlank() || 
         (video.youtubeUrl.isNotBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(video.youtubeUrl) != null)
-    val fileTypeLabel = if (isYouTubePlaylist) "Playlist" else "Video"
+    }
+    val fileTypeLabel = remember(isYouTubePlaylist) { if (isYouTubePlaylist) "Playlist" else "Video" }
 
-    val theme = com.pravor.notessharing.ui.components.getStudyResourceTheme(fileTypeLabel)
+    val theme = remember(fileTypeLabel) { com.pravor.notessharing.ui.components.getStudyResourceTheme(fileTypeLabel) }
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
+
+    val badgeBgColor = remember(accentColor) { accentColor.copy(alpha = 0.08f) }
+    val badgeBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.3f) }
+    val cardBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.12f) }
+
+    val cardBorder = remember(cardBorderColor) { BorderStroke(1.dp, cardBorderColor) }
+    val badgeBorder = remember(badgeBorderColor) { BorderStroke(0.5.dp, badgeBorderColor) }
 
     PressScaleSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)), RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
+            .border(cardBorder, CardShape),
+        shape = CardShape,
         brush = cardBrush,
         onClick = onClick
     ) {
@@ -72,24 +88,36 @@ fun VideoRecommendationCard(
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
-                val finalImageUrl = if (!video.thumbnailUrl.isNullOrBlank()) {
-                    video.thumbnailUrl
-                } else if (!video.youtubeThumbnailUrl.isNullOrBlank()) {
-                    video.youtubeThumbnailUrl
-                } else {
-                    null
+                val finalImageUrl = remember(video.thumbnailUrl, video.youtubeThumbnailUrl) {
+                    if (!video.thumbnailUrl.isNullOrBlank()) {
+                        video.thumbnailUrl
+                    } else if (!video.youtubeThumbnailUrl.isNullOrBlank()) {
+                        video.youtubeThumbnailUrl
+                    } else {
+                        null
+                    }
                 }
 
-                android.util.Log.d(
-                    "VideoRecommendationCard",
-                    "Type: ${video.documentType}, Title: ${video.title}, thumbnailUrl: ${video.thumbnailUrl}, finalImageUrl: $finalImageUrl"
-                )
+                val context = LocalContext.current
+                val imageRequest = remember(finalImageUrl, context) {
+                    if (finalImageUrl != null) {
+                        ImageRequest.Builder(context)
+                            .data(finalImageUrl)
+                            .crossfade(true)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .size(300, 200)
+                            .build()
+                    } else {
+                        null
+                    }
+                }
 
-                var hasThumbnailError by remember { mutableStateOf(finalImageUrl.isNullOrBlank()) }
+                var hasThumbnailError by remember(finalImageUrl) { mutableStateOf(finalImageUrl.isNullOrBlank()) }
                 
-                if (!hasThumbnailError && !finalImageUrl.isNullOrBlank()) {
+                if (!hasThumbnailError && imageRequest != null) {
                     AsyncImage(
-                        model = finalImageUrl,
+                        model = imageRequest,
                         contentDescription = video.subject,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
@@ -97,34 +125,34 @@ fun VideoRecommendationCard(
                     )
                     
                     // Centered small glassmorphic play button overlay
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.4f),
-                        modifier = Modifier.size(28.dp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(OverlayPlayColor)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                     
                     if (video.duration.isNotBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color.Black.copy(alpha = 0.75f),
+                        Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(4.dp)
+                                .clip(DurationShape)
+                                .background(OverlayDurationColor)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = video.duration,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                color = Color.White
                             )
                         }
                     }
@@ -157,32 +185,32 @@ fun VideoRecommendationCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = accentColor.copy(alpha = 0.08f),
-                        border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f)),
-                        modifier = Modifier.wrapContentWidth()
+                    Box(
+                        modifier = Modifier
+                            .clip(BadgeShape)
+                            .background(badgeBgColor)
+                            .border(badgeBorder, BadgeShape)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = fileTypeLabel,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = accentColor,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.wrapContentWidth()
+                    Box(
+                        modifier = Modifier
+                            .clip(BadgeShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = semesterText,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

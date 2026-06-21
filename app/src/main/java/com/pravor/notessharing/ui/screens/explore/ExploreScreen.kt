@@ -224,11 +224,6 @@ fun ExploreScreen(
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val recompositionCount = remember { AtomicInteger(0) }
-    SideEffect {
-        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] ExploreScreen count=${recompositionCount.incrementAndGet()}")
-    }
-
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
@@ -236,18 +231,6 @@ fun ExploreScreen(
  
     val listState = rememberLazyListState()
 
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            Pair(listState.firstVisibleItemIndex, listState.layoutInfo.visibleItemsInfo.size)
-        }
-        .distinctUntilChanged()
-        .collect { (firstVisible, visibleCount) ->
-            if (visibleCount > 0) {
-                android.util.Log.d("PERF", "[PERF] First visible item=$firstVisible")
-                android.util.Log.d("PERF", "[PERF] Visible items count=$visibleCount")
-            }
-        }
-    }
 
     val pullToRefreshState = rememberPullToRefreshState()
     val pullProgress = if (isRefreshing) 1f else pullToRefreshState.distanceFraction.coerceIn(0f, 1f)

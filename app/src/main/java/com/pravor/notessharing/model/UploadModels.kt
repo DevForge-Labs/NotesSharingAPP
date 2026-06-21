@@ -37,18 +37,19 @@ data class UploadItem(
     val totalSizeBytes: Long
 )
 
+private val YoutubeVideoPattern = "^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com\\/(?:watch\\?(?:.*&)?v=|shorts\\/|live\\/|embed\\/|v\\/)|youtu\\.be\\/)([a-zA-Z0-9_-]{11})".toRegex(RegexOption.IGNORE_CASE)
+private val YoutubePlaylistPattern = "[?&]list=([a-zA-Z0-9_-]+)".toRegex(RegexOption.IGNORE_CASE)
+
 fun extractYoutubeVideoId(url: String): String? {
     val trimmed = url.trim()
     if (trimmed.isBlank()) return null
-    val pattern = "^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com\\/(?:watch\\?(?:.*&)?v=|shorts\\/|live\\/|embed\\/|v\\/)|youtu\\.be\\/)([a-zA-Z0-9_-]{11})".toRegex(RegexOption.IGNORE_CASE)
-    val matchResult = pattern.find(trimmed)
+    val matchResult = YoutubeVideoPattern.find(trimmed)
     return matchResult?.groupValues?.get(1)
 }
 
 fun extractYoutubePlaylistId(url: String): String? {
     val trimmed = url.trim()
     if (trimmed.isBlank()) return null
-    val pattern = "[?&]list=([a-zA-Z0-9_-]+)".toRegex(RegexOption.IGNORE_CASE)
-    val matchResult = pattern.find(trimmed)
+    val matchResult = YoutubePlaylistPattern.find(trimmed)
     return matchResult?.groupValues?.get(1)
 }

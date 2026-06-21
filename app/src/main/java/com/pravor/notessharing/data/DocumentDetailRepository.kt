@@ -1,14 +1,16 @@
 package com.pravor.notessharing.data
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pravor.notessharing.BuildConfig
+import com.pravor.notessharing.data.cache.TimedMemoryCache
 import com.pravor.notessharing.model.DocumentDetail
 import com.pravor.notessharing.model.toDocumentDetail
-import com.pravor.notessharing.data.ExploreRankingUtils
 import com.pravor.notessharing.ui.components.utils.normalizeSubject
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.tasks.await
 
 object UserFetchDiagnostics {
     val fetchedUids = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
@@ -29,11 +31,13 @@ object UserFetchDiagnostics {
             cacheMisses.incrementAndGet()
         }
         
-        android.util.Log.d("FIRESTORE", "[FIRESTORE] User fetch uid=$uid")
-        if (isDuplicate) {
-            android.util.Log.d("FIRESTORE", "[FIRESTORE] User fetch duplicate=true uid=$uid")
+        if (BuildConfig.DEBUG) {
+            Log.d("FIRESTORE", "[FIRESTORE] User fetch uid=$uid")
+            if (isDuplicate) {
+                Log.d("FIRESTORE", "[FIRESTORE] User fetch duplicate=true uid=$uid")
+            }
+            Log.d("FIRESTORE", "[FIRESTORE] User fetch cacheHit=$fromCache uid=$uid")
         }
-        android.util.Log.d("FIRESTORE", "[FIRESTORE] User fetch cacheHit=$fromCache uid=$uid")
     }
 }
 
@@ -41,9 +45,16 @@ class DocumentDetailRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
 
+    companion object {
+        // 10 minutes timed cache for contributor levels
+        private val contributorLevelCache = TimedMemoryCache<String, String>(10 * 60 * 1000L)
+    }
+
     suspend fun getDocument(documentId: String): DocumentDetail? {
         val startTime = System.currentTimeMillis()
-        android.util.Log.d("PERF", "[PERF] getDocument START id=$documentId")
+        if (BuildConfig.DEBUG) {
+            Log.d("PERF", "[PERF] getDocument START id=$documentId")
+        }
         return try {
             val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
             var foundData: Pair<Map<String, Any>, String>? = null
@@ -51,14 +62,19 @@ class DocumentDetailRepository {
                 val deferreds = collections.map { col ->
                     async {
                         try {
-                            android.util.Log.d("PERF", "[PERF] Collection searched=$col")
-                            val firestoreQueryStartTime = System.currentTimeMillis()
-                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col document=$documentId thread=${Thread.currentThread().name}")
+                            if (BuildConfig.DEBUG) {
+                                Log.d("PERF", "[PERF] Collection searched=$col")
+                                Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col document=$documentId thread=${Thread.currentThread().name}")
+                            }
                             val snap = firestore.collection(col).document(documentId).get().await()
-                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col document=$documentId duration=${firestoreQueryDuration}ms exists=${snap.exists()} thread=${Thread.currentThread().name}")
+                            if (BuildConfig.DEBUG) {
+                                val firestoreQueryDuration = System.currentTimeMillis() - startTime
+                                Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col document=$documentId duration=${firestoreQueryDuration}ms exists=${snap.exists()} thread=${Thread.currentThread().name}")
+                            }
                             if (snap.exists() && snap.data != null) {
-                                android.util.Log.d("PERF", "[PERF] Found in collection=$col")
+                                if (BuildConfig.DEBUG) {
+                                    Log.d("PERF", "[PERF] Found in collection=$col")
+                                }
                                 Pair(snap.data!!, col)
                             } else null
                         } catch (e: Exception) {
@@ -73,12 +89,16 @@ class DocumentDetailRepository {
             } else {
                 null
             }
-            val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
+            if (BuildConfig.DEBUG) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
+            }
             result
         } catch (e: Exception) {
-            val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
+            if (BuildConfig.DEBUG) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
+            }
             null
         }
     }
@@ -87,25 +107,43 @@ class DocumentDetailRepository {
         if (uploaderId == "dummy-uid" || uploaderId.isEmpty()) {
             return "Gold Contributor" // Premium look for dummy uploader
         }
+
+        // Check timed memory cache first
+        val cachedLevel = contributorLevelCache.get(uploaderId)
+        if (cachedLevel != null) {
+            UserFetchDiagnostics.recordFetch(uploaderId, fromCache = true)
+            return cachedLevel
+        }
+
         val startTime = System.currentTimeMillis()
         return try {
-            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=users document=$uploaderId thread=${Thread.currentThread().name}")
+            if (BuildConfig.DEBUG) {
+                Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=users document=$uploaderId thread=${Thread.currentThread().name}")
+            }
             val snapshot = usersCollection.document(uploaderId).get().await()
-            val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=${snapshot.exists()} thread=${Thread.currentThread().name}")
+            if (BuildConfig.DEBUG) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=${snapshot.exists()} thread=${Thread.currentThread().name}")
+            }
             
             val fromCache = snapshot.metadata.isFromCache
             UserFetchDiagnostics.recordFetch(uploaderId, fromCache)
  
-            if (snapshot.exists()) {
+            val resolvedLevel = if (snapshot.exists()) {
                 val level = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 getContributorLevelName(level)
             } else {
                 "Bronze Contributor"
             }
+
+            // Save to cache
+            contributorLevelCache.put(uploaderId, resolvedLevel)
+            resolvedLevel
         } catch (e: Exception) {
-            val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=false thread=${Thread.currentThread().name}")
+            if (BuildConfig.DEBUG) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=false thread=${Thread.currentThread().name}")
+            }
             "Bronze Contributor"
         }
     }
@@ -135,16 +173,20 @@ class DocumentDetailRepository {
 
     suspend fun getRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> = coroutineScope {
         val startTime = System.currentTimeMillis()
-        android.util.Log.d("PERF", "[PERF] getRelatedDocuments START id=${doc.id} thread=${Thread.currentThread().name}")
+        if (BuildConfig.DEBUG) {
+            Log.d("PERF", "[PERF] getRelatedDocuments START id=${doc.id} thread=${Thread.currentThread().name}")
+        }
         
         val col = doc.collection
         if (col.isBlank()) {
-            android.util.Log.e("RECOMMENDATIONS", "getRelatedDocuments: collection is blank for docId=${doc.id}. Returning empty recommendations.")
-            android.util.Log.d("REC_TRACE", "[DOC] 1. Candidates fetched: 0 (collection is blank)")
-            android.util.Log.d("REC_TRACE", "[DOC] 2. Count after type filtering: 0")
-            android.util.Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion: 0")
-            android.util.Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=0, otherSubjects=0")
-            android.util.Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=0")
+            if (BuildConfig.DEBUG) {
+                Log.e("RECOMMENDATIONS", "getRelatedDocuments: collection is blank for docId=${doc.id}. Returning empty recommendations.")
+                Log.d("REC_TRACE", "[DOC] 1. Candidates fetched: 0 (collection is blank)")
+                Log.d("REC_TRACE", "[DOC] 2. Count after type filtering: 0")
+                Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion: 0")
+                Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=0, otherSubjects=0")
+                Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=0")
+            }
             return@coroutineScope emptyList()
         }
         
@@ -153,13 +195,19 @@ class DocumentDetailRepository {
             val querySnapshot = firestore.collection(col)
                 .get()
                 .await()
-            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-            android.util.Log.d("FIRESTORE", "[FIRESTORE] getRelatedDocuments single query collection=$col duration=${firestoreQueryDuration}ms docs=${querySnapshot.documents.size}")
+            
+            if (BuildConfig.DEBUG) {
+                val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                Log.d("FIRESTORE", "[FIRESTORE] getRelatedDocuments single query collection=$col duration=${firestoreQueryDuration}ms docs=${querySnapshot.documents.size}")
+            }
             
             val candidates = querySnapshot.documents
                 .sortedWith(ExploreRankingUtils.documentSnapshotComparator)
                 .take(100)
-            android.util.Log.d("REC_TRACE", "[DOC] 1. Candidates fetched from collection=$col count=${candidates.size}")
+            
+            if (BuildConfig.DEBUG) {
+                Log.d("REC_TRACE", "[DOC] 1. Candidates fetched from collection=$col count=${candidates.size}")
+            }
             
             val currentNormalizedSubject = normalizeSubject(doc.subject)
             
@@ -190,9 +238,11 @@ class DocumentDetailRepository {
                 }
             }
             
-            android.util.Log.d("REC_TRACE", "[DOC] 2. Count after type filtering (non-videos only) count=$afterTypeFilter")
-            android.util.Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion count=$afterCurrentItemExclusion")
-            android.util.Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=${sameSubjectPairs.size}, otherSubjects=${otherSubjectPairs.size}")
+            if (BuildConfig.DEBUG) {
+                Log.d("REC_TRACE", "[DOC] 2. Count after type filtering (non-videos only) count=$afterTypeFilter")
+                Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion count=$afterCurrentItemExclusion")
+                Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=${sameSubjectPairs.size}, otherSubjects=${otherSubjectPairs.size}")
+            }
             
             val pairComparator = Comparator<Pair<com.google.firebase.firestore.DocumentSnapshot, DocumentDetail>> { p1, p2 ->
                 ExploreRankingUtils.documentSnapshotComparator.compare(p1.first, p2.first)
@@ -205,15 +255,18 @@ class DocumentDetailRepository {
                 .distinctBy { it.id }
                 .take(5)
             
-            val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${combined.size}")
-            android.util.Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=${combined.size} items=${combined.map { it.id }}")
+            if (BuildConfig.DEBUG) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms count=${combined.size}")
+                Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=${combined.size} items=${combined.map { it.id }}")
+            }
             combined
         } catch (e: Exception) {
-            e.printStackTrace()
-            val duration = System.currentTimeMillis() - startTime
-            android.util.Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms error")
-            android.util.Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=0 due to exception: ${e.message}")
+            if (BuildConfig.DEBUG) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.d("PERF", "[PERF] getRelatedDocuments END duration=${duration}ms error")
+                Log.d("REC_TRACE", "[DOC] 5. Final recommendations returned by repo count=0 due to exception: ${e.message}")
+            }
             emptyList()
         }
     }
