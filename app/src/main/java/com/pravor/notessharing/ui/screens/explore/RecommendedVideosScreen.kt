@@ -133,7 +133,9 @@ fun RecommendedVideosScreen(
                     StatePanel("Explore failed", uiState.message)
                 }
                 is ExploreUiState.Success -> {
-                    val videos = uiState.content.videoRecommendations
+                    val videos = remember(uiState.content.videos) {
+                        uiState.content.videos.map { it.toVideoRecommendation() }
+                    }
                     if (videos.isEmpty()) {
                         EmptyVideosState()
                     } else {

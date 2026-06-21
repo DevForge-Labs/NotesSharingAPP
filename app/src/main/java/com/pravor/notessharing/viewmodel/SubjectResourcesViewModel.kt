@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
+import com.pravor.notessharing.data.mapper.ExploreMapper
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.model.VideoRecommendation
 import kotlinx.coroutines.async
@@ -141,87 +142,13 @@ class SubjectResourcesViewModel(
                         return@mapNotNull null
                     }
 
-                    val id = data["documentId"] as? String ?: ""
-                    val title = data["title"] as? String ?: ""
-                    val uploaderId = data["uploaderId"] as? String
-                    if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") {
-                        return@mapNotNull null
-                    }
-                    val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
-                    val displaySubjectVal = data["displaySubject"] as? String
-                    val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
-                    val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
-                        ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
-                    val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
-                    val thumbnailType = data["thumbnailType"] as? String
-                    val documentTypeField = data["documentType"] as? String
-                    val typeField = data["type"] as? String
-                    val examYearVal = data["examYear"] as? String
-                    val branchVal = data["branch"] as? String ?: ""
+                    val note = ExploreMapper.documentToTrendingNote(doc, bookmarkedIds) ?: return@mapNotNull null
 
-                    val docType = (data["documentType"] as? String ?: data["type"] as? String ?: "").trim()
-                    val contentType = (data["contentType"] as? String ?: "").trim()
-                    val hasYoutubeLink = (data["hasYoutubeLink"] as? Boolean) == true || (data["hasYoutubeLink"] as? String)?.lowercase() == "true"
-                    val sourceType = (data["sourceType"] as? String ?: "").trim()
-                    val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
-                    val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
-                    val resourceType = (data["resourceType"] as? String ?: "").trim()
-                    val source = (data["source"] as? String ?: "").trim()
-
-                    val isVideo = docType.equals("VIDEO", ignoreCase = true) ||
-                            docType.equals("YouTube Resource", ignoreCase = true) ||
-                            docType.equals("Videos", ignoreCase = true) ||
-                            contentType.equals("VIDEO", ignoreCase = true) ||
-                            hasYoutubeLink ||
-                            sourceType.equals("youtube", ignoreCase = true) ||
-                            sourceType.equals("video", ignoreCase = true) ||
-                            youtubeUrl.isNotBlank() ||
-                            youtubeVideoId.isNotBlank() ||
-                            resourceType.equals("VIDEO", ignoreCase = true) ||
-                            source.equals("YOUTUBE", ignoreCase = true)
-
-                    if (isVideo) {
-                        val uploaderName = data["uploaderName"] as? String ?: "Anonymous"
-                        val bookmarks = (data["bookmarks"] as? Long ?: 0L).toInt()
-                        val semesterVal = data["semester"] as? String ?: "Semester 4"
-                        VideoRecommendation(
-                            id = id,
-                            title = title.ifBlank { data["videoTitle"] as? String ?: "Untitled Video" },
-                            channelName = uploaderName,
-                            duration = "",
-                            subject = docSubject,
-                            youtubeVideoId = youtubeVideoId,
-                            upvotes = upvotes,
-                            bookmarks = bookmarks,
-                            thumbnailUrl = thumbnailUrl,
-                            youtubeThumbnailUrl = data["youtubeThumbnailUrl"] as? String,
-                            documentType = docType,
-                            semester = semesterVal,
-                            youtubeUrl = youtubeUrl,
-                            isUpvoted = false,
-                            isBookmarked = bookmarkedIds.contains(id)
-                        )
+                    if (note.resourceType == com.pravor.notessharing.model.ResourceType.VIDEO ||
+                        note.resourceType == com.pravor.notessharing.model.ResourceType.PLAYLIST) {
+                        note.toVideoRecommendation()
                     } else {
-                        val trendingScore = (data["trendingScore"] as? Number)?.toDouble() ?: 0.0
-                        TrendingNote(
-                            id = id,
-                            title = title,
-                            subject = docSubject,
-                            downloadsCount = downloadsCount,
-                            rating = 4.5,
-                            upvotes = upvotes,
-                            isBookmarked = bookmarkedIds.contains(id),
-                            thumbnailUrl = thumbnailUrl,
-                            thumbnailGenerated = thumbnailGenerated,
-                            thumbnailType = thumbnailType,
-                            documentType = documentTypeField ?: "",
-                            type = typeField,
-                            examYear = examYearVal,
-                            isUpvoted = false,
-                            branch = branchVal,
-                            trendingScore = trendingScore,
-                            displaySubject = displaySubjectVal
-                        )
+                        note
                     }
                 }
 

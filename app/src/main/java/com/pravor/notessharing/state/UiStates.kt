@@ -40,8 +40,10 @@ sealed interface ExploreUiState {
 data class ExploreContent(
     val topics: List<TrendingTopic>,
     val popularUploads: List<FeedItem>,
-    val trendingNotes: List<TrendingNote>,
-    val videoRecommendations: List<VideoRecommendation>,
+    val notes: List<TrendingNote>,
+    val examPrep: List<TrendingNote>,
+    val assignments: List<TrendingNote>,
+    val videos: List<TrendingNote>,
     val studyCollections: List<StudyCollection>,
     val subjectHubs: List<String>,
     val topContributors: List<Contributor>,

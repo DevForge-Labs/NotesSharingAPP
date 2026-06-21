@@ -246,7 +246,8 @@ class UploadRepository(private val context: Context) {
                 "fileSize" to 0L,
                 "fileExtension" to "",
                 "tags" to emptyList<String>(),
-                "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: ""))
+                "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: "")),
+                "trendingScore" to 0.0
             )
 
             if (isPlaylist) {
@@ -342,7 +343,8 @@ class UploadRepository(private val context: Context) {
                     "fileSize" to file.sizeBytes,
                     "fileExtension" to "pdf",
                     "tags" to emptyList<String>(),
-                    "attachmentCount" to 1
+                    "attachmentCount" to 1,
+                    "trendingScore" to 0.0
                 )
 
                 if (subjectId.isNotBlank()) {
@@ -460,7 +462,8 @@ class UploadRepository(private val context: Context) {
                     "mimeType" to mimeType,
                     "fileUrls" to downloadUrls,
                     "thumbnailUrl" to (if (fileType == "image") downloadUrls.first() else ""),
-                    "attachmentCount" to selectedFiles.size
+                    "attachmentCount" to selectedFiles.size,
+                    "trendingScore" to 0.0
                 )
 
                 if (subjectId.isNotBlank()) {

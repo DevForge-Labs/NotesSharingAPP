@@ -2,6 +2,15 @@ package com.pravor.notessharing.model
 
 import androidx.compose.runtime.Immutable
 
+enum class ResourceType {
+    NOTE,
+    PYQ,
+    CHEAT_SHEET,
+    ASSIGNMENT,
+    VIDEO,
+    PLAYLIST
+}
+
 @Immutable
 data class TrendingNote(
     val id: String,
@@ -28,13 +37,37 @@ data class TrendingNote(
     val branch: String = "",
     val trendingScore: Double = 0.0,
     val displaySubject: String? = null,
-    val sectionDisplay: String? = null
+    val sectionDisplay: String? = null,
+    val uploadedAt: Long = 0L,
+    val resourceType: ResourceType = ResourceType.NOTE,
+    val channelName: String = "",
+    val duration: String = "",
+    val youtubeVideoId: String = "",
+    val youtubeThumbnailUrl: String? = null,
+    val youtubeUrl: String = ""
 ) {
     fun isTrendingNote(): Boolean {
-        val docType = documentType.ifBlank { type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-        val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
-        val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
-        return isValid && !isExcluded
+        return resourceType == ResourceType.NOTE
+    }
+
+    fun toVideoRecommendation(): VideoRecommendation {
+        return VideoRecommendation(
+            id = id,
+            title = title,
+            channelName = channelName.ifBlank { uploaderName },
+            duration = duration,
+            subject = subject,
+            youtubeVideoId = youtubeVideoId,
+            upvotes = upvotes,
+            bookmarks = bookmarks,
+            thumbnailUrl = thumbnailUrl,
+            youtubeThumbnailUrl = youtubeThumbnailUrl,
+            documentType = documentType,
+            semester = semester.ifBlank { "Semester 4" },
+            youtubeUrl = youtubeUrl,
+            isUpvoted = isUpvoted,
+            isBookmarked = isBookmarked
+        )
     }
 }
 
@@ -55,7 +88,44 @@ data class VideoRecommendation(
     val youtubeUrl: String = "",
     val isUpvoted: Boolean = false,
     val isBookmarked: Boolean = false
-)
+) {
+    fun toTrendingNote(): TrendingNote {
+        return TrendingNote(
+            id = id,
+            title = title,
+            subject = subject,
+            downloadsCount = 0,
+            rating = 4.5,
+            upvotes = upvotes,
+            isBookmarked = isBookmarked,
+            thumbnailUrl = thumbnailUrl,
+            thumbnailGenerated = null,
+            thumbnailType = null,
+            description = "",
+            uploaderName = channelName,
+            uploaderPhotoUrl = "",
+            contributorLevel = "Bronze Contributor",
+            documentType = documentType,
+            type = documentType,
+            bookmarks = bookmarks,
+            examYear = null,
+            examType = null,
+            semester = semester,
+            isUpvoted = isUpvoted,
+            branch = "",
+            trendingScore = 0.0,
+            displaySubject = null,
+            sectionDisplay = null,
+            uploadedAt = 0L,
+            resourceType = ResourceType.VIDEO,
+            channelName = channelName,
+            duration = duration,
+            youtubeVideoId = youtubeVideoId,
+            youtubeThumbnailUrl = youtubeThumbnailUrl,
+            youtubeUrl = youtubeUrl
+        )
+    }
+}
 
 @Immutable
 data class StudyCollection(

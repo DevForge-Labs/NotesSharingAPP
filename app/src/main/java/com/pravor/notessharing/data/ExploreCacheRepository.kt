@@ -35,50 +35,33 @@ class ExploreCacheRepository(context: Context) {
             }
             json.put("popularUploads", popularArray)
 
-            // 3. trendingNotes
-            val trendingArray = JSONArray()
-            content.trendingNotes.forEach {
-                trendingArray.put(JSONObject().apply {
-                    put("id", it.id)
-                    put("title", it.title)
-                    put("subject", it.subject)
-                    put("downloadsCount", it.downloadsCount)
-                    put("rating", it.rating)
-                    put("upvotes", it.upvotes)
-                    put("isBookmarked", it.isBookmarked)
-                    put("thumbnailUrl", it.thumbnailUrl ?: "")
-                    put("thumbnailGenerated", it.thumbnailGenerated ?: false)
-                    put("thumbnailType", it.thumbnailType ?: "")
-                    put("documentType", it.documentType)
-                    put("type", it.type ?: "")
-                    put("examYear", it.examYear ?: "")
-                    put("examType", it.examType ?: "")
-                    put("trendingScore", it.trendingScore)
-                    put("displaySubject", it.displaySubject ?: "")
-                })
+            // 3. notes
+            val notesArray = JSONArray()
+            content.notes.forEach {
+                notesArray.put(serializeTrendingNote(it))
             }
-            json.put("trendingNotes", trendingArray)
+            json.put("notes", notesArray)
 
-            // 4. videoRecommendations
-            val videosArray = JSONArray()
-            content.videoRecommendations.forEach {
-                videosArray.put(JSONObject().apply {
-                    put("id", it.id)
-                    put("title", it.title)
-                    put("channelName", it.channelName)
-                    put("duration", it.duration)
-                    put("subject", it.subject)
-                    put("youtubeVideoId", it.youtubeVideoId)
-                    put("upvotes", it.upvotes)
-                    put("bookmarks", it.bookmarks)
-                    put("thumbnailUrl", it.thumbnailUrl ?: "")
-                    put("youtubeThumbnailUrl", it.youtubeThumbnailUrl ?: "")
-                    put("documentType", it.documentType)
-                    put("semester", it.semester)
-                    put("youtubeUrl", it.youtubeUrl)
-                })
+            // 4. examPrep
+            val examPrepArray = JSONArray()
+            content.examPrep.forEach {
+                examPrepArray.put(serializeTrendingNote(it))
             }
-            json.put("videoRecommendations", videosArray)
+            json.put("examPrep", examPrepArray)
+
+            // 5. assignments
+            val assignmentsArray = JSONArray()
+            content.assignments.forEach {
+                assignmentsArray.put(serializeTrendingNote(it))
+            }
+            json.put("assignments", assignmentsArray)
+
+            // 6. videos
+            val videosArray = JSONArray()
+            content.videos.forEach {
+                videosArray.put(serializeTrendingNote(it))
+            }
+            json.put("videos", videosArray)
 
             // 5. studyCollections
             val collectionsArray = JSONArray()
@@ -166,59 +149,43 @@ class ExploreCacheRepository(context: Context) {
                 }
             }
 
-            // 3. trendingNotes
-            val trendingList = mutableListOf<TrendingNote>()
-            val trendingArray = json.optJSONArray("trendingNotes")
-            if (trendingArray != null) {
-                for (i in 0 until trendingArray.length()) {
-                    val obj = trendingArray.getJSONObject(i)
-                    trendingList.add(TrendingNote(
-                        id = obj.getString("id"),
-                        title = obj.getString("title"),
-                        subject = obj.getString("subject"),
-                        downloadsCount = obj.getInt("downloadsCount"),
-                        rating = obj.getDouble("rating"),
-                        upvotes = obj.getInt("upvotes"),
-                        isBookmarked = obj.getBoolean("isBookmarked"),
-                        thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
-                        thumbnailGenerated = if (obj.has("thumbnailGenerated")) obj.getBoolean("thumbnailGenerated") else null,
-                        thumbnailType = obj.optString("thumbnailType").ifBlank { null },
-                        documentType = obj.optString("documentType", ""),
-                        type = obj.optString("type").ifBlank { null },
-                        examYear = obj.optString("examYear").ifBlank { null },
-                        examType = obj.optString("examType").ifBlank { null },
-                        semester = obj.optString("semester", ""),
-                        trendingScore = obj.optDouble("trendingScore", 0.0),
-                        displaySubject = obj.optString("displaySubject").ifBlank { null }
-                    ))
+            // 3. notes
+            val notesList = mutableListOf<TrendingNote>()
+            val notesArray = json.optJSONArray("notes")
+            if (notesArray != null) {
+                for (i in 0 until notesArray.length()) {
+                    notesList.add(deserializeTrendingNote(notesArray.getJSONObject(i)))
                 }
             }
 
-            // 4. videoRecommendations
-            val videosList = mutableListOf<VideoRecommendation>()
-            val videosArray = json.optJSONArray("videoRecommendations")
+            // 4. examPrep
+            val examPrepList = mutableListOf<TrendingNote>()
+            val examPrepArray = json.optJSONArray("examPrep")
+            if (examPrepArray != null) {
+                for (i in 0 until examPrepArray.length()) {
+                    examPrepList.add(deserializeTrendingNote(examPrepArray.getJSONObject(i)))
+                }
+            }
+
+            // 5. assignments
+            val assignmentsList = mutableListOf<TrendingNote>()
+            val assignmentsArray = json.optJSONArray("assignments")
+            if (assignmentsArray != null) {
+                for (i in 0 until assignmentsArray.length()) {
+                    assignmentsList.add(deserializeTrendingNote(assignmentsArray.getJSONObject(i)))
+                }
+            }
+
+            // 6. videos
+            val videosList = mutableListOf<TrendingNote>()
+            val videosArray = json.optJSONArray("videos")
             if (videosArray != null) {
                 for (i in 0 until videosArray.length()) {
-                    val obj = videosArray.getJSONObject(i)
-                    videosList.add(VideoRecommendation(
-                        id = obj.getString("id"),
-                        title = obj.getString("title"),
-                        channelName = obj.getString("channelName"),
-                        duration = obj.getString("duration"),
-                        subject = obj.getString("subject"),
-                        youtubeVideoId = obj.getString("youtubeVideoId"),
-                        upvotes = obj.optInt("upvotes", 0),
-                        bookmarks = obj.optInt("bookmarks", 0),
-                        thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
-                        youtubeThumbnailUrl = obj.optString("youtubeThumbnailUrl").ifBlank { null },
-                        documentType = obj.optString("documentType", ""),
-                        semester = obj.optString("semester", "Semester 4"),
-                        youtubeUrl = obj.optString("youtubeUrl", "")
-                    ))
+                    videosList.add(deserializeTrendingNote(videosArray.getJSONObject(i)))
                 }
             }
 
-            // 5. studyCollections
+            // 7. studyCollections
             val collectionsList = mutableListOf<StudyCollection>()
             val collectionsArray = json.optJSONArray("studyCollections")
             if (collectionsArray != null) {
@@ -235,7 +202,7 @@ class ExploreCacheRepository(context: Context) {
                 }
             }
 
-            // 6. subjectHubs
+            // 8. subjectHubs
             val hubsList = mutableListOf<String>()
             val hubsArray = json.optJSONArray("subjectHubs")
             if (hubsArray != null) {
@@ -244,7 +211,7 @@ class ExploreCacheRepository(context: Context) {
                 }
             }
 
-            // 7. topContributors
+            // 9. topContributors
             val contributorsList = mutableListOf<Contributor>()
             val contributorsArray = json.optJSONArray("topContributors")
             if (contributorsArray != null) {
@@ -260,7 +227,7 @@ class ExploreCacheRepository(context: Context) {
                 }
             }
 
-            // 8. revisionCards
+            // 10. revisionCards
             val revisionList = mutableListOf<RevisionCard>()
             val revisionArray = json.optJSONArray("revisionCards")
             if (revisionArray != null) {
@@ -279,7 +246,7 @@ class ExploreCacheRepository(context: Context) {
                 }
             }
 
-            // 9. discoverItems
+            // 11. discoverItems
             val discoverList = mutableListOf<DiscoverFeedItem>()
             val discoverArray = json.optJSONArray("discoverItems")
             if (discoverArray != null) {
@@ -292,8 +259,10 @@ class ExploreCacheRepository(context: Context) {
             ExploreContent(
                 topics = topicsList,
                 popularUploads = popularList,
-                trendingNotes = trendingList,
-                videoRecommendations = videosList,
+                notes = notesList,
+                examPrep = examPrepList,
+                assignments = assignmentsList,
+                videos = videosList,
                 studyCollections = collectionsList,
                 subjectHubs = hubsList,
                 topContributors = contributorsList,
@@ -460,5 +429,86 @@ class ExploreCacheRepository(context: Context) {
             )
             else -> null
         }
+    }
+
+    private fun serializeTrendingNote(note: TrendingNote): JSONObject {
+        return JSONObject().apply {
+            put("id", note.id)
+            put("title", note.title)
+            put("subject", note.subject)
+            put("downloadsCount", note.downloadsCount)
+            put("rating", note.rating)
+            put("upvotes", note.upvotes)
+            put("isBookmarked", note.isBookmarked)
+            put("thumbnailUrl", note.thumbnailUrl ?: "")
+            put("thumbnailGenerated", note.thumbnailGenerated ?: false)
+            put("thumbnailType", note.thumbnailType ?: "")
+            put("description", note.description)
+            put("uploaderName", note.uploaderName)
+            put("uploaderPhotoUrl", note.uploaderPhotoUrl)
+            put("contributorLevel", note.contributorLevel)
+            put("documentType", note.documentType)
+            put("type", note.type ?: "")
+            put("bookmarks", note.bookmarks)
+            put("examYear", note.examYear ?: "")
+            put("examType", note.examType ?: "")
+            put("semester", note.semester)
+            put("isUpvoted", note.isUpvoted)
+            put("branch", note.branch)
+            put("trendingScore", note.trendingScore)
+            put("displaySubject", note.displaySubject ?: "")
+            put("sectionDisplay", note.sectionDisplay ?: "")
+            put("uploadedAt", note.uploadedAt)
+            put("resourceType", note.resourceType.name)
+            put("channelName", note.channelName)
+            put("duration", note.duration)
+            put("youtubeVideoId", note.youtubeVideoId)
+            put("youtubeThumbnailUrl", note.youtubeThumbnailUrl ?: "")
+            put("youtubeUrl", note.youtubeUrl)
+        }
+    }
+
+    private fun deserializeTrendingNote(obj: JSONObject): TrendingNote {
+        val resourceTypeName = obj.optString("resourceType", ResourceType.NOTE.name)
+        val resourceType = try {
+            ResourceType.valueOf(resourceTypeName)
+        } catch (e: Exception) {
+            ResourceType.NOTE
+        }
+
+        return TrendingNote(
+            id = obj.getString("id"),
+            title = obj.getString("title"),
+            subject = obj.getString("subject"),
+            downloadsCount = obj.getInt("downloadsCount"),
+            rating = obj.getDouble("rating"),
+            upvotes = obj.getInt("upvotes"),
+            isBookmarked = obj.getBoolean("isBookmarked"),
+            thumbnailUrl = obj.optString("thumbnailUrl").ifBlank { null },
+            thumbnailGenerated = if (obj.has("thumbnailGenerated")) obj.getBoolean("thumbnailGenerated") else null,
+            thumbnailType = obj.optString("thumbnailType").ifBlank { null },
+            description = obj.optString("description"),
+            uploaderName = obj.optString("uploaderName"),
+            uploaderPhotoUrl = obj.optString("uploaderPhotoUrl"),
+            contributorLevel = obj.optString("contributorLevel"),
+            documentType = obj.optString("documentType", ""),
+            type = obj.optString("type").ifBlank { null },
+            bookmarks = obj.optInt("bookmarks", 0),
+            examYear = obj.optString("examYear").ifBlank { null },
+            examType = obj.optString("examType").ifBlank { null },
+            semester = obj.optString("semester", ""),
+            isUpvoted = obj.optBoolean("isUpvoted", false),
+            branch = obj.optString("branch", ""),
+            trendingScore = obj.optDouble("trendingScore", 0.0),
+            displaySubject = obj.optString("displaySubject").ifBlank { null },
+            sectionDisplay = obj.optString("sectionDisplay").ifBlank { null },
+            uploadedAt = obj.optLong("uploadedAt", 0L),
+            resourceType = resourceType,
+            channelName = obj.optString("channelName", ""),
+            duration = obj.optString("duration", ""),
+            youtubeVideoId = obj.optString("youtubeVideoId", ""),
+            youtubeThumbnailUrl = obj.optString("youtubeThumbnailUrl").ifBlank { null },
+            youtubeUrl = obj.optString("youtubeUrl", "")
+        )
     }
 }
