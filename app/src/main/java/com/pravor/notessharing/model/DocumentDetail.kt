@@ -117,7 +117,11 @@ fun Map<String, Any>.toDocumentDetail(id: String, collection: String = "notes"):
         uploaderName = this["uploaderName"] as? String ?: "Anonymous",
         uploaderPhotoUrl = this["uploaderPhotoUrl"] as? String ?: "",
         uploadedAt = (this["uploadedAt"] as? Long) ?: (this["uploadTimestamp"] as? Long) ?: 0L,
-        downloadsCount = ((this["downloads"] ?: this["downloadsCount"]) as? Number)?.toInt() ?: 0,
+        downloadsCount = if (collection == "notes") {
+            ((this["downloadsCount"] ?: this["downloads"]) as? Number)?.toInt() ?: 0
+        } else {
+            ((this["downloads"] ?: this["downloadsCount"]) as? Number)?.toInt() ?: 0
+        },
         upvotes = (this["upvotes"] as? Long)?.toInt() ?: (this["likesCount"] as? Long)?.toInt() ?: 0,
         bookmarks = (this["bookmarks"] as? Long)?.toInt() ?: 0,
         fileUrls = fileUrlsList,

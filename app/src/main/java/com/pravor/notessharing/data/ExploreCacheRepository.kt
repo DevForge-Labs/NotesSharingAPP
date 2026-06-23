@@ -491,7 +491,16 @@ class ExploreCacheRepository(context: Context) {
             uploaderName = obj.optString("uploaderName"),
             uploaderPhotoUrl = obj.optString("uploaderPhotoUrl"),
             contributorLevel = obj.optString("contributorLevel"),
-            documentType = obj.optString("documentType", ""),
+            documentType = obj.optString("documentType").ifBlank {
+                when (resourceType) {
+                    ResourceType.NOTE -> "Notes"
+                    ResourceType.PYQ -> "PYQ"
+                    ResourceType.ASSIGNMENT -> "Assignment"
+                    ResourceType.CHEAT_SHEET -> "Cheat Sheet"
+                    ResourceType.VIDEO -> "Video"
+                    else -> "Notes"
+                }
+            },
             type = obj.optString("type").ifBlank { null },
             bookmarks = obj.optInt("bookmarks", 0),
             examYear = obj.optString("examYear").ifBlank { null },

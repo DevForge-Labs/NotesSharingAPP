@@ -145,7 +145,7 @@ fun RecommendedVideosScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             itemsIndexed(videos, key = { index, video -> video.id.ifBlank { "video_$index" } }, contentType = { _, _ -> "video" }) { _, video ->
-                                val onBookmarkClickRemembered = remember(video.id) {
+                                val onBookmarkClickRemembered = remember(video) {
                                     { onBookmarkClick(video) }
                                 }
                                 VideoRecommendationCard(
