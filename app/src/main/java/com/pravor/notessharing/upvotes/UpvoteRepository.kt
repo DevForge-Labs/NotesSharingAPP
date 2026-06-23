@@ -67,7 +67,10 @@ class UpvoteRepository {
                     try {
                         val listener = firestore.collection(collection).document(docId)
                             .addSnapshotListener { snapshot, error ->
-                                if (error != null) return@addSnapshotListener
+                                if (error != null) {
+                                    android.util.Log.e("DEBUG_DOWNLOAD", "[OBSERVER_ERROR] docId=$docId collection=$collection error=${error.message}")
+                                    return@addSnapshotListener
+                                }
                                 if (snapshot != null && snapshot.exists()) {
                                     val count = snapshot.getLong("upvotes")?.toInt()
                                     if (count != null) {
@@ -75,8 +78,13 @@ class UpvoteRepository {
                                             current + (docId to count)
                                         }
                                     }
-                                    val downloadCount = snapshot.getLong("downloads")?.toInt()
-                                        ?: snapshot.getLong("downloadsCount")?.toInt()
+                                    val downloadCount = if (collection == "notes") {
+                                        snapshot.getLong("downloadsCount")?.toInt()
+                                            ?: snapshot.getLong("downloads")?.toInt()
+                                    } else {
+                                        snapshot.getLong("downloads")?.toInt()
+                                            ?: snapshot.getLong("downloadsCount")?.toInt()
+                                    }
                                     if (downloadCount != null) {
                                         _downloadCountsFlow.update { current ->
                                             current + (docId to downloadCount)

@@ -146,6 +146,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             android.util.Log.d("PERF", "[PERF] Explore startup START thread=${Thread.currentThread().name}")
         }
         val cached = exploreRepository.getCachedContent()
+        if (cached != null) {
+            _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cached)) }
+        }
         loadRealDocuments(silent = cached != null)
         loadCatalogSubjects()
 
@@ -340,7 +343,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 if (!isPullToRefresh) {
                     val cachedContent = exploreRepository.getCachedContent()
                     if (cachedContent != null) {
-                        _uiState.update { ExploreUiState.Success(cachedContent) }
+                        _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cachedContent)) }
                         if (!exploreRepository.isCacheExpired()) {
                             return@launch
                         }
@@ -352,7 +355,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 val freshContent = exploreRepository.fetchExploreContent()
-                _uiState.update { ExploreUiState.Success(freshContent) }
+                _uiState.update { ExploreUiState.Success(mergeWithLatestStats(freshContent)) }
 
                 if (com.pravor.notessharing.BuildConfig.DEBUG) {
                     val duration = System.currentTimeMillis() - startTime
@@ -466,6 +469,88 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 userId = currentUid
             )
         }
+    }
+
+    private fun mergeWithLatestStats(content: ExploreContent): ExploreContent {
+        val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+        val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
+        val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+
+        val updatedNotes = content.notes.map { note ->
+            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+            val upvotes = upvoteCountsMap[note.id] ?: note.upvotes
+            val isUpvoted = upvotesMap[note.id] ?: note.isUpvoted
+            val isBookmarked = bookmarkedIds.contains(note.id)
+            note.copy(
+                downloadsCount = count,
+                upvotes = upvotes,
+                isUpvoted = isUpvoted,
+                isBookmarked = isBookmarked
+            )
+        }
+
+        val updatedExamPrep = content.examPrep.map { note ->
+            note.copy(
+                downloadsCount = downloadCountsMap[note.id] ?: note.downloadsCount,
+                upvotes = upvoteCountsMap[note.id] ?: note.upvotes,
+                isUpvoted = upvotesMap[note.id] ?: note.isUpvoted,
+                isBookmarked = bookmarkedIds.contains(note.id)
+            )
+        }
+
+        val updatedAssignments = content.assignments.map { note ->
+            note.copy(
+                downloadsCount = downloadCountsMap[note.id] ?: note.downloadsCount,
+                upvotes = upvoteCountsMap[note.id] ?: note.upvotes,
+                isUpvoted = upvotesMap[note.id] ?: note.isUpvoted,
+                isBookmarked = bookmarkedIds.contains(note.id)
+            )
+        }
+
+        val updatedVideos = content.videos.map { video ->
+            val isBookmarkedNow = bookmarkedIds.contains(video.id)
+            val originalIsBookmarked = video.isBookmarked
+            val bookmarksCount = if (isBookmarkedNow && !originalIsBookmarked) {
+                video.bookmarks + 1
+            } else if (!isBookmarkedNow && originalIsBookmarked) {
+                (video.bookmarks - 1).coerceAtLeast(0)
+            } else {
+                video.bookmarks
+            }
+            video.copy(
+                downloadsCount = downloadCountsMap[video.id] ?: video.downloadsCount,
+                upvotes = upvoteCountsMap[video.id] ?: video.upvotes,
+                isUpvoted = upvotesMap[video.id] ?: video.isUpvoted,
+                isBookmarked = isBookmarkedNow,
+                bookmarks = bookmarksCount
+            )
+        }
+
+        val updatedPopular = content.popularUploads.map { item ->
+            item.copy(
+                downloadsCount = downloadCountsMap[item.id] ?: item.downloadsCount,
+                upvotes = upvoteCountsMap[item.id] ?: item.upvotes,
+                isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
+            )
+        }
+
+        val updatedDiscover = content.discoverItems.map { item ->
+            if (item is com.pravor.notessharing.model.DiscoverFeedItem.Note) {
+                item.copy(downloadsCount = downloadCountsMap[item.id] ?: item.downloadsCount)
+            } else {
+                item
+            }
+        }
+
+        return content.copy(
+            popularUploads = updatedPopular,
+            notes = updatedNotes,
+            examPrep = updatedExamPrep,
+            assignments = updatedAssignments,
+            videos = updatedVideos,
+            discoverItems = updatedDiscover
+        )
     }
 
     override fun onCleared() {

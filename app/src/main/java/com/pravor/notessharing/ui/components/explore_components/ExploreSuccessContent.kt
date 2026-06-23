@@ -182,7 +182,7 @@ fun ExploreSuccessContent(
                             key = { index, note -> note.id.ifBlank { "trending_note_$index" } },
                             contentType = { _, _ -> "trending-note" }
                         ) { _, note ->
-                            val onBookmarkClickRemembered = remember(note.id) {
+                            val onBookmarkClickRemembered = remember(note) {
                                 { onBookmarkClick(note) }
                             }
                             val onClickRemembered = remember(note.id) {
@@ -264,7 +264,7 @@ fun ExploreSuccessContent(
                                     val onUpvoteClickRemembered = remember(video.id, video.documentType, video.upvotes) {
                                         { onUpvoteClick(video.id, video.documentType, video.upvotes) }
                                     }
-                                    val onBookmarkClickRemembered = remember(video.id) {
+                                    val onBookmarkClickRemembered = remember(video) {
                                         { onVideoBookmarkClick(video.toVideoRecommendation()) }
                                     }
                                     VideoRecommendationCard(
@@ -323,7 +323,7 @@ fun ExploreSuccessContent(
                             key = { index, note -> note.id.ifBlank { "examprep_note_$index" } },
                             contentType = { _, _ -> "examprep-note" }
                         ) { _, note ->
-                            val onBookmarkClickRemembered = remember(note.id) {
+                            val onBookmarkClickRemembered = remember(note) {
                                 { onBookmarkClick(note) }
                             }
                             val onClickRemembered = remember(note.id) {
@@ -373,7 +373,7 @@ fun ExploreSuccessContent(
                             key = { index, note -> note.id.ifBlank { "assignment_note_$index" } },
                             contentType = { _, _ -> "assignment-note" }
                         ) { _, note ->
-                            val onBookmarkClickRemembered = remember(note.id) {
+                            val onBookmarkClickRemembered = remember(note) {
                                 { onBookmarkClick(note) }
                             }
                             val onClickRemembered = remember(note.id) {

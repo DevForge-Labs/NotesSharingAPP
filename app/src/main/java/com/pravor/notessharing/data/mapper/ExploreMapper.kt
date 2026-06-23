@@ -36,7 +36,8 @@ object ExploreMapper {
         val uploaderId = data["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
         val subject = data["subject"] as? String ?: ""
-        val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
+        // Discover notes are always Notes (docType="Notes"), so downloadsCount takes precedence
+        val downloadsCount = ((data["downloadsCount"] ?: data["downloads"]) as? Number)?.toInt() ?: 0
         return DiscoverFeedItem.Note(
             id = id,
             title = title,
@@ -110,14 +111,27 @@ object ExploreMapper {
 
         val subject = data["subject"] as? String ?: ""
         val displaySubjectVal = data["displaySubject"] as? String
-        val downloadsCount = (data["downloadsCount"] as? Long ?: 0L).toInt()
-        val upvotes = (data["upvotes"] as? Long ?: data["likesCount"] as? Long ?: 0L).toInt()
+        val downloadsCount = if (resourceType == ResourceType.NOTE) {
+            ((data["downloadsCount"] ?: data["downloads"]) as? Number)?.toInt() ?: 0
+        } else {
+            (data["downloadsCount"] as? Number)?.toInt() ?: 0
+        }
+        val upvotes = ((data["upvotes"] ?: data["likesCount"]) as? Number)?.toInt() ?: 0
         val thumbnailUrl = (data["thumbnailUrl"] as? String)?.ifBlank { null }
             ?: (data["youtubeThumbnailUrl"] as? String)?.ifBlank { null }
         val thumbnailGenerated = data["thumbnailGenerated"] as? Boolean
         val thumbnailType = data["thumbnailType"] as? String
         val documentTypeField = data["documentType"] as? String
-        val typeField = data["type"] as? String
+            ?: data["type"] as? String
+            ?: when (collectionName.lowercase(Locale.US)) {
+                "notes" -> "Notes"
+                "pyqs" -> "PYQ"
+                "assignments" -> "Assignment"
+                "cheatsheets" -> "Cheat Sheet"
+                "videos" -> "Video"
+                else -> "Notes"
+            }
+        val typeField = data["type"] as? String ?: documentTypeField
         val examYearVal = (data["examYear"] ?: data["year"])?.toString()
         val examTypeVal = data["examType"]?.toString()
         val branchVal = data["branch"] as? String ?: ""
@@ -217,8 +231,13 @@ object ExploreMapper {
         val description = doc["description"] as? String ?: ""
         val tags = (doc["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
 
-        val upvotes = (doc["upvotes"] as? Long ?: (doc["likesCount"] as? Long ?: 0L)).toInt()
-        val downloadsCount = (doc["downloadsCount"] as? Long ?: 0L).toInt()
+        val upvotes = ((doc["upvotes"] ?: doc["likesCount"]) as? Number)?.toInt() ?: 0
+        val isNote = docType.trim().lowercase(Locale.US) in listOf("notes", "note")
+        val downloadsCount = if (isNote) {
+            ((doc["downloadsCount"] ?: doc["downloads"]) as? Number)?.toInt() ?: 0
+        } else {
+            (doc["downloadsCount"] as? Number)?.toInt() ?: 0
+        }
         val bookmarks = (doc["bookmarks"] as? Long ?: 0L).toInt()
 
         val youtubeUrl = doc["youtubeUrl"] as? String

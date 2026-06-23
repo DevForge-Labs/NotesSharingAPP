@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -210,32 +211,39 @@ fun TrendingNoteCard(
         }
     }
 
+    val finalBorderColor = remember(accentColor) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.RGBToHSV(
+            (accentColor.red * 255f).toInt().coerceIn(0, 255),
+            (accentColor.green * 255f).toInt().coerceIn(0, 255),
+            (accentColor.blue * 255f).toInt().coerceIn(0, 255),
+            hsv
+        )
+        // Brighten and increase vibrancy slightly for a subtle themed glow
+        hsv[1] = (hsv[1] * 1.15f).coerceAtMost(1.0f)
+        hsv[2] = (hsv[2] * 1.20f).coerceAtMost(1.0f)
+        Color(android.graphics.Color.HSVToColor(hsv)).copy(alpha = 0.25f)
+    }
+
     PressScaleSurface(
-        modifier = Modifier.width(216.dp),
+        modifier = Modifier
+            .width(216.dp)
+            .border(BorderStroke(1.5.dp, finalBorderColor), RoundedCornerShape(26.dp)),
         shape = RoundedCornerShape(26.dp),
         brush = cardBrush,
         onClick = onClick
     ) {
-        Column(
-            Modifier.padding(14.dp)
-        ) {
-            // 1. PREVIEW THUMBNAIL (Box)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Background Layer: Thumbnail (Image / Fallback / Shimmer)
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(108.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .matchParentSize()
                     .background(theme.thumbnailBrush)
-                    .border(
-                        BorderStroke(1.dp, accentColor.copy(alpha = 0.15f)),
-                        RoundedCornerShape(20.dp)
-                    ),
-                contentAlignment = Alignment.Center
             ) {
                 var hasImageLoaded by remember { mutableStateOf(false) }
 
                 if (isLoading) {
-                    ShimmerPlaceholder()
+                    ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
                 } else {
                     // Render actual image thumbnail if available
                     if (isImage && !firstAttachmentUrl.isNullOrBlank()) {
@@ -276,47 +284,74 @@ fun TrendingNoteCard(
                     val showFallback = (!isImage || firstAttachmentUrl.isNullOrBlank() || !isImage) && !showShimmer
                     
                     if (showShimmer) {
-                        ShimmerPlaceholder()
+                        ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
                     } else if (showFallback) {
                         DocumentPlaceholder(documentType = docType, modifier = Modifier.fillMaxSize())
                     }
                 }
-
-                // Overlay badge on thumbnail in top-right corner
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.Black.copy(alpha = 0.65f),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = docType.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color = accentColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            Text(
-                text = displayTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            // Opaque grey and black vertical gradient for extreme text/chip legibility
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.48f to Color.Transparent,
+                            0.68f to Color(0xFF1C1C1E).copy(alpha = 0.98f),
+                            0.88f to Color.Black
+                        )
+                    )
             )
+
+            // Foreground Content Layer
+            Column(
+                Modifier.padding(vertical = 14.dp)
+            ) {
+                // Top placeholder box to preserve exact height and badge positioning
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(108.dp)
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Overlay badge in top-right corner
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color.Black.copy(alpha = 0.65f),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = docType.uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(36.dp))
+
+                Text(
+                    text = displayTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 14.dp)
+                )
 
             // 3. SUBJECT BADGE (Primary position below title area)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp),
+                    .padding(horizontal = 14.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -390,44 +425,87 @@ fun TrendingNoteCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // 4. STATS ROW
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SmallMetric(Icons.Default.Download, note.downloadsCount.toString())
+            // 4. STATS ROW (Anchored bottom footer)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 14.dp)
+            ) {
+                // Download Metric
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Downloads",
+                        tint = Color(0xFF64B5F6),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = note.downloadsCount.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF64B5F6).copy(alpha = 0.9f),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
                 Spacer(Modifier.width(10.dp))
-                SmallMetric(Icons.Default.ThumbUp, note.upvotes.toString())
+
+                // Clickable Upvote Metric
+                NoPropagationBox {
+                    val scale by animateFloatAsState(
+                        targetValue = if (note.isUpvoted) 1.15f else 1.0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "upvote-scale"
+                    )
+                    
+                    val upvoteColor = if (note.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .scale(scale)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onUpvoteClick() }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Upvote",
+                            tint = upvoteColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = note.upvotes.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = upvoteColor,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
                 Spacer(Modifier.weight(1f))
+
+                // Bookmark Button
                 NoPropagationBox {
                     Icon(
                         imageVector = if (note.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                         contentDescription = "Bookmark",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(23.dp)
+                            .clip(RoundedCornerShape(6.dp))
                             .clickable { onBookmarkClick() }
+                            .padding(2.dp)
                     )
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // 5. ACTION BUTTON ROW
-            val buttonColor = if (note.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.primaryContainer
-            val buttonContentColor = if (note.isUpvoted) Color(0xFF141A23) else MaterialTheme.colorScheme.onPrimaryContainer
-            NoPropagationBox(modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = onUpvoteClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = buttonColor,
-                        contentColor = buttonContentColor
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(note.upvotes.toString())
                 }
             }
         }
     }
+}
 }

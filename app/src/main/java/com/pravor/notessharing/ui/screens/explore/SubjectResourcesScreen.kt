@@ -429,7 +429,7 @@ fun SubjectResourcesScreen(
                                 when (res) {
                                     is TrendingNote -> {
                                         val onClickClick = remember(res.id) { { onDocumentClick(res.id) } }
-                                        val onBookmarkClickRemembered = remember(res.id) { { onBookmarkClick(res) } }
+                                        val onBookmarkClickRemembered = remember(res) { { onBookmarkClick(res) } }
                                         val onUpvoteClickRemembered = remember(res.id, res.documentType, res.upvotes) {
                                             { onUpvoteClick(res.id, res.documentType, res.upvotes) }
                                         }
@@ -444,7 +444,7 @@ fun SubjectResourcesScreen(
                                     }
                                     is VideoRecommendation -> {
                                         val onVideoClickClick = remember(res.id) { { onVideoClick(res.id) } }
-                                        val onVideoBookmarkClickRemembered = remember(res.id) { { onVideoBookmarkClick(res) } }
+                                        val onVideoBookmarkClickRemembered = remember(res) { { onVideoBookmarkClick(res) } }
                                         val onUpvoteClickRemembered = remember(res.id, res.documentType, res.upvotes) {
                                             { onUpvoteClick(res.id, res.documentType, res.upvotes) }
                                         }
