@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +53,17 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.runtime.getValue
 
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
 
 @Composable
 fun HomeSuccessContent(
@@ -189,11 +201,61 @@ fun HomeSuccessContent(
                 }
                 if (content.feedItems.size > visibleFeedItems.size) {
                     item(key = "for-you-see-more", contentType = "action") {
-                        TextButton(
-                            onClick = onSeeMoreClick,
-                            modifier = Modifier.fillMaxWidth()
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val isPressed by interactionSource.collectIsPressedAsState()
+                        val scale by animateFloatAsState(
+                            targetValue = if (isPressed) 0.97f else 1.0f,
+                            animationSpec = tween(durationMillis = 100),
+                            label = "see-more-scale"
+                        )
+                        val buttonElevation by animateFloatAsState(
+                            targetValue = if (isPressed) 1f else 4f,
+                            animationSpec = tween(durationMillis = 100),
+                            label = "see-more-elevation"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .graphicsLayer(scaleX = scale, scaleY = scale)
+                                .shadow(
+                                    elevation = buttonElevation.dp,
+                                    shape = RoundedCornerShape(24.dp),
+                                    clip = false,
+                                    ambientColor = Color(0xFF14B8A6).copy(alpha = 0.15f),
+                                    spotColor = Color(0xFF14B8A6).copy(alpha = 0.3f)
+                                )
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFF0F766E), // Deep teal
+                                            Color(0xFF115E59)  // Dark teal
+                                        )
+                                    )
+                                )
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = androidx.compose.foundation.LocalIndication.current,
+                                    onClick = onSeeMoreClick
+                                )
+                                .border(
+                                    BorderStroke(1.dp, Color(0xFF2DD4BF).copy(alpha = 0.25f)),
+                                    shape = RoundedCornerShape(24.dp)
+                                )
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("See More")
+                            Text(
+                                text = "See More",
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    letterSpacing = 0.5.sp
+                                )
+                            )
                         }
                     }
                 }
