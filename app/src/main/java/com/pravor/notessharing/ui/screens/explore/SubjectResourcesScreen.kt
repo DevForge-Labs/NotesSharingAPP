@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.screens.explore
 
 import androidx.compose.foundation.BorderStroke
+import com.pravor.notessharing.util.RefreshCooldownManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -107,7 +108,12 @@ fun SubjectResourcesRoute(
         subjectName = subjectName,
         resources = resources,
         isRefreshing = isRefreshing,
-        onRefresh = { viewModel.loadResources() },
+        onRefresh = {
+            val key = "subject_${subjectName.lowercase().replace(" ", "_")}"
+            RefreshCooldownManager.runWithCooldown(key) {
+                viewModel.loadResources()
+            }
+        },
         onBackClick = onBackClick,
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick,

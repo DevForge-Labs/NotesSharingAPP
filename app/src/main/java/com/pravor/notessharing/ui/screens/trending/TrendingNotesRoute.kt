@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.screens.trending
 
 import androidx.compose.runtime.Composable
+import com.pravor.notessharing.util.RefreshCooldownManager
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,7 +33,11 @@ fun TrendingNotesRoute(
         isLoadingMore = isLoadingMore,
         onBackClick = onBackClick,
         onDocumentClick = onDocumentClick,
-        onRefresh = { viewModel.refresh() },
+        onRefresh = {
+            RefreshCooldownManager.runWithCooldown("trending") {
+                viewModel.refresh()
+            }
+        },
         onLoadMore = { viewModel.loadMore() },
         onBookmarkClick = { note ->
             if (note.isBookmarked) {
