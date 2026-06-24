@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.screens.explore
 
 import androidx.compose.foundation.background
+import com.pravor.notessharing.util.RefreshCooldownManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -90,7 +91,12 @@ internal fun ExploreExpandedListScaffold(
     ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
+            onRefresh = {
+                val key = "explore_expanded_${title.lowercase().replace(" ", "_")}"
+                RefreshCooldownManager.runWithCooldown(key) {
+                    onRefresh()
+                }
+            },
             state = pullToRefreshState,
             indicator = {
                 CustomPullRefreshIndicator(

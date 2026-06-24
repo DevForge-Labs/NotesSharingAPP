@@ -1,6 +1,7 @@
 package com.pravor.notessharing.ui.screens.explore
 
 import androidx.compose.animation.Crossfade
+import com.pravor.notessharing.util.RefreshCooldownManager
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -98,7 +99,11 @@ fun ExploreRoute(
     }
 
     val onRefreshRemembered = remember(viewModel) {
-        { viewModel.loadRealDocuments(isPullToRefresh = true) }
+        {
+            RefreshCooldownManager.runWithCooldown("explore") {
+                viewModel.loadRealDocuments(isPullToRefresh = true)
+            }
+        }
     }
 
     ExploreScreen(

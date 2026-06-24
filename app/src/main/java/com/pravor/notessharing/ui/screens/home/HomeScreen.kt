@@ -2,6 +2,7 @@
 package com.pravor.notessharing.ui.screens.home
 
 import android.annotation.SuppressLint
+import com.pravor.notessharing.util.RefreshCooldownManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -158,7 +159,11 @@ fun HomeRoute(
     HomeScreen(
         uiState = uiState,
         isRefreshing = isRefreshing,
-        onRefresh = { viewModel.loadRealDocuments(isPullToRefresh = true) },
+        onRefresh = {
+            RefreshCooldownManager.runWithCooldown("home") {
+                viewModel.loadRealDocuments(isPullToRefresh = true)
+            }
+        },
         myFilesUiState = myFilesUiState,
         uploadsCount = uploadsCount,
         bookmarksCount = bookmarksCount,
