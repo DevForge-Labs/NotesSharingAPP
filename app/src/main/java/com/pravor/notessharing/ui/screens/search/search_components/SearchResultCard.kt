@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,13 +22,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import com.pravor.notessharing.ui.components.DocumentPlaceholder
 import com.pravor.notessharing.ui.screens.search.SearchResultModel
 
 @Composable
@@ -65,16 +76,46 @@ fun SearchResultCard(
                 color = accentColor.copy(alpha = 0.1f),
                 modifier = Modifier.size(44.dp)
             ) {
-                Box(
-                    modifier = Modifier.size(44.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = result.type,
-                        tint = accentColor,
-                        modifier = Modifier.size(22.dp)
-                    )
+                if (isUser) {
+                    Box(
+                        modifier = Modifier.size(44.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = result.type,
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                } else {
+                    if (result.thumbnailUrl.isNotBlank()) {
+                        var hasError by remember(result.thumbnailUrl) { mutableStateOf(false) }
+                        if (!hasError) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(result.thumbnailUrl)
+                                    .crossfade(true)
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .build(),
+                                contentDescription = result.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onError = { hasError = true }
+                            )
+                        } else {
+                            DocumentPlaceholder(
+                                documentType = result.type,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    } else {
+                        DocumentPlaceholder(
+                            documentType = result.type,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 

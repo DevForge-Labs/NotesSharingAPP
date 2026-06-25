@@ -3,6 +3,7 @@ package com.pravor.notessharing.ui.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.pravor.notessharing.data.SearchRepository
 import com.pravor.notessharing.data.local.search.SearchHistoryManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SearchViewModel(
+    private val searchRepository: SearchRepository,
     private val searchHistoryManager: SearchHistoryManager
 ) : ViewModel() {
 
@@ -133,11 +135,18 @@ class SearchViewModel(
 
             _uiState.value = SearchUiState.Loading
 
-            // Simulate slight delay to allow verification of loading skeletons
-            delay(600)
-
-            // Default to empty state when no search backend is integrated yet
-            _uiState.value = SearchUiState.Empty
+            try {
+                val results = searchRepository.search(trimmed)
+                if (results.isEmpty()) {
+                    _uiState.value = SearchUiState.Empty
+                } else {
+                    _uiState.value = SearchUiState.Results(query = trimmed, results = results)
+                }
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    _uiState.value = SearchUiState.Error(e.message ?: "Unknown error occurred")
+                }
+            }
         }
     }
 }
@@ -148,7 +157,8 @@ class SearchViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SearchViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SearchViewModel(searchHistoryManager) as T
+            val searchRepository = SearchRepository()
+            return SearchViewModel(searchRepository, searchHistoryManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

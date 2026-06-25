@@ -8,7 +8,8 @@ data class SearchResultModel(
     val title: String,
     val subtitle: String,
     val type: String, // e.g. "Note", "User", "Subject"
-    val additionalInfo: String = ""
+    val additionalInfo: String = "",
+    val thumbnailUrl: String = ""
 )
 
 enum class SearchCategory(val displayName: String) {

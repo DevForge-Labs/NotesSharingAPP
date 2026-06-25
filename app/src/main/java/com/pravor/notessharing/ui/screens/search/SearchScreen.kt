@@ -56,6 +56,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun SearchRoute(
     onBackClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current.applicationContext
@@ -70,6 +72,8 @@ fun SearchRoute(
         state = state,
         onEvent = searchViewModel::onEvent,
         onBackClick = onBackClick,
+        onDocumentClick = onDocumentClick,
+        onVideoClick = onVideoClick,
         modifier = modifier
     )
 }
@@ -80,6 +84,8 @@ fun SearchScreen(
     state: SearchScreenState,
     onEvent: (SearchEvent) -> Unit,
     onBackClick: () -> Unit,
+    onDocumentClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -230,7 +236,15 @@ fun SearchScreen(
                                         SearchResultCard(
                                             result = result,
                                             onClick = {
-                                                // Future details screen navigation
+                                                val isVideo = result.type.equals("Video", ignoreCase = true) ||
+                                                        result.type.equals("Videos", ignoreCase = true) ||
+                                                        result.type.equals("YouTube Resource", ignoreCase = true) ||
+                                                        result.type.equals("youtube", ignoreCase = true)
+                                                if (isVideo) {
+                                                    onVideoClick(result.id)
+                                                } else {
+                                                    onDocumentClick(result.id)
+                                                }
                                             }
                                         )
                                     }

@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -20,6 +23,18 @@ android {
         versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Load Algolia credentials from local.properties if defined
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            FileInputStream(localPropertiesFile).use { localProperties.load(it) }
+        }
+        val algoliaAppId = localProperties.getProperty("ALGOLIA_APP_ID") ?: ""
+        val algoliaSearchKey = localProperties.getProperty("ALGOLIA_SEARCH_KEY") ?: ""
+
+        buildConfigField("String", "ALGOLIA_APP_ID", "\"$algoliaAppId\"")
+        buildConfigField("String", "ALGOLIA_SEARCH_KEY", "\"$algoliaSearchKey\"")
     }
 
     buildTypes {
@@ -98,4 +113,8 @@ dependencies {
     // Jetpack Glance Widget
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+
+    // Algolia Search
+    implementation(libs.algolia.client)
+    implementation(libs.ktor.client.okhttp)
 }

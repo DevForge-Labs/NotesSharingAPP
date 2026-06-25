@@ -503,7 +503,13 @@ fun NotesSharingApp(
                 }
                 composable(AppDestination.Search.route) {
                     com.pravor.notessharing.ui.screens.search.SearchRoute(
-                        onBackClick = { navController.popBackStack() }
+                        onBackClick = { navController.popBackStack() },
+                        onDocumentClick = { docId ->
+                            navController.navigate(AppDestination.DocumentDetail.createRoute(docId))
+                        },
+                        onVideoClick = { videoId ->
+                            navController.navigate(AppDestination.VideoDetail.createRoute(videoId))
+                        }
                     )
                 }
                 composable(

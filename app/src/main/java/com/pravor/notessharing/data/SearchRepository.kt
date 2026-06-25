@@ -1,0 +1,67 @@
+package com.pravor.notessharing.data
+
+import com.pravor.notessharing.BuildConfig
+import com.pravor.notessharing.ui.screens.search.SearchResultModel
+import com.algolia.client.api.SearchClient
+import com.algolia.client.model.search.SearchParamsObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * Repository in charge of executing text search queries using the official Algolia Kotlin Client SDK.
+ * Exposes a provider-agnostic method to return standard SearchResultModel records to presentation layers.
+ */
+class SearchRepository(
+    private val appId: String = BuildConfig.ALGOLIA_APP_ID,
+    private val apiKey: String = BuildConfig.ALGOLIA_SEARCH_KEY,
+    private val indexName: String = "resources"
+) {
+    private val client by lazy {
+        SearchClient(
+            appId = appId,
+            apiKey = apiKey
+        )
+    }
+
+    /**
+     * Executes a text query against the search index.
+     * @param query The search text input.
+     * @return List of mapped SearchResultModel items.
+     */
+    suspend fun search(query: String): List<SearchResultModel> = withContext(Dispatchers.IO) {
+        if (appId.isBlank() || apiKey.isBlank()) {
+            return@withContext emptyList()
+        }
+
+        val params = SearchParamsObject(
+            query = query
+        )
+
+        try {
+            val response = client.searchSingleIndex(
+                indexName = indexName,
+                searchParams = params
+            )
+            response.hits.map { hit ->
+                val id = hit.objectID
+                val title = hit.additionalProperties?.get("title")?.jsonPrimitive?.content ?: ""
+                val displaySubject = (hit.additionalProperties?.get("displaySubject") ?: hit.additionalProperties?.get("subject"))?.jsonPrimitive?.content ?: ""
+                val documentType = hit.additionalProperties?.get("documentType")?.jsonPrimitive?.content ?: ""
+                val thumbnailUrl = hit.additionalProperties?.get("thumbnailUrl")?.jsonPrimitive?.content ?: ""
+
+                SearchResultModel(
+                    id = id,
+                    title = title,
+                    subtitle = displaySubject,
+                    type = documentType,
+                    additionalInfo = documentType,
+                    thumbnailUrl = thumbnailUrl
+                )
+            }
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+}
