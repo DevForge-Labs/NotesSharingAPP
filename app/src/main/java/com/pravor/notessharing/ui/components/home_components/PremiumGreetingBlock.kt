@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 sealed interface SmartBannerState {
     object GreetingMode : SmartBannerState
@@ -71,7 +72,12 @@ private fun PremiumGreetingBlock(
     unreadCount: Int = 0,
     onBellClick: () -> Unit = {}
 ) {
-    val baseGreeting = "Good Morning"
+    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val baseGreeting = when (currentHour) {
+        in 5..11 -> "Good Morning"
+        in 12..16 -> "Good Afternoon"
+        else -> "Good Evening"
+    }
 
     val currentUser = remember { FirebaseAuth.getInstance().currentUser }
     val displayName = remember(currentUser) {
