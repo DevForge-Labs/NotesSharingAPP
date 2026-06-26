@@ -65,9 +65,20 @@ export class SearchService {
         }
       }
 
-      const resource = SearchMapper.toSearchResource(docId, finalData);
+      const resource = {
+        ...SearchMapper.toSearchResource(docId, finalData),
+        documentType: finalData.documentType ?? null,
+        sectionDisplay: finalData.sectionDisplay ?? null,
+        examYear: finalData.examYear ?? null,
+        examType: finalData.examType ?? null,
+        branch: finalData.branch ?? null,
+        semester: finalData.semester ?? null,
+        college: finalData.college ?? null,
+        channelName: finalData.channelName ?? null,
+        playlistTitle: finalData.playlistTitle ?? null,
+      };
       
-      await SearchRepository.save(resource);
+      await SearchRepository.save(resource as any);
 
       logger.info("Successfully indexed resource to search index", {
         collection: collectionName,
