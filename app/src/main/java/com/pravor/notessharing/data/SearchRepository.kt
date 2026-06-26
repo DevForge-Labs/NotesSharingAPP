@@ -50,6 +50,15 @@ class SearchRepository(
                 val displaySubject = (hit.additionalProperties?.get("displaySubject") ?: hit.additionalProperties?.get("subject"))?.jsonPrimitive?.content ?: ""
                 val documentType = hit.additionalProperties?.get("documentType")?.jsonPrimitive?.content ?: ""
                 val thumbnailUrl = hit.additionalProperties?.get("thumbnailUrl")?.jsonPrimitive?.content ?: ""
+                
+                val sectionDisplay = hit.additionalProperties?.get("sectionDisplay")?.jsonPrimitive?.content ?: ""
+                val examYear = hit.additionalProperties?.get("examYear")?.jsonPrimitive?.content ?: ""
+                val examType = hit.additionalProperties?.get("examType")?.jsonPrimitive?.content ?: ""
+                val branch = hit.additionalProperties?.get("branch")?.jsonPrimitive?.content ?: ""
+                val semester = hit.additionalProperties?.get("semester")?.jsonPrimitive?.content ?: ""
+                val college = hit.additionalProperties?.get("college")?.jsonPrimitive?.content ?: ""
+                val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
+                val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
 
                 SearchResultModel(
                     id = id,
@@ -57,7 +66,17 @@ class SearchRepository(
                     subtitle = displaySubject,
                     type = documentType,
                     additionalInfo = documentType,
-                    thumbnailUrl = thumbnailUrl
+                    thumbnailUrl = thumbnailUrl,
+                    sectionDisplay = sectionDisplay,
+                    examYear = examYear,
+                    examType = examType,
+                    branch = branch,
+                    semester = semester,
+                    college = college,
+                    channelName = channelName,
+                    playlistTitle = playlistTitle,
+                    subject = displaySubject,
+                    documentType = documentType
                 )
             }
         } catch (e: Exception) {

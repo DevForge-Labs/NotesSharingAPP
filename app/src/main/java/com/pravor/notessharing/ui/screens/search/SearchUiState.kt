@@ -9,7 +9,17 @@ data class SearchResultModel(
     val subtitle: String,
     val type: String, // e.g. "Note", "User", "Subject"
     val additionalInfo: String = "",
-    val thumbnailUrl: String = ""
+    val thumbnailUrl: String = "",
+    val sectionDisplay: String = "",
+    val examYear: String = "",
+    val examType: String = "",
+    val branch: String = "",
+    val semester: String = "",
+    val college: String = "",
+    val channelName: String = "",
+    val playlistTitle: String = "",
+    val subject: String = "",
+    val documentType: String = ""
 )
 
 enum class SearchCategory(val displayName: String) {

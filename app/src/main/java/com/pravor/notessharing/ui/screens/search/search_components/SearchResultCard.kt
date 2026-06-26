@@ -1,13 +1,18 @@
 package com.pravor.notessharing.ui.screens.search.search_components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +45,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.pravor.notessharing.ui.components.DocumentPlaceholder
+import com.pravor.notessharing.ui.components.getStudyResourceTheme
 import com.pravor.notessharing.ui.screens.search.SearchResultModel
 
 @Composable
@@ -48,44 +55,131 @@ fun SearchResultCard(
     modifier: Modifier = Modifier
 ) {
     val isUser = result.type.equals("User", ignoreCase = true)
-    val accentColor = if (isUser) Color(0xFFC7A6FF) else Color(0xFF58D6D1)
-    val icon = if (isUser) Icons.Default.Person else Icons.Default.Description
+    
+    val normalizedType: String = remember(result.documentType, result.type) {
+        if (isUser) {
+            "User"
+        } else if (result.documentType.isNotBlank()) {
+            val rawType = result.documentType.lowercase(java.util.Locale.ROOT).trim()
+            when {
+                rawType.contains("pyq") -> "PYQ"
+                rawType.contains("assignment") -> "Assignment"
+                rawType.contains("cheat") || rawType.contains("formula") -> "Cheat Sheet"
+                rawType.contains("notes") || rawType.contains("note") -> "Notes"
+                rawType.contains("playlist") -> "Playlist"
+                rawType.contains("video") || rawType.contains("youtube") -> "Video"
+                else -> result.documentType
+            }
+        } else {
+            result.type
+        }
+    }
+
+    val accentColor = remember(normalizedType) {
+        if (isUser) {
+            Color(0xFFC7A6FF)
+        } else {
+            getStudyResourceTheme(normalizedType).accentColor
+        }
+    }
+
+    val displayTitle = remember(result, normalizedType) {
+        val cleanTitleWithoutExt = result.title.replace(Regex("\\.(pdf|jpg|jpeg|png|webp|docx|txt|html|zip|rar|mp4|mkv|avi|mov)$", RegexOption.IGNORE_CASE), "").trim()
+        when {
+            normalizedType == "PYQ" -> {
+                val normalizedExamType = when {
+                    result.examType.contains("mid", ignoreCase = true) -> "Mid Semester"
+                    result.examType.contains("end", ignoreCase = true) -> "End Semester"
+                    else -> result.examType
+                }
+                val parts = mutableListOf<String>()
+                if (result.subject.isNotBlank() && !result.subject.equals("Unknown", ignoreCase = true)) {
+                    parts.add(result.subject)
+                }
+                if (normalizedExamType.isNotBlank()) {
+                    parts.add(normalizedExamType)
+                }
+                if (result.examYear.isNotBlank()) {
+                    parts.add(result.examYear)
+                }
+                if (parts.isNotEmpty()) parts.joinToString(" ") else cleanTitleWithoutExt
+            }
+            normalizedType == "Playlist" && result.playlistTitle.isNotBlank() -> {
+                result.playlistTitle
+            }
+            else -> {
+                cleanTitleWithoutExt
+            }
+        }
+    }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         border = BorderStroke(
-            width = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+            width = 1.dp,
+            color = accentColor.copy(alpha = 0.15f)
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .height(IntrinsicSize.Min)
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Surface(
-                shape = if (isUser) CircleShape else RoundedCornerShape(10.dp),
-                color = accentColor.copy(alpha = 0.1f),
-                modifier = Modifier.size(44.dp)
+            // Adaptive Thumbnail / Avatar Container
+            Box(
+                modifier = if (isUser) {
+                    Modifier
+                        .size(76.dp)
+                        .clip(CircleShape)
+                        .background(accentColor.copy(alpha = 0.1f))
+                } else {
+                    Modifier
+                        .fillMaxHeight()
+                        .aspectRatio(1.42f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                },
+                contentAlignment = Alignment.Center
             ) {
                 if (isUser) {
-                    Box(
-                        modifier = Modifier.size(44.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    if (result.thumbnailUrl.isNotBlank()) {
+                        var hasError by remember(result.thumbnailUrl) { mutableStateOf(false) }
+                        if (!hasError) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(result.thumbnailUrl)
+                                    .crossfade(true)
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .build(),
+                                contentDescription = displayTitle,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onError = { hasError = true }
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = result.type,
+                                tint = accentColor,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    } else {
                         Icon(
-                            imageVector = icon,
+                            imageVector = Icons.Default.Person,
                             contentDescription = result.type,
                             tint = accentColor,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 } else {
@@ -99,54 +193,148 @@ fun SearchResultCard(
                                     .memoryCachePolicy(CachePolicy.ENABLED)
                                     .diskCachePolicy(CachePolicy.ENABLED)
                                     .build(),
-                                contentDescription = result.title,
+                                contentDescription = displayTitle,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
                                 onError = { hasError = true }
                             )
                         } else {
                             DocumentPlaceholder(
-                                documentType = result.type,
+                                documentType = normalizedType,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
                     } else {
                         DocumentPlaceholder(
-                            documentType = result.type,
+                            documentType = normalizedType,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
             }
 
+            // Info Details Column
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = result.title,
+                    text = displayTitle,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = result.subtitle,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (result.additionalInfo.isNotEmpty()) {
-                    Text(
-                        text = result.additionalInfo,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = accentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+
+                // Subtitle (subject) and channel name
+                if (isUser) {
+                    if (result.subtitle.isNotBlank()) {
+                        Text(
+                            text = result.subtitle,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    val displaySubject = if (result.subject.isNotBlank()) result.subject else result.subtitle
+                    if (displaySubject.isNotBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = displaySubject,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if ((normalizedType == "Video" || normalizedType == "Playlist") && result.channelName.isNotBlank()) {
+                                Text(
+                                    text = result.channelName,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Metadata Badges Row
+                if (!isUser) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        // Resource Type Badge
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = accentColor.copy(alpha = 0.1f),
+                            border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = normalizedType,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = accentColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Assignment Section Badge
+                        if (normalizedType == "Assignment" && result.sectionDisplay.isNotBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            ) {
+                                Text(
+                                    text = result.sectionDisplay,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // PYQ Year & Exam Type Badges
+                        if (normalizedType == "PYQ") {
+                            if (result.examYear.isNotBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = result.examYear,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            if (result.examType.isNotBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = result.examType,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
