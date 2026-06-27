@@ -129,4 +129,48 @@ export class SearchService {
       });
     }
   }
+
+  /**
+   * Compares the indexed search fields derived from the before/after Firestore snapshots
+   * to determine if reindexing is necessary.
+   */
+  static shouldReindex(beforeData: any, afterData: any): boolean {
+    if (!beforeData || !afterData) return true;
+
+    // Helper to generate the exact mapped index payload with stable key ordering
+    const getPayload = (data: any) => {
+      const mapped = SearchMapper.toSearchResource("placeholder_id", data);
+      return {
+        title: mapped.title,
+        displaySubject: mapped.displaySubject,
+        subject: mapped.subject,
+        searchKey: mapped.searchKey,
+        description: mapped.description,
+        documentType: data.documentType ?? mapped.documentType ?? null,
+        trendingScore: mapped.trendingScore,
+        thumbnailUrl: mapped.thumbnailUrl,
+        sectionDisplay: data.sectionDisplay ?? null,
+        examYear: data.examYear ?? null,
+        examType: data.examType ?? null,
+        branch: data.branch ?? null,
+        semester: data.semester ?? null,
+        college: data.college ?? null,
+        channelName: data.channelName ?? null,
+        playlistTitle: data.playlistTitle ?? null,
+      };
+    };
+
+    const beforePayload = getPayload(beforeData);
+    const afterPayload = getPayload(afterData);
+
+    // Shallow comparison of all properties in the payload
+    type PayloadType = ReturnType<typeof getPayload>;
+    const keys = Object.keys(beforePayload) as Array<keyof PayloadType>;
+    for (const key of keys) {
+      if (beforePayload[key] !== afterPayload[key]) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

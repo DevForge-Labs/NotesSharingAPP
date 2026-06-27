@@ -28,15 +28,28 @@ class SearchRepository(
     /**
      * Executes a text query against the search index.
      * @param query The search text input.
+     * @param selectedDocumentTypes Set of document types to filter results by using Algolia facet filters.
      * @return List of mapped SearchResultModel items.
      */
-    suspend fun search(query: String): List<SearchResultModel> = withContext(Dispatchers.IO) {
+    suspend fun search(
+        query: String,
+        selectedDocumentTypes: Set<String> = emptySet()
+    ): List<SearchResultModel> = withContext(Dispatchers.IO) {
         if (appId.isBlank() || apiKey.isBlank()) {
             return@withContext emptyList()
         }
 
+        val filterExpression = if (selectedDocumentTypes.isNotEmpty()) {
+            selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
+                "documentType:$it"
+            }
+        } else {
+            null
+        }
+
         val params = SearchParamsObject(
-            query = query
+            query = query,
+            filters = filterExpression
         )
 
         try {

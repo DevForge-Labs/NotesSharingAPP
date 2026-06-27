@@ -244,48 +244,78 @@ async function handleSoftDeletion(
 }
 
 // Notes trigger
-export const onNotesUpdated = onDocumentUpdated("notes/{docId}", async (event) => {
+export const onNotesUpdated = onDocumentUpdated({
+  document: "notes/{docId}",
+  secrets: [algoliaAdminApiKey],
+}, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
   const afterData = event.data?.after.data();
   if (!beforeData || !afterData) return;
   await handleSoftDeletion("notes", docId, beforeData, afterData);
+  if (SearchService.shouldReindex(beforeData, afterData)) {
+    await SearchService.indexResource("notes", docId, afterData);
+  }
 });
 
 // PYQs trigger
-export const onPyqsUpdated = onDocumentUpdated("pyqs/{docId}", async (event) => {
+export const onPyqsUpdated = onDocumentUpdated({
+  document: "pyqs/{docId}",
+  secrets: [algoliaAdminApiKey],
+}, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
   const afterData = event.data?.after.data();
   if (!beforeData || !afterData) return;
   await handleSoftDeletion("pyqs", docId, beforeData, afterData);
+  if (SearchService.shouldReindex(beforeData, afterData)) {
+    await SearchService.indexResource("pyqs", docId, afterData);
+  }
 });
 
 // Assignments trigger
-export const onAssignmentsUpdated = onDocumentUpdated("assignments/{docId}", async (event) => {
+export const onAssignmentsUpdated = onDocumentUpdated({
+  document: "assignments/{docId}",
+  secrets: [algoliaAdminApiKey],
+}, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
   const afterData = event.data?.after.data();
   if (!beforeData || !afterData) return;
   await handleSoftDeletion("assignments", docId, beforeData, afterData);
+  if (SearchService.shouldReindex(beforeData, afterData)) {
+    await SearchService.indexResource("assignments", docId, afterData);
+  }
 });
 
 // Cheatsheets trigger
-export const onCheatsheetsUpdated = onDocumentUpdated("cheatsheets/{docId}", async (event) => {
+export const onCheatsheetsUpdated = onDocumentUpdated({
+  document: "cheatsheets/{docId}",
+  secrets: [algoliaAdminApiKey],
+}, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
   const afterData = event.data?.after.data();
   if (!beforeData || !afterData) return;
   await handleSoftDeletion("cheatsheets", docId, beforeData, afterData);
+  if (SearchService.shouldReindex(beforeData, afterData)) {
+    await SearchService.indexResource("cheatsheets", docId, afterData);
+  }
 });
 
 // Videos trigger
-export const onVideosUpdated = onDocumentUpdated("videos/{docId}", async (event) => {
+export const onVideosUpdated = onDocumentUpdated({
+  document: "videos/{docId}",
+  secrets: [algoliaAdminApiKey],
+}, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
   const afterData = event.data?.after.data();
   if (!beforeData || !afterData) return;
   await handleSoftDeletion("videos", docId, beforeData, afterData);
+  if (SearchService.shouldReindex(beforeData, afterData)) {
+    await SearchService.indexResource("videos", docId, afterData);
+  }
 });
 
 // Administrative Deletion Cascade Trigger

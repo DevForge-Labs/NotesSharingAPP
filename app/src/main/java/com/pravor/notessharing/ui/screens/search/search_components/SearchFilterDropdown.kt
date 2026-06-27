@@ -14,11 +14,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
@@ -70,10 +71,11 @@ fun SearchFilterDropdown(
                     val isSelected = selectedFilters.contains(option)
                     val (accentColor, icon) = when (option) {
                         FilterOption.NOTES -> Pair(Color(0xFF58D6D1), Icons.Default.Description)
-                        FilterOption.ASSIGNMENTS -> Pair(Color(0xFF7AD7FF), Icons.Default.Assignment)
+                        FilterOption.ASSIGNMENTS -> Pair(Color(0xFF7AD7FF), Icons.AutoMirrored.Filled.Assignment)
                         FilterOption.VIDEOS -> Pair(Color(0xFFFF6B6B), Icons.Default.PlayArrow)
                         FilterOption.CHEAT_SHEETS -> Pair(Color(0xFFC7A6FF), Icons.Default.Bolt)
-                        FilterOption.PYQS -> Pair(Color(0xFFFFB45C), Icons.Default.Help)
+                        FilterOption.PYQS -> Pair(Color(0xFFFFB45C), Icons.AutoMirrored.Filled.Help)
+                        FilterOption.PLAYLISTS -> Pair(Color(0xFFFF6B6B), Icons.AutoMirrored.Filled.FeaturedPlayList)
                     }
 
                     Surface(

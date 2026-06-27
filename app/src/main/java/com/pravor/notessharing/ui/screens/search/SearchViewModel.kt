@@ -63,8 +63,7 @@ class SearchViewModel(
                 .debounce(500)
                 .collect { query ->
                     if (query.isNotEmpty()) {
-                        // Future auto-search trigger place:
-                        // executeSearchFlow(query)
+                        executeSearchFlow(query, saveToHistory = false)
                     }
                 }
         }
@@ -82,7 +81,7 @@ class SearchViewModel(
             is SearchEvent.CategorySelected -> {
                 _selectedCategory.value = event.category
                 if (_searchQuery.value.isNotBlank()) {
-                    executeSearchFlow(_searchQuery.value)
+                    executeSearchFlow(_searchQuery.value, saveToHistory = false)
                 }
             }
             is SearchEvent.FilterOptionClicked -> {
@@ -94,13 +93,13 @@ class SearchViewModel(
                     }
                 }
                 if (_searchQuery.value.isNotBlank()) {
-                    executeSearchFlow(_searchQuery.value)
+                    executeSearchFlow(_searchQuery.value, saveToHistory = false)
                 }
             }
             SearchEvent.ResetFilters -> {
                 _selectedFilters.value = emptySet()
                 if (_searchQuery.value.isNotBlank()) {
-                    executeSearchFlow(_searchQuery.value)
+                    executeSearchFlow(_searchQuery.value, saveToHistory = false)
                 }
             }
             SearchEvent.ClearRecentHistory -> {
@@ -110,18 +109,18 @@ class SearchViewModel(
             }
             is SearchEvent.RecentSearchClicked -> {
                 _searchQuery.value = event.query
-                executeSearchFlow(event.query)
+                executeSearchFlow(event.query, saveToHistory = true)
             }
             SearchEvent.SearchExecuted -> {
-                executeSearchFlow(_searchQuery.value)
+                executeSearchFlow(_searchQuery.value, saveToHistory = true)
             }
             SearchEvent.RetryClicked -> {
-                executeSearchFlow(_searchQuery.value)
+                executeSearchFlow(_searchQuery.value, saveToHistory = false)
             }
         }
     }
 
-    private fun executeSearchFlow(query: String) {
+    private fun executeSearchFlow(query: String, saveToHistory: Boolean = false) {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) {
             _uiState.value = SearchUiState.Idle
@@ -130,13 +129,25 @@ class SearchViewModel(
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            // Save to recent search history
-            searchHistoryManager.addSearchQuery(trimmed)
+            if (saveToHistory) {
+                searchHistoryManager.addSearchQuery(trimmed)
+            }
 
             _uiState.value = SearchUiState.Loading
 
             try {
-                val results = searchRepository.search(trimmed)
+                val docTypes = _selectedFilters.value.map { option ->
+                    when (option) {
+                        FilterOption.NOTES -> "Notes"
+                        FilterOption.ASSIGNMENTS -> "Assignment"
+                        FilterOption.VIDEOS -> "Video"
+                        FilterOption.CHEAT_SHEETS -> "Cheat Sheet"
+                        FilterOption.PYQS -> "PYQ"
+                        FilterOption.PLAYLISTS -> "Playlist"
+                    }
+                }.toSet()
+
+                val results = searchRepository.search(trimmed, docTypes)
                 if (results.isEmpty()) {
                     _uiState.value = SearchUiState.Empty
                 } else {
