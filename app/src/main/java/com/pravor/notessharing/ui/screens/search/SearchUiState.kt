@@ -34,7 +34,8 @@ enum class FilterOption(val displayName: String) {
     ASSIGNMENTS("Assignments"),
     VIDEOS("Videos"),
     CHEAT_SHEETS("Cheat Sheets"),
-    PYQS("PYQs")
+    PYQS("PYQs"),
+    PLAYLISTS("Playlists")
 }
 
 sealed interface SearchUiState {
