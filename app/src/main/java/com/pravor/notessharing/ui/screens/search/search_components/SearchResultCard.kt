@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -113,6 +114,8 @@ fun SearchResultCard(
         }
     }
 
+    var isImageSuccessfullyLoaded by remember(result.thumbnailUrl) { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -164,6 +167,7 @@ fun SearchResultCard(
                                 contentDescription = displayTitle,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
+                                onSuccess = { isImageSuccessfullyLoaded = true },
                                 onError = { hasError = true }
                             )
                         } else {
@@ -196,6 +200,7 @@ fun SearchResultCard(
                                 contentDescription = displayTitle,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
+                                onSuccess = { isImageSuccessfullyLoaded = true },
                                 onError = { hasError = true }
                             )
                         } else {
@@ -209,6 +214,38 @@ fun SearchResultCard(
                             documentType = normalizedType,
                             modifier = Modifier.fillMaxSize()
                         )
+                    }
+
+                    if (isImageSuccessfullyLoaded) {
+                        // Subtle vertical black gradient overlay on the bottom 25% of the thumbnail
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.25f)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
+                                    )
+                                )
+                        )
+                        // Compact resource type chip aligned at the bottom-right corner
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.Black.copy(alpha = 0.6f),
+                            border = BorderStroke(0.75.dp, accentColor.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = normalizedType,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = accentColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -269,19 +306,21 @@ fun SearchResultCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
-                        // Resource Type Badge
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = accentColor.copy(alpha = 0.1f),
-                            border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
-                        ) {
-                            Text(
-                                text = normalizedType,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                color = accentColor,
-                                fontWeight = FontWeight.Bold
-                            )
+                        // Resource Type Badge (shown as fallback in details section only when thumbnail is not loaded)
+                        if (!isImageSuccessfullyLoaded) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = accentColor.copy(alpha = 0.1f),
+                                border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
+                            ) {
+                                Text(
+                                    text = normalizedType,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = accentColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         // Assignment Section Badge
