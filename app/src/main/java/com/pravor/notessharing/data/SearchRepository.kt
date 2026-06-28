@@ -42,17 +42,36 @@ open class SearchRepository(
 
         // Check the cache first (using normalized query internally in SearchCache)
         val cachedResults = searchCache.get(query)
-        if (cachedResults != null) {
-            return@withContext cachedResults
-        }
-
-        try {
-            val results = executeNetworkSearch(query, selectedDocumentTypes)
-            // Cache successful results (including empty result lists)
-            searchCache.put(query, results)
-            results
+        val rawResults = cachedResults ?: try {
+            // Fetch raw, unfiltered results from Algolia on cache miss
+            val networkResults = executeNetworkSearch(query, emptySet())
+            // Cache successful raw results (including empty result lists)
+            searchCache.put(query, networkResults)
+            networkResults
         } catch (e: Exception) {
             throw e
+        }
+
+        // Apply selected resource type filters locally
+        if (selectedDocumentTypes.isNotEmpty()) {
+            rawResults.filter { result ->
+                val type = if (result.documentType.isNotBlank()) result.documentType else result.type
+                val normalizedType = type.lowercase(java.util.Locale.ROOT).trim()
+                selectedDocumentTypes.any { filterType ->
+                    val rawFilter = filterType.lowercase(java.util.Locale.ROOT).trim()
+                    when {
+                        rawFilter.contains("pyq") -> normalizedType.contains("pyq")
+                        rawFilter.contains("assignment") -> normalizedType.contains("assignment")
+                        rawFilter.contains("cheat") || rawFilter.contains("formula") -> normalizedType.contains("cheat") || normalizedType.contains("formula")
+                        rawFilter.contains("notes") || normalizedType.contains("note") -> normalizedType.contains("notes") || normalizedType.contains("note")
+                        rawFilter.contains("playlist") -> normalizedType.contains("playlist")
+                        rawFilter.contains("video") || rawFilter.contains("youtube") -> normalizedType.contains("video") || normalizedType.contains("youtube")
+                        else -> normalizedType.contains(rawFilter)
+                    }
+                }
+            }
+        } else {
+            rawResults
         }
     }
 

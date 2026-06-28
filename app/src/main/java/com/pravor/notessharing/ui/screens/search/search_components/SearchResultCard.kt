@@ -60,8 +60,9 @@ fun SearchResultCard(
     val normalizedType: String = remember(result.documentType, result.type) {
         if (isUser) {
             "User"
-        } else if (result.documentType.isNotBlank()) {
-            val rawType = result.documentType.lowercase(java.util.Locale.ROOT).trim()
+        } else {
+            val typeSource = if (result.documentType.isNotBlank()) result.documentType else result.type
+            val rawType = typeSource.lowercase(java.util.Locale.ROOT).trim()
             when {
                 rawType.contains("pyq") -> "PYQ"
                 rawType.contains("assignment") -> "Assignment"
@@ -69,10 +70,8 @@ fun SearchResultCard(
                 rawType.contains("notes") || rawType.contains("note") -> "Notes"
                 rawType.contains("playlist") -> "Playlist"
                 rawType.contains("video") || rawType.contains("youtube") -> "Video"
-                else -> result.documentType
+                else -> typeSource
             }
-        } else {
-            result.type
         }
     }
 
