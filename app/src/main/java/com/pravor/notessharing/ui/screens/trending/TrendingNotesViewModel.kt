@@ -130,7 +130,7 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                 val docType = note.documentType.ifBlank { note.type ?: "Notes" }
                 val fileType = when (docType.lowercase(java.util.Locale.US)) {
                     "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                    "cheat sheet" -> com.pravor.notessharing.model.FileType.CheatSheet
+                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.model.FileType.CheatSheet
                     "assignment" -> com.pravor.notessharing.model.FileType.Notes
                     "video" -> com.pravor.notessharing.model.FileType.Video
                     else -> com.pravor.notessharing.model.FileType.Pdf

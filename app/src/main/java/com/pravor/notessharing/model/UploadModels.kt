@@ -10,6 +10,13 @@ enum class UploadType(val label: String) {
     Youtube("YouTube Resource")
 }
 
+val UploadType.firestoreValue: String
+    get() = when (this) {
+        UploadType.CheatSheet -> "CheatSheet"
+        else -> this.label
+    }
+
+
 enum class UploadFileSource {
     DocumentPicker,
     Gallery,

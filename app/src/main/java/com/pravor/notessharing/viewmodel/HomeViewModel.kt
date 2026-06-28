@@ -502,7 +502,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val docType = doc["documentType"] as? String ?: (doc["type"] as? String ?: "Notes")
         val fileType = when (docType) {
             "PYQ" -> FileType.Pyq
-            "Cheat Sheet" -> FileType.CheatSheet
+            "CheatSheet", "Cheat Sheet" -> FileType.CheatSheet
             "Assignment" -> FileType.Notes
             "Notes" -> FileType.Notes
             "YouTube Resource", "Videos" -> FileType.Video
