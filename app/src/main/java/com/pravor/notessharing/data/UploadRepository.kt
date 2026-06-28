@@ -9,6 +9,7 @@ import com.pravor.notessharing.firebase.FirestoreDocumentService
 import com.pravor.notessharing.model.SelectedUploadFile
 import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
+import com.pravor.notessharing.model.firestoreValue
 import com.pravor.notessharing.state.YoutubePreview
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
@@ -326,8 +327,8 @@ class UploadRepository(private val context: Context) {
                     "subject" to displaySubject,
                     "displaySubject" to displaySubject,
                     "searchKey" to searchKey,
-                    "documentType" to type.label,
-                    "type" to type.label,
+                    "documentType" to type.firestoreValue,
+                    "type" to type.firestoreValue,
                     "uploaderId" to uploaderId,
                     "uploaderName" to uploaderName,
                     "uploaderPhotoUrl" to uploaderPhotoUrl,
@@ -439,8 +440,8 @@ class UploadRepository(private val context: Context) {
                     "subject" to displaySubject,
                     "displaySubject" to displaySubject,
                     "searchKey" to searchKey,
-                    "documentType" to type.label,
-                    "type" to type.label,
+                    "documentType" to type.firestoreValue,
+                    "type" to type.firestoreValue,
                     "uploaderId" to uploaderId,
                     "uploaderName" to uploaderName,
                     "uploaderPhotoUrl" to uploaderPhotoUrl,

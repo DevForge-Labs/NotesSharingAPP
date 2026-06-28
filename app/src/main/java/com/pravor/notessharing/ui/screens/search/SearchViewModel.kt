@@ -136,14 +136,14 @@ class SearchViewModel(
             _uiState.value = SearchUiState.Loading
 
             try {
-                val docTypes = _selectedFilters.value.map { option ->
+                val docTypes = _selectedFilters.value.flatMap { option ->
                     when (option) {
-                        FilterOption.NOTES -> "Notes"
-                        FilterOption.ASSIGNMENTS -> "Assignment"
-                        FilterOption.VIDEOS -> "Video"
-                        FilterOption.CHEAT_SHEETS -> "Cheat Sheet"
-                        FilterOption.PYQS -> "PYQ"
-                        FilterOption.PLAYLISTS -> "Playlist"
+                        FilterOption.NOTES -> listOf("Notes")
+                        FilterOption.ASSIGNMENTS -> listOf("Assignment")
+                        FilterOption.VIDEOS -> listOf("Video")
+                        FilterOption.CHEAT_SHEETS -> listOf("CheatSheet", "Cheat Sheet")
+                        FilterOption.PYQS -> listOf("PYQ")
+                        FilterOption.PLAYLISTS -> listOf("Playlist")
                     }
                 }.toSet()
 

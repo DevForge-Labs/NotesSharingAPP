@@ -44,9 +44,9 @@ class BookmarkRepository {
                                 val docId = data["documentId"] as? String ?: ""
                                 val title = data["title"] as? String ?: ""
                                 val docTypeStr = data["documentType"] as? String ?: "Notes"
-                                val fileType = when (docTypeStr.lowercase(Locale.US)) {
+                                val fileType = when (docTypeStr.lowercase(Locale.US).replace(" ", "")) {
                                     "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                                    "cheat sheet" -> com.pravor.notessharing.model.FileType.CheatSheet
+                                    "cheatsheet", "cheatsheets" -> com.pravor.notessharing.model.FileType.CheatSheet
                                     "assignment" -> com.pravor.notessharing.model.FileType.Notes
                                     "video" -> com.pravor.notessharing.model.FileType.Video
                                     else -> com.pravor.notessharing.model.FileType.Pdf
@@ -84,7 +84,12 @@ class BookmarkRepository {
 
     suspend fun addBookmark(feedItem: FeedItem, userId: String) {
         val docId = feedItem.id
-        val docType = feedItem.documentType ?: feedItem.fileType.label
+        val rawDocType = feedItem.documentType ?: feedItem.fileType.label
+        val docType = if (rawDocType.lowercase(java.util.Locale.US).replace(" ", "") == "cheatsheet") {
+            "CheatSheet"
+        } else {
+            rawDocType
+        }
         val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
         val dateStr = "Saved " + sdf.format(java.util.Date(System.currentTimeMillis()))
         
@@ -139,7 +144,12 @@ class BookmarkRepository {
 
         try {
             val bookmarkId = "${userId}_${docId}"
-            val docType = studyFile.documentType ?: studyFile.fileType.label
+            val rawDocType = studyFile.documentType ?: studyFile.fileType.label
+            val docType = if (rawDocType.lowercase(java.util.Locale.US).replace(" ", "") == "cheatsheet") {
+                "CheatSheet"
+            } else {
+                rawDocType
+            }
             val data = mapOf(
                 "userId" to userId,
                 "documentId" to docId,

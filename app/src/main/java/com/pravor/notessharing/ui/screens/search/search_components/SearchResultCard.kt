@@ -113,8 +113,6 @@ fun SearchResultCard(
         }
     }
 
-    var isImageSuccessfullyLoaded by remember(result.thumbnailUrl) { mutableStateOf(false) }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -145,7 +143,7 @@ fun SearchResultCard(
                         .background(accentColor.copy(alpha = 0.1f))
                 } else {
                     Modifier
-                        .fillMaxHeight()
+                        .height(80.dp)
                         .aspectRatio(1.42f)
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -166,7 +164,6 @@ fun SearchResultCard(
                                 contentDescription = displayTitle,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
-                                onSuccess = { isImageSuccessfullyLoaded = true },
                                 onError = { hasError = true }
                             )
                         } else {
@@ -199,7 +196,6 @@ fun SearchResultCard(
                                 contentDescription = displayTitle,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
-                                onSuccess = { isImageSuccessfullyLoaded = true },
                                 onError = { hasError = true }
                             )
                         } else {
@@ -215,36 +211,34 @@ fun SearchResultCard(
                         )
                     }
 
-                    if (isImageSuccessfullyLoaded) {
-                        // Subtle vertical black gradient overlay on the bottom 25% of the thumbnail
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .fillMaxHeight(0.25f)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
-                                    )
+                    // Subtle vertical black gradient overlay on the bottom 25% of the thumbnail
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.25f)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
                                 )
-                        )
-                        // Compact resource type chip aligned at the bottom-right corner
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(8.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.Black.copy(alpha = 0.6f),
-                            border = BorderStroke(0.75.dp, accentColor.copy(alpha = 0.4f))
-                        ) {
-                            Text(
-                                text = normalizedType,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                color = accentColor,
-                                fontWeight = FontWeight.Bold
                             )
-                        }
+                    )
+                    // Compact resource type chip aligned at the bottom-right corner
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color.Black.copy(alpha = 0.6f),
+                        border = BorderStroke(0.75.dp, accentColor.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = normalizedType,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -305,22 +299,7 @@ fun SearchResultCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
-                        // Resource Type Badge (shown as fallback in details section only when thumbnail is not loaded)
-                        if (!isImageSuccessfullyLoaded) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = accentColor.copy(alpha = 0.1f),
-                                border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
-                            ) {
-                                Text(
-                                    text = normalizedType,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    color = accentColor,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+
 
                         // Assignment Section Badge
                         if (normalizedType == "Assignment" && result.sectionDisplay.isNotBlank()) {

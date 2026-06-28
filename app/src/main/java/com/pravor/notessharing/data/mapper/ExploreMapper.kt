@@ -127,7 +127,7 @@ object ExploreMapper {
                 "notes" -> "Notes"
                 "pyqs" -> "PYQ"
                 "assignments" -> "Assignment"
-                "cheatsheets" -> "Cheat Sheet"
+                "cheatsheets" -> "CheatSheet"
                 "videos" -> "Video"
                 else -> "Notes"
             }
@@ -218,7 +218,7 @@ object ExploreMapper {
         val docType = doc["documentType"] as? String ?: (doc["type"] as? String ?: "Notes")
         val fileType = when (docType) {
             "PYQ" -> FileType.Pyq
-            "Cheat Sheet" -> FileType.CheatSheet
+            "CheatSheet", "Cheat Sheet" -> FileType.CheatSheet
             "Assignment" -> FileType.Notes
             "Notes" -> FileType.Notes
             "YouTube Resource", "Videos" -> FileType.Video

@@ -496,7 +496,7 @@ class ExploreCacheRepository(context: Context) {
                     ResourceType.NOTE -> "Notes"
                     ResourceType.PYQ -> "PYQ"
                     ResourceType.ASSIGNMENT -> "Assignment"
-                    ResourceType.CHEAT_SHEET -> "Cheat Sheet"
+                    ResourceType.CHEAT_SHEET -> "CheatSheet"
                     ResourceType.VIDEO -> "Video"
                     else -> "Notes"
                 }

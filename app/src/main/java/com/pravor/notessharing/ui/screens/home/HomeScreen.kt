@@ -60,7 +60,6 @@ import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.loading.KnowledgeNetworkLoading
 import com.pravor.notessharing.ui.components.home_components.HomeSuccessContent
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
-import com.pravor.notessharing.viewmodel.DummyData
 import com.pravor.notessharing.viewmodel.HomeViewModel
 import com.pravor.notessharing.viewmodel.MyFilesViewModel
 import androidx.compose.material3.ModalBottomSheet
@@ -894,18 +893,66 @@ private fun NotificationItemRow(
     }
 }
 
+private val previewFeedItems = listOf(
+    com.pravor.notessharing.model.FeedItem(
+        id = "feed-dbms-4",
+        uploaderName = "Aarav Mehta",
+        uploaderInitials = "AM",
+        uploadDate = "May 22",
+        title = "DBMS Unit 4 Complete Notes",
+        description = "Normalization, transactions, indexing, and recovery notes cleaned up.",
+        tags = listOf("DBMS", "CSE", "Unit 4"),
+        fileType = com.pravor.notessharing.model.FileType.Pdf,
+        upvotes = 128,
+        comments = 18,
+        downloadsCount = 642,
+        isUpvoted = false,
+        isSaved = false
+    ),
+    com.pravor.notessharing.model.FeedItem(
+        id = "feed-os-pyq",
+        uploaderName = "Nisha Rao",
+        uploaderInitials = "NR",
+        uploadDate = "May 21",
+        title = "Operating Systems PYQ Set 2021-2025",
+        description = "Semester-wise solved questions with short hints.",
+        tags = listOf("OS", "PYQ", "Exam"),
+        fileType = com.pravor.notessharing.model.FileType.Pyq,
+        upvotes = 214,
+        comments = 32,
+        downloadsCount = 980,
+        isUpvoted = true,
+        isSaved = true
+    )
+)
+
+private val previewUploadedFiles = listOf(
+    com.pravor.notessharing.model.StudyFile(
+        id = "uploaded-java",
+        title = "Java OOP Lab Manual",
+        uploadDate = "Uploaded May 12",
+        fileType = com.pravor.notessharing.model.FileType.Pdf,
+        downloadsCount = 89,
+        upvotes = 24
+    )
+)
+
 @Preview
 @Composable
 private fun HomePreview() {
     NotesSharingTheme {
         HomeScreen(
             uiState = HomeUiState.Success(
-                HomeContent(DummyData.categories.first(), DummyData.categories, DummyData.feedItems)
+                HomeContent(
+                    com.pravor.notessharing.model.Category.entries.first(),
+                    com.pravor.notessharing.model.Category.entries,
+                    previewFeedItems
+                )
             ),
             isRefreshing = false,
             onRefresh = {},
             myFilesUiState = MyFilesUiState.Success(
-                com.pravor.notessharing.state.MyFilesContent(emptyList(), DummyData.uploadedFiles)
+                com.pravor.notessharing.state.MyFilesContent(emptyList(), previewUploadedFiles)
             ),
             uploadsCount = 12,
             bookmarksCount = 5,
