@@ -13,7 +13,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * Repository in charge of executing text search queries using the official Algolia Kotlin Client SDK.
  * Exposes a provider-agnostic method to return standard SearchResultModel records to presentation layers.
  */
-class SearchRepository(
+open class SearchRepository(
+    private val searchCache: SearchCache = SearchCache(),
     private val appId: String = BuildConfig.ALGOLIA_APP_ID,
     private val apiKey: String = BuildConfig.ALGOLIA_SEARCH_KEY,
     private val indexName: String = "resources"
@@ -39,6 +40,30 @@ class SearchRepository(
             return@withContext emptyList()
         }
 
+        // Check the cache first (using normalized query internally in SearchCache)
+        val cachedResults = searchCache.get(query)
+        if (cachedResults != null) {
+            return@withContext cachedResults
+        }
+
+        try {
+            val results = executeNetworkSearch(query, selectedDocumentTypes)
+            // Cache successful results (including empty result lists)
+            searchCache.put(query, results)
+            results
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
+    /**
+     * Executes the actual network search using the Algolia client.
+     * Extracted and made open for unit testing.
+     */
+    internal open suspend fun executeNetworkSearch(
+        query: String,
+        selectedDocumentTypes: Set<String>
+    ): List<SearchResultModel> {
         val filterExpression = if (selectedDocumentTypes.isNotEmpty()) {
             selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
                 "documentType:$it"
@@ -52,48 +77,44 @@ class SearchRepository(
             filters = filterExpression
         )
 
-        try {
-            val response = client.searchSingleIndex(
-                indexName = indexName,
-                searchParams = params
-            )
-            response.hits.map { hit ->
-                val id = hit.objectID
-                val title = hit.additionalProperties?.get("title")?.jsonPrimitive?.content ?: ""
-                val displaySubject = (hit.additionalProperties?.get("displaySubject") ?: hit.additionalProperties?.get("subject"))?.jsonPrimitive?.content ?: ""
-                val documentType = hit.additionalProperties?.get("documentType")?.jsonPrimitive?.content ?: ""
-                val thumbnailUrl = hit.additionalProperties?.get("thumbnailUrl")?.jsonPrimitive?.content ?: ""
-                
-                val sectionDisplay = hit.additionalProperties?.get("sectionDisplay")?.jsonPrimitive?.content ?: ""
-                val examYear = hit.additionalProperties?.get("examYear")?.jsonPrimitive?.content ?: ""
-                val examType = hit.additionalProperties?.get("examType")?.jsonPrimitive?.content ?: ""
-                val branch = hit.additionalProperties?.get("branch")?.jsonPrimitive?.content ?: ""
-                val semester = hit.additionalProperties?.get("semester")?.jsonPrimitive?.content ?: ""
-                val college = hit.additionalProperties?.get("college")?.jsonPrimitive?.content ?: ""
-                val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
-                val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
+        val response = client.searchSingleIndex(
+            indexName = indexName,
+            searchParams = params
+        )
+        return response.hits.map { hit ->
+            val id = hit.objectID
+            val title = hit.additionalProperties?.get("title")?.jsonPrimitive?.content ?: ""
+            val displaySubject = (hit.additionalProperties?.get("displaySubject") ?: hit.additionalProperties?.get("subject"))?.jsonPrimitive?.content ?: ""
+            val documentType = hit.additionalProperties?.get("documentType")?.jsonPrimitive?.content ?: ""
+            val thumbnailUrl = hit.additionalProperties?.get("thumbnailUrl")?.jsonPrimitive?.content ?: ""
+            
+            val sectionDisplay = hit.additionalProperties?.get("sectionDisplay")?.jsonPrimitive?.content ?: ""
+            val examYear = hit.additionalProperties?.get("examYear")?.jsonPrimitive?.content ?: ""
+            val examType = hit.additionalProperties?.get("examType")?.jsonPrimitive?.content ?: ""
+            val branch = hit.additionalProperties?.get("branch")?.jsonPrimitive?.content ?: ""
+            val semester = hit.additionalProperties?.get("semester")?.jsonPrimitive?.content ?: ""
+            val college = hit.additionalProperties?.get("college")?.jsonPrimitive?.content ?: ""
+            val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
+            val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
 
-                SearchResultModel(
-                    id = id,
-                    title = title,
-                    subtitle = displaySubject,
-                    type = documentType,
-                    additionalInfo = documentType,
-                    thumbnailUrl = thumbnailUrl,
-                    sectionDisplay = sectionDisplay,
-                    examYear = examYear,
-                    examType = examType,
-                    branch = branch,
-                    semester = semester,
-                    college = college,
-                    channelName = channelName,
-                    playlistTitle = playlistTitle,
-                    subject = displaySubject,
-                    documentType = documentType
-                )
-            }
-        } catch (e: Exception) {
-            throw e
+            SearchResultModel(
+                id = id,
+                title = title,
+                subtitle = displaySubject,
+                type = documentType,
+                additionalInfo = documentType,
+                thumbnailUrl = thumbnailUrl,
+                sectionDisplay = sectionDisplay,
+                examYear = examYear,
+                examType = examType,
+                branch = branch,
+                semester = semester,
+                college = college,
+                channelName = channelName,
+                playlistTitle = playlistTitle,
+                subject = displaySubject,
+                documentType = documentType
+            )
         }
     }
 }
