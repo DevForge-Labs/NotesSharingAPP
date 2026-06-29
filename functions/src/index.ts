@@ -14,3 +14,4 @@ setGlobalOptions({
 export * from "./firestoreTriggers.js";
 export * from "./upvote.js";
 export * from "./trending.js";
+export * from "./videoRepair.js";

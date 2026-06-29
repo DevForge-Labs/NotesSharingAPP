@@ -14,7 +14,7 @@ export class SearchService {
    * Resolves configuration, maps data to search schema, and saves to repository.
    * Catches errors gracefully to avoid blocking Firestore transaction flows.
    */
-  static async indexResource(collectionName: string, docId: string, data: any): Promise<void> {
+  static async indexResource(collectionName: string, docId: string, data: any): Promise<boolean> {
     try {
       const config = getSearchConfig();
       if (!config.appId || !config.adminApiKey) {
@@ -23,7 +23,7 @@ export class SearchService {
           documentId: docId,
           status: "skipped",
         });
-        return;
+        return false;
       }
 
       let finalData = data;
@@ -86,6 +86,7 @@ export class SearchService {
         title: resource.title,
         status: "success",
       });
+      return true;
     } catch (error) {
       logger.error("Failed to index resource to search index", {
         collection: collectionName,
@@ -94,6 +95,7 @@ export class SearchService {
         status: "failure",
         error: error instanceof Error ? error.message : String(error),
       });
+      return false;
     }
   }
 

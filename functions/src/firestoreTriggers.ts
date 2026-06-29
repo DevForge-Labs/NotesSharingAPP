@@ -56,17 +56,6 @@ export const onCheatsheetsCreated = onDocumentCreated({
   await SearchService.indexResource("cheatsheets", docId, data);
 });
 
-// Videos trigger
-// export const onVideosCreatedSearch = onDocumentCreated({
-//   document: "videos/{docId}",
-//   secrets: [algoliaAdminApiKey],
-// }, async (event) => {
-//   const docId = event.params.docId;
-//   const data = event.data?.data();
-//   if (!data) return;
-//   await SearchService.indexResource("videos", docId, data);
-// });
-
 // Centralized FCM delivery trigger
 export const onNotificationCreated = onDocumentCreated({
   document: "users/{userId}/notifications/{notificationId}",

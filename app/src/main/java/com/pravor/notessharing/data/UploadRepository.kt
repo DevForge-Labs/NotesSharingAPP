@@ -248,7 +248,9 @@ class UploadRepository(private val context: Context) {
                 "fileExtension" to "",
                 "tags" to emptyList<String>(),
                 "youtubeUrl" to (youtubeUrl ?: (youtubePreview?.url ?: "")),
-                "trendingScore" to 0.0
+                "trendingScore" to 0.0,
+                "searchIndexed" to false,
+                "needsSearchIndexing" to true
             )
 
             if (isPlaylist) {
@@ -285,6 +287,17 @@ class UploadRepository(private val context: Context) {
                 doc["college"] = canonicalCollege
             }
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
+            
+            // Enqueue delayed video search indexing repair task
+            try {
+                com.google.firebase.functions.FirebaseFunctions.getInstance()
+                    .getHttpsCallable("enqueueVideoIndexing")
+                    .call(mapOf("docId" to documentId))
+                    .await()
+            } catch (e: Exception) {
+                android.util.Log.e("UploadRepository", "Failed to enqueue video indexing: ${e.message}")
+            }
+
             statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
             onProgress(1.0f)
         } else if (type == UploadType.Pyq) {
