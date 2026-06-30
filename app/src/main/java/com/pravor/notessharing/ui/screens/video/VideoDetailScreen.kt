@@ -41,6 +41,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+import com.pravor.notessharing.ui.components.ReportBottomSheet
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.VideoDetailUiState
 import com.pravor.notessharing.viewmodel.VideoDetailViewModel
@@ -332,6 +333,7 @@ fun VideoDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VideoDetailContent(
     video: VideoDetail,
@@ -345,6 +347,7 @@ private fun VideoDetailContent(
     onShowRemoveUpvoteDialog: () -> Unit
 ) {
     val bottomPadding = LocalBottomBarPadding.current
+    var showReportBottomSheet by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + bottomPadding),
@@ -376,7 +379,14 @@ private fun VideoDetailContent(
                 onShareClick = {
                     shareVideo(context, video.youtubeUrl, video.title)
                 },
-                shareEnabled = video.youtubeUrl.isNotBlank()
+                shareEnabled = video.youtubeUrl.isNotBlank(),
+                onReportClick = {
+                    if (currentUid.isEmpty()) {
+                        Toast.makeText(context, "Please sign in to report resources", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showReportBottomSheet = true
+                    }
+                }
             )
         }
 
@@ -433,6 +443,18 @@ private fun VideoDetailContent(
                 }
             }
         }
+    }
+
+    if (showReportBottomSheet) {
+        ReportBottomSheet(
+            resourceId = video.id,
+            resourceType = video.collection,
+            resourceTitle = video.title,
+            resourceThumbnail = video.thumbnailUrl ?: video.youtubeThumbnailUrl,
+            uploaderUid = video.uploaderId,
+            uploaderName = video.uploaderName,
+            onDismissRequest = { showReportBottomSheet = false }
+        )
     }
 }
 
@@ -611,7 +633,8 @@ fun VideoInfoCard(
     onUpvoteClick: (String) -> Unit,
     onShowRemoveUpvoteDialog: () -> Unit,
     onShareClick: () -> Unit,
-    shareEnabled: Boolean
+    shareEnabled: Boolean,
+    onReportClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -638,6 +661,17 @@ fun VideoInfoCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+
+                IconButton(
+                    onClick = { onReportClick() },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Flag,
+                        contentDescription = "Report Video",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
