@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Flag
+import com.pravor.notessharing.ui.components.ReportBottomSheet
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
@@ -453,6 +455,7 @@ fun DocumentDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentDetailSuccessContent(
     doc: DocumentDetail,
@@ -474,6 +477,7 @@ fun DocumentDetailSuccessContent(
     val currentUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    var showReportBottomSheet by remember { mutableStateOf(false) }
 
     LazyColumn(
         state = listState,
@@ -576,24 +580,47 @@ fun DocumentDetailSuccessContent(
                         else -> Color(0xFF64B5F6) // Softer Blue
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = accentColor.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.5f)),
-                        modifier = Modifier.height(30.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = accentColor.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.5f)),
+                            modifier = Modifier.height(30.dp)
                         ) {
-                            Text(
-                                text = docTypeTag,
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp,
-                                    fontSize = 12.sp,
-                                    color = accentColor
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = docTypeTag,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp,
+                                        fontSize = 12.sp,
+                                        color = accentColor
+                                    )
                                 )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                if (currentUid.isEmpty()) {
+                                    Toast.makeText(context, "Please sign in to report resources", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    showReportBottomSheet = true
+                                }
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Flag,
+                                contentDescription = "Report Resource",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -756,6 +783,18 @@ fun DocumentDetailSuccessContent(
                 )
             }
         }
+    }
+
+    if (showReportBottomSheet) {
+        ReportBottomSheet(
+            resourceId = doc.id,
+            resourceType = doc.collection,
+            resourceTitle = doc.title,
+            resourceThumbnail = doc.thumbnailUrl ?: doc.thumbnailUrls.firstOrNull(),
+            uploaderUid = doc.uploaderId,
+            uploaderName = doc.uploaderName,
+            onDismissRequest = { showReportBottomSheet = false }
+        )
     }
 }
 
