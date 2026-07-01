@@ -311,6 +311,7 @@ export const onVideosUpdated = onDocumentUpdated({
 export const onAdminDeletionLogCreated = onDocumentCreated({
   document: "admin_deletion_logs/{logId}",
   memory: "512MiB",
+  secrets: [algoliaAdminApiKey],
 }, async (event) => {
   const logId = event.params.logId;
   const logData = event.data?.data();
@@ -334,6 +335,18 @@ export const onAdminDeletionLogCreated = onDocumentCreated({
   logger.info(`Processing administrative deletion cascade for log ${logId}. Resource: ${resourceTitle} (${resourceType}, ${resourceId})`);
 
   try {
+    // 1.5. Propagate deletion to Algolia search index
+    if (resourceId && resourceType) {
+      try {
+        logger.info(`Propagating deletion to Algolia for resource ${resourceId} of type ${resourceType}`);
+        await SearchService.deleteResource(resourceType, resourceId);
+      } catch (algoliaError) {
+        logger.error(`Failed to propagate deletion to Algolia for resource ${resourceId}:`, algoliaError);
+      }
+    } else {
+      logger.warn(`Skipping Algolia deletion: resourceId or resourceType is missing in deletion log ${logId}`);
+    }
+
     // 2. Notify the uploader
     if (uploaderUid) {
       const uploaderDoc = await db.collection("users").doc(uploaderUid).get();
