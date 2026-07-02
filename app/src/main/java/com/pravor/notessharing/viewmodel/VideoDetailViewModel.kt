@@ -35,6 +35,14 @@ class VideoDetailViewModel(
     
     fun loadVideoDetail(videoId: String) {
         loadedVideoId = videoId
+        
+        val currentUid = auth.currentUser?.uid
+        if (!currentUid.isNullOrBlank()) {
+            viewModelScope.launch {
+                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(videoId, currentUid)
+            }
+        }
+
         viewModelScope.launch {
             _uiState.value = VideoDetailUiState.Loading
             try {

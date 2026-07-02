@@ -20,7 +20,10 @@ import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.outlined.Flag
 import com.pravor.notessharing.ui.components.ReportBottomSheet
+import com.pravor.notessharing.data.ReportRepository
+import com.pravor.notessharing.ui.navigation.LocalSnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
@@ -479,6 +482,9 @@ fun DocumentDetailSuccessContent(
     val listState = rememberLazyListState()
     var showReportBottomSheet by remember { mutableStateOf(false) }
 
+    val snackbarHostState = LocalSnackbarHostState.current
+    val scope = rememberCoroutineScope()
+
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -607,10 +613,19 @@ fun DocumentDetailSuccessContent(
                             }
                         }
 
+                        val reportedMap by ReportRepository.instance.reportedFlow.collectAsStateWithLifecycle()
+                        val isReported = remember(reportedMap, doc.id) {
+                            reportedMap[doc.id] == true
+                        }
+
                         IconButton(
                             onClick = {
                                 if (currentUid.isEmpty()) {
                                     Toast.makeText(context, "Please sign in to report resources", Toast.LENGTH_SHORT).show()
+                                } else if (isReported) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("You've already reported this resource.")
+                                    }
                                 } else {
                                     showReportBottomSheet = true
                                 }
@@ -618,9 +633,9 @@ fun DocumentDetailSuccessContent(
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Flag,
-                                contentDescription = "Report Resource",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                imageVector = if (isReported) Icons.Filled.Flag else Icons.Outlined.Flag,
+                                contentDescription = if (isReported) "Already Reported" else "Report Resource",
+                                tint = if (isReported) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
