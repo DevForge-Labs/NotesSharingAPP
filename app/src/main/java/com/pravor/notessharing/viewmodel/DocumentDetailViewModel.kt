@@ -273,6 +273,14 @@ class DocumentDetailViewModel(
 
     fun loadDocumentDetail(documentId: String, context: Context) {
         loadedDocumentId = documentId
+        
+        val currentUid = auth.currentUser?.uid
+        if (!currentUid.isNullOrBlank()) {
+            viewModelScope.launch {
+                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(documentId, currentUid)
+            }
+        }
+
         val currentState = _uiState.value
         if (currentState is DocumentDetailUiState.Success && currentState.document.id == documentId) {
             android.util.Log.d("DETAILS_DEBUG", "loadDocumentDetail: Already loaded, skipping fetch")

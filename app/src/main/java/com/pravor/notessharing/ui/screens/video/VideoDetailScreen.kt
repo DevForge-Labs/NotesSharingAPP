@@ -42,6 +42,9 @@ import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.components.ReportBottomSheet
+import androidx.compose.material.icons.outlined.Flag
+import com.pravor.notessharing.data.ReportRepository
+import com.pravor.notessharing.ui.navigation.LocalSnackbarHostState
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.VideoDetailUiState
 import com.pravor.notessharing.viewmodel.VideoDetailViewModel
@@ -636,6 +639,9 @@ fun VideoInfoCard(
     shareEnabled: Boolean,
     onReportClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val snackbarHostState = LocalSnackbarHostState.current
+    val scope = rememberCoroutineScope()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -664,14 +670,27 @@ fun VideoInfoCard(
                     )
                 }
 
+                val reportedMap by ReportRepository.instance.reportedFlow.collectAsStateWithLifecycle()
+                val isReported = remember(reportedMap, video.id) {
+                    reportedMap[video.id] == true
+                }
+
                 IconButton(
-                    onClick = { onReportClick() },
+                    onClick = {
+                        if (isReported && currentUid.isNotEmpty()) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("You've already reported this resource.")
+                            }
+                        } else {
+                            onReportClick()
+                        }
+                    },
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Flag,
-                        contentDescription = "Report Video",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = if (isReported) Icons.Filled.Flag else Icons.Outlined.Flag,
+                        contentDescription = if (isReported) "Already Reported" else "Report Video",
+                        tint = if (isReported) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

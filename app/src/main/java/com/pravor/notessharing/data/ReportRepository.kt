@@ -2,17 +2,42 @@ package com.pravor.notessharing.data
 
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 
 class ReportRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val reportsCollection = firestore.collection("reports")
 
+    private val _reportedFlow = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val reportedFlow: StateFlow<Map<String, Boolean>> = _reportedFlow.asStateFlow()
+    private var cachedUserId: String? = null
+
+    companion object {
+        val instance by lazy { ReportRepository() }
+    }
+
     suspend fun hasUserReported(resourceId: String, userId: String): Boolean {
+        if (userId.isBlank() || resourceId.isBlank()) return false
+        
+        synchronized(this) {
+            if (cachedUserId != userId) {
+                _reportedFlow.value = emptyMap()
+                cachedUserId = userId
+            }
+        }
+
+        _reportedFlow.value[resourceId]?.let { return it }
+
         return try {
             val docId = "${resourceId}_${userId}"
             val doc = reportsCollection.document(docId).get().await()
-            doc.exists()
+            val exists = doc.exists()
+            _reportedFlow.update { it + (resourceId to exists) }
+            exists
         } catch (e: Exception) {
             false
         }
@@ -72,9 +97,20 @@ class ReportRepository {
                 "actionTaken" to null
             )
             reportsCollection.document(docId).set(reportData).await()
+            
+            // Eagerly update cache upon successful submission
+            synchronized(this) {
+                if (cachedUserId != reporterUid) {
+                    _reportedFlow.value = emptyMap()
+                    cachedUserId = reporterUid
+                }
+            }
+            _reportedFlow.update { it + (resourceId to true) }
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 }
+

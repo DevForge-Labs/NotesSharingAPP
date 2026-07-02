@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.data.ReportRepository
+import com.pravor.notessharing.ui.navigation.LocalSnackbarHostState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -38,6 +39,7 @@ fun ReportBottomSheet(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = LocalSnackbarHostState.current
     val currentUser = remember { FirebaseAuth.getInstance().currentUser }
 
     val reasons = listOf(
@@ -196,7 +198,7 @@ fun ReportBottomSheet(
                         }
                         isSubmitting = true
                         scope.launch {
-                            val repo = ReportRepository()
+                            val repo = ReportRepository.instance
                             val result = repo.submitReport(
                                 resourceId = resourceId,
                                 resourceType = resourceType,
@@ -212,10 +214,14 @@ fun ReportBottomSheet(
                             )
                             isSubmitting = false
                             result.onSuccess {
-                                Toast.makeText(context, "Report submitted successfully.", Toast.LENGTH_SHORT).show()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Report submitted successfully.")
+                                }
                                 onDismissRequest()
                             }.onFailure { exception ->
-                                Toast.makeText(context, exception.message ?: "Failed to submit report", Toast.LENGTH_SHORT).show()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(exception.message ?: "Failed to submit report")
+                                }
                             }
                         }
                     },
