@@ -39,7 +39,7 @@ class VideoDetailViewModel(
         val currentUid = auth.currentUser?.uid
         if (!currentUid.isNullOrBlank()) {
             viewModelScope.launch {
-                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(videoId, currentUid)
+                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(videoId, currentUid, forceRefresh = true)
             }
         }
 
@@ -118,6 +118,10 @@ class VideoDetailViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        val videoId = loadedVideoId
+        if (videoId != null) {
+            com.pravor.notessharing.data.ReportRepository.instance.removeReportListener(videoId)
+        }
         clearUpvotesObservation()
     }
 }

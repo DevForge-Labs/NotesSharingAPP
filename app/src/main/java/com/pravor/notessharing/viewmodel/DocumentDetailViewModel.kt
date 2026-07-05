@@ -277,7 +277,7 @@ class DocumentDetailViewModel(
         val currentUid = auth.currentUser?.uid
         if (!currentUid.isNullOrBlank()) {
             viewModelScope.launch {
-                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(documentId, currentUid)
+                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(documentId, currentUid, forceRefresh = true)
             }
         }
 
@@ -550,6 +550,10 @@ class DocumentDetailViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        val docId = loadedDocumentId
+        if (docId != null) {
+            com.pravor.notessharing.data.ReportRepository.instance.removeReportListener(docId)
+        }
         clearUpvotesObservation()
     }
 
