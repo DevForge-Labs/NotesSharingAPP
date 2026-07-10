@@ -3,17 +3,19 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
 /**
- * Scheduled Cloud Function to run every 6 hours and update the trendingScore
+ * Scheduled Cloud Function to run every 24 hours and update the trendingScore
  * for all documents in the notes, assignments, pyqs, cheatsheets, and videos collections.
  */
 export const updateTrendingScores = onSchedule({
-  schedule: "every 6 hours",
+  schedule: "every 24 hours",
   memory: "512MiB",
   timeoutSeconds: 300,
 }, async (event) => {
   logger.info("Starting scheduled updateTrendingScores function execution.");
   const db = getFirestore();
   const collections = ["notes", "assignments", "pyqs", "cheatsheets", "videos"];
+  // Ignore tiny floating-point differences
+  const SCORE_THRESHOLD = 0.1;
 
   for (const col of collections) {
     try {
@@ -70,6 +72,19 @@ export const updateTrendingScores = onSchedule({
           const daysSinceUpload = (Date.now() - uploadedTimeMs) / (1000 * 60 * 60 * 24);
           const daysOld = Math.max(1, isNaN(daysSinceUpload) ? 0 : daysSinceUpload);
           const trendingScore = rawScore / Math.sqrt(daysOld);
+
+          const currentScore =
+            typeof data.trendingScore === "number"
+              ? data.trendingScore
+              : null;
+
+          const scoreChanged =
+            currentScore === null ||
+            Math.abs(currentScore - trendingScore) >= SCORE_THRESHOLD;
+
+          if (!scoreChanged) {
+            continue;
+          }
 
           // 4. Queue updates
           batch.update(doc.ref, {
