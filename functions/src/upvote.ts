@@ -5,7 +5,9 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
  * Callable function to toggle the upvote status of a document.
  * Expects { documentId, collectionName } in the request data.
  */
-export const upvote = onCall(async (request) => {
+export const upvote = onCall({
+  memory: "128MiB",
+}, async (request) => {
   // 1. Ensure user is authenticated
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated to upvote.");
