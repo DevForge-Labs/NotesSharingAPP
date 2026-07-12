@@ -336,7 +336,11 @@ export const onAdminDeletionLogCreated = onDocumentCreated({
   const resourceType = logData.resourceType || "";
   const deletionReason = logData.deletionReason || "Administrative Action";
   const uploaderUid = logData.uploaderUid;
-
+  const triggeredByReport = logData.triggeredByReport === true;
+  const reporterUid = logData.reporterUid;
+  const reportReason = logData.reportReason;
+  const reportNotificationSent = logData.reportNotificationSent === true;
+  const reportId = logData.reportId;
   logger.info(`Processing administrative deletion cascade for log ${logId}. Resource: ${resourceTitle} (${resourceType}, ${resourceId})`);
 
   try {
@@ -441,6 +445,72 @@ export const onAdminDeletionLogCreated = onDocumentCreated({
         }
       });
     }
+
+  // 3.5 Notify the reporter (only for report-based deletions)
+  if (
+    triggeredByReport &&
+    reporterUid &&
+    !reportNotificationSent
+  ) {
+    const reporterDoc = await db.collection("users").doc(reporterUid).get();
+
+    if (reporterDoc.exists) {
+      const reporterData = reporterDoc.data();
+
+      const masterEnabled =
+        reporterData?.notifications_enabled !== false;
+
+      const personalEnabled =
+        reporterData?.pref_notifications_personal !== false;
+
+      if (masterEnabled && personalEnabled) {
+        logger.info(
+          `Notifying reporter ${reporterUid} that report ${reportId} has been resolved.`
+        );
+
+        const reporterNotificationBody =
+          `The resource you reported "${resourceTitle}" has been reviewed by our moderation team and has been removed.\n\n` +
+          `Reported Reason:\n${reportReason}\n\n` +
+          `Thank you for helping keep NotesSharing safe.`;
+
+        const notificationId = crypto
+          .createHash("md5")
+          .update(`reporter_${logId}_${reporterUid}`)
+          .digest("hex");
+
+        await db
+          .collection("users")
+          .doc(reporterUid)
+          .collection("notifications")
+          .doc(notificationId)
+          .set(
+            {
+              title: "Report Reviewed",
+              body: reporterNotificationBody,
+              message: reporterNotificationBody,
+              type: "report_resolved_deleted",
+              read: false,
+              createdAt: FieldValue.serverTimestamp(),
+              targetId: resourceId,
+              targetType: resourceType,
+              resourceTitle,
+              resourceId,
+              resourceType,
+              reportId,
+            },
+            { merge: true }
+          );
+
+        await logRef.update({
+          reportNotificationSent: true,
+        });
+      } else {
+        logger.info(
+          `Reporter ${reporterUid} has notifications disabled. Skipping reporter notification.`
+        );
+      }
+    }
+  }
 
     // 4. Find all bookmark users
     const bookmarksSnap = await db.collection("bookmarks")
