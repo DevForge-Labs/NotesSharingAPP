@@ -5,6 +5,11 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -1036,10 +1041,31 @@ fun ProfileSkeletonLoading(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.12f))
             )
-            StudyLoadingIndicator(
-                text = "Loading profile...",
-                modifier = Modifier.wrapContentSize()
+            // Preserved original loading animation (commented out as requested)
+            // StudyLoadingIndicator(
+            //     text = "Loading profile...",
+            //     modifier = Modifier.wrapContentSize()
+            // )
+
+            // New Lottie Profile Loading Animation
+            val lottieCompositionResult = rememberLottieComposition(
+                LottieCompositionSpec.Asset("App_animations/profile_loading.json")
             )
+            val lottieComposition = lottieCompositionResult.value
+            val lottieProgress by animateLottieCompositionAsState(
+                composition = lottieComposition,
+                iterations = LottieConstants.IterateForever
+            )
+
+            if (lottieComposition != null) {
+                LottieAnimation(
+                    composition = lottieComposition,
+                    progress = { lottieProgress },
+                    modifier = Modifier.size(240.dp) // Size increased to 240dp
+                )
+            } else {
+                Spacer(modifier = Modifier.size(240.dp))
+            }
         }
     }
 }

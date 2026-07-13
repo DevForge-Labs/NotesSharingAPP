@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.ui.components.pdfViewing.PdfErrorView
 import com.pravor.notessharing.ui.components.pdfViewing.PdfLoadingView
 import com.pravor.notessharing.ui.components.pdfViewing.PdfViewerContent
+import com.pravor.notessharing.ui.components.pdfViewing.PdfNetworkErrorView
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.PdfViewingUiState
 import com.pravor.notessharing.viewmodel.PdfViewingViewModel
@@ -140,12 +141,21 @@ fun PdfViewingScreen(
                     PdfLoadingView()
                 }
                 is PdfViewingUiState.Error -> {
-                    PdfErrorView(
-                        message = state.message,
-                        onRetry = {
-                            viewModel.loadPdf(context, documentId, fileUrl)
-                        }
-                    )
+                    val isNetworkError = state.message.startsWith("Download failed:", ignoreCase = true)
+                    if (isNetworkError) {
+                        PdfNetworkErrorView(
+                            onRetry = {
+                                viewModel.loadPdf(context, documentId, fileUrl)
+                            }
+                        )
+                    } else {
+                        PdfErrorView(
+                            message = state.message,
+                            onRetry = {
+                                viewModel.loadPdf(context, documentId, fileUrl)
+                            }
+                        )
+                    }
                 }
                 is PdfViewingUiState.Success -> {
                     PdfViewerContent(

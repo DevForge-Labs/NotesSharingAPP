@@ -117,4 +117,7 @@ dependencies {
     // Algolia Search
     implementation(libs.algolia.client)
     implementation(libs.ktor.client.okhttp)
+
+    // Lottie Animation
+    implementation(libs.lottie.compose)
 }
