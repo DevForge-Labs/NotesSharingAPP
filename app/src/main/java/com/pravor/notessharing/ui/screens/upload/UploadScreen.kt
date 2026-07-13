@@ -79,10 +79,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -106,7 +113,8 @@ import com.pravor.notessharing.model.UploadFileSource
 import com.pravor.notessharing.model.UploadType
 import com.pravor.notessharing.state.UploadUiState
 import com.pravor.notessharing.state.YoutubePreview
-import com.pravor.notessharing.ui.components.AdaptiveScrollbar
+import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
+import com.pravor.notessharing.ui.components.explore_components.MonkeyMascot
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.LiquidTransferProgressBar
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
@@ -291,7 +299,9 @@ fun UploadScreen(
                 )
             }
         }
-        AdaptiveScrollbar(listState = listState)
+        ClimbingMascotScrollbar(listState = listState) { modifier, isScrolling ->
+            MonkeyMascot(modifier = modifier, isScrolling = isScrolling)
+        }
     }
 }
 
@@ -857,23 +867,58 @@ private fun EmptyUploadState(metadataComplete: Boolean) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Upload, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text(
-                text = if (metadataComplete) "Choose a content type" else "Start with metadata",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
+            val lottieCompositionResult = rememberLottieComposition(
+                LottieCompositionSpec.Asset("App_animations/upload_start_metadata.json")
             )
-            Text(
-                text = if (metadataComplete) "PDFs, images, and YouTube links cannot be mixed." else "Branch, semester, subject, and document type are required before file selection.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            val lottieComposition = lottieCompositionResult.value
+            val lottieProgress by animateLottieCompositionAsState(
+                composition = lottieComposition,
+                iterations = LottieConstants.IterateForever
             )
+
+            if (lottieComposition != null) {
+                LottieAnimation(
+                    composition = lottieComposition,
+                    progress = { lottieProgress },
+                    modifier = Modifier
+                        .size(125.dp)
+                        .offset(y = (-18).dp)
+                        .alpha(0.85f)
+                )
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Spacer(modifier = Modifier.height(58.dp))
+
+                Text(
+                    text = if (metadataComplete) "Choose a content type" else "Start with metadata",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = if (metadataComplete) "PDFs, images, and YouTube links cannot be mixed." else "Branch, semester, subject, and document type are required before file selection.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
     }
 }

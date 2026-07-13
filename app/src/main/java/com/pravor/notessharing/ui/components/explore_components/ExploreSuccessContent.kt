@@ -56,7 +56,8 @@ import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.model.VideoRecommendation
 import com.pravor.notessharing.model.ResourceType
 import com.pravor.notessharing.state.ExploreContent
-import com.pravor.notessharing.ui.components.AdaptiveScrollbar
+import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
+import com.pravor.notessharing.ui.components.explore_components.MonkeyMascot
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 
@@ -426,7 +427,9 @@ fun ExploreSuccessContent(
                 }
             }
         }
-        AdaptiveScrollbar(listState = listState)
+        ClimbingMascotScrollbar(listState = listState) { modifier, isScrolling ->
+            MonkeyMascot(modifier = modifier, isScrolling = isScrolling)
+        }
     }
 }
 

@@ -544,14 +544,18 @@ fun ForYouGridCard(
                 } else {
                     val imageUrl = if (!item.thumbnailUrl.isNullOrBlank()) item.thumbnailUrl else null
                     if (!imageUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        val imageRequest = remember(imageUrl) {
+                            coil.request.ImageRequest.Builder(context)
                                 .data(imageUrl)
                                 .crossfade(true)
                                 .size(280, 200)
                                 .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
                                 .diskCachePolicy(coil.request.CachePolicy.ENABLED)
-                                .build(),
+                                .build()
+                        }
+                        AsyncImage(
+                            model = imageRequest,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,

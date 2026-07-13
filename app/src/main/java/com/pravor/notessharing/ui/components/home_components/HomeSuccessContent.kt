@@ -39,7 +39,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.MyFilesUiState
-import com.pravor.notessharing.ui.components.AdaptiveScrollbar
+import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
+import com.pravor.notessharing.ui.components.explore_components.MonkeyMascot
 import com.pravor.notessharing.ui.components.CompactStudyFileRow
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
@@ -332,6 +333,8 @@ fun HomeSuccessContent(
                 )
             }
         }
-        AdaptiveScrollbar(listState = listState)
+        ClimbingMascotScrollbar(listState = listState) { modifier, isScrolling ->
+            MonkeyMascot(modifier = modifier, isScrolling = isScrolling)
+        }
     }
 }

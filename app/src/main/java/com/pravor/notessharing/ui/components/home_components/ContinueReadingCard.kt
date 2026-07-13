@@ -504,8 +504,9 @@ fun ContinueReadingCard(
                             val showThumbnail = isImage && !firstFileUrl.isNullOrBlank() && !imageLoadError
                             if (showThumbnail) {
                                 Box(modifier = Modifier.fillMaxSize()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(LocalContext.current)
+                                    val context = LocalContext.current
+                                    val imageRequest = remember(firstFileUrl) {
+                                        ImageRequest.Builder(context)
                                             .data(run {
                                                 val url = firstFileUrl
                                                 if (url != null && !url.startsWith("http")) java.io.File(url) else url
@@ -514,7 +515,10 @@ fun ContinueReadingCard(
                                             .size(300, 200)
                                             .memoryCachePolicy(CachePolicy.ENABLED)
                                             .diskCachePolicy(CachePolicy.ENABLED)
-                                            .build(),
+                                            .build()
+                                    }
+                                    AsyncImage(
+                                        model = imageRequest,
                                         contentDescription = item.title,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop,

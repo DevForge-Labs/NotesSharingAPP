@@ -114,7 +114,6 @@ import com.pravor.notessharing.model.Profile
 import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ProfileUiState
 import com.pravor.notessharing.state.ThemePreference
-import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.LiquidContributorCard
 import com.pravor.notessharing.ui.components.profile_components.ProfileHeaderCard
 import com.pravor.notessharing.ui.components.SectionHeader
@@ -401,7 +400,6 @@ private fun ProfileContent(
                 }
             }
         }
-        AdaptiveScrollbar(listState = listState)
 
         // Overlay Backdrop
         if (isExpanded) {

@@ -204,7 +204,7 @@ fun StartupLoadingScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Preparing NoteShare...",
+                text = "Preparing Campus Pages...",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.5.sp

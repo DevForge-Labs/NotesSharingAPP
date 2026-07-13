@@ -48,26 +48,8 @@ class TrendingFeedRepository(private val context: Context) {
         // Load cache immediately
         _trendingNotes.value = getCachedNotes()
 
-        // Configure Coil image loader with 50MB disk cache and memory cache limits
-        try {
-            val imageLoader = ImageLoader.Builder(context)
-                .memoryCache {
-                    MemoryCache.Builder(context)
-                        .maxSizePercent(0.25)
-                        .build()
-                }
-                .diskCache {
-                    DiskCache.Builder()
-                        .directory(context.cacheDir.resolve("image_cache"))
-                        .maxSizeBytes(50 * 1024 * 1024L) // 50 MB
-                        .build()
-                }
-                .respectCacheHeaders(false)
-                .build()
-            Coil.setImageLoader(imageLoader)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // Coil image loader is initialized globally in NotesSharingApplication
+        // to ensure caching is enabled immediately at app startup (for the Home screen).
     }
 
     private fun getCachedNotes(): List<TrendingNote> {
