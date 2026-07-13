@@ -302,14 +302,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 android.util.Log.d("PERF", "[PERF] Home feed load START thread=${Thread.currentThread().name}")
                 android.util.Log.d("PERF", "[PERF] Feed reload trigger source=$lastReloadCause")
                 try {
-                    val semester = forcedSemester ?: run {
+                    val userProfile = if (forcedSemester != null) null else run {
                         val currentUid = auth.currentUser?.uid
                         if (currentUid != null) {
-                            userService.getUserProfile(currentUid)?.semester
+                            userService.getUserProfile(currentUid)
                         } else {
                             null
                         }
                     }
+
+                    val semester = forcedSemester ?: userProfile?.semester
+                    val rawBranch = userProfile?.branch
+                    val rawCollege = userProfile?.college
 
                     val isNecessary = when (lastReloadCause) {
                         "NavigationReturn" -> {
@@ -337,6 +341,31 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
+                    val hasBranch = !rawBranch.isNullOrBlank()
+
+                    val subjectIds = if (hasSemester && hasBranch) {
+                        try {
+                            val branchId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(rawBranch!!)
+                            val collegeId = rawCollege?.takeIf { it.isNotBlank() } ?: "kiit"
+                            val doc = firestore.collection("curriculum")
+                                .document(collegeId.lowercase())
+                                .get()
+                                .await()
+
+                            val branchMap = doc.get(branchId) as? Map<*, *>
+                            val semesterData = branchMap?.get(semester!!)
+                            when (semesterData) {
+                                is List<*> -> semesterData.mapNotNull { it as? String }
+                                is Map<*, *> -> semesterData.keys.mapNotNull { it as? String }
+                                else -> emptyList()
+                            }.filter { it.isNotBlank() }
+                        } catch (e: Exception) {
+                            android.util.Log.e("CURRICULUM", "Error loading curriculum: ${e.message}", e)
+                            emptyList()
+                        }
+                    } else {
+                        emptyList()
+                    }
 
                     val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
                     val allDocs = coroutineScope {
@@ -345,7 +374,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                                 try {
                                     val firestoreQueryStartTime = System.currentTimeMillis()
                                     android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
-                                    val documents = if (hasSemester) {
+                                    val documents = if (subjectIds.isNotEmpty()) {
+                                        val colRef = firestore.collection(col)
+                                        // Chunk/batch the subjectIds to handle Firestore's whereIn list limits transparently
+                                        val chunks = subjectIds.chunked(30)
+                                        chunks.flatMap { chunk ->
+                                            colRef.whereIn("subjectId", chunk)
+                                                .get()
+                                                .await()
+                                                .documents
+                                        }
+                                    } else if (hasSemester) {
                                         firestore.collection(col)
                                             .whereEqualTo("semester", semester)
                                             .get()
@@ -361,6 +400,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                                     android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${documents.size} thread=${Thread.currentThread().name}")
                                     documents
                                 } catch (e: Exception) {
+                                    android.util.Log.e("FIRESTORE", "Error querying collection $col: ${e.message}", e)
                                     emptyList()
                                 }
                             }
