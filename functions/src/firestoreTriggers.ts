@@ -705,9 +705,9 @@ export const onReportResolved = onDocumentUpdated({
 
     const notificationBody =
       `Your report regarding "${resourceTitle}" has been reviewed by our moderation team.\n\n` +
-      `After careful review, we determined that this resource does not violate the NotesSharing Community Guidelines and will remain available.\n\n` +
+      `After careful review, we determined that this resource does not violate the Campus Pages Community Guidelines and will remain available.\n\n` +
       `Moderator's Message:\n${moderatorMessage}\n\n` +
-      `Thank you for helping improve NotesSharing.`;
+      `Thank you for helping improve Campus Pages.`;
 
     // Create notification document
     await db
