@@ -626,7 +626,7 @@ export const onAdminDeletionLogCreated = onDocumentCreated({
 // Report Resolved Trigger for Dismissed Reports
 export const onReportResolved = onDocumentUpdated({
   document: "reports/{reportId}",
-  memory: "128MiB",
+  memory: "512MiB",
 }, async (event) => {
   const reportId = event.params.reportId;
   const beforeData = event.data?.before.data();
