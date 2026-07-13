@@ -297,7 +297,7 @@ fun KnowledgeNetworkLoading(
                 ) {
                     Image(
                         painter = painterResource(R.drawable.app_logo_normal),
-                        contentDescription = "Notes Sharing Hub",
+                        contentDescription = "Campus Pages Hub",
                         modifier = Modifier.fillMaxSize()
                     )
                 }

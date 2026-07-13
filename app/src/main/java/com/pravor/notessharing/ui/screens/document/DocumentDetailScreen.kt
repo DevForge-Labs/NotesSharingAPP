@@ -523,7 +523,7 @@ fun DocumentDetailSuccessContent(
                                 )
                             )
                             Text(
-                                text = "This resource has been removed from NotesSharing but remains available on your device.",
+                                text = "This resource has been removed from Campus Pages but remains available on your device.",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = Color(0xFF64748B)
                                 )

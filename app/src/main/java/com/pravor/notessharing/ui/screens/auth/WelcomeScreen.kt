@@ -74,7 +74,7 @@ fun WelcomeScreen(
 
             // App Name & Tagline
             Text(
-                text = "Notes Sharing",
+                text = "Campus Pages",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground

@@ -126,7 +126,7 @@ fun NotificationPreferencesScreen(
             item(key = "category-announcements") {
                 PreferenceCategoryCard(
                     title = "Announcements",
-                    description = "Important messages, maintenance notices, feature releases, platform updates, and official NotesSharing communications.",
+                    description = "Important messages, maintenance notices, feature releases, platform updates, and official Campus Pages communications.",
                     icon = Icons.Default.Notifications,
                     checked = uiState.announcements,
                     onCheckedChange = { viewModel.toggleCategory("pref_notifications_announcements", it) },
@@ -246,7 +246,7 @@ private fun HeroNotificationsCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Manage how NotesSharing keeps you informed.",
+                        text = "Manage how Campus Pages keeps you informed.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

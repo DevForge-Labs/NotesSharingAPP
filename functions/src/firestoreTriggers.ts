@@ -59,7 +59,6 @@ export const onCheatsheetsCreated = onDocumentCreated({
 // Centralized FCM delivery trigger
 export const onNotificationCreated = onDocumentCreated({
   document: "users/{userId}/notifications/{notificationId}",
-  memory: "128MiB",
 }, async (event) => {
   const userId = event.params.userId;
   const notificationId = event.params.notificationId;
@@ -80,7 +79,7 @@ export const onNotificationCreated = onDocumentCreated({
       return;
     }
 
-    const title = data.title || "NotesSharing Update";
+    const title = data.title || "Campus Pages Update";
     const body = data.body || data.message || "";
     const payloadData = data.data || {};
     
@@ -239,7 +238,6 @@ async function handleSoftDeletion(
 export const onNotesUpdated = onDocumentUpdated({
   document: "notes/{docId}",
   secrets: [algoliaAdminApiKey],
-  memory: "256MiB",
 }, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
@@ -255,7 +253,6 @@ export const onNotesUpdated = onDocumentUpdated({
 export const onPyqsUpdated = onDocumentUpdated({
   document: "pyqs/{docId}",
   secrets: [algoliaAdminApiKey],
-  memory: "256MiB",
 }, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
@@ -271,7 +268,6 @@ export const onPyqsUpdated = onDocumentUpdated({
 export const onAssignmentsUpdated = onDocumentUpdated({
   document: "assignments/{docId}",
   secrets: [algoliaAdminApiKey],
-  memory: "256MiB",
 }, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
@@ -287,7 +283,6 @@ export const onAssignmentsUpdated = onDocumentUpdated({
 export const onCheatsheetsUpdated = onDocumentUpdated({
   document: "cheatsheets/{docId}",
   secrets: [algoliaAdminApiKey],
-  memory: "256MiB",
 }, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
@@ -303,7 +298,6 @@ export const onCheatsheetsUpdated = onDocumentUpdated({
 export const onVideosUpdated = onDocumentUpdated({
   document: "videos/{docId}",
   secrets: [algoliaAdminApiKey],
-  memory: "256MiB",
 }, async (event) => {
   const docId = event.params.docId;
   const beforeData = event.data?.before.data();
@@ -318,7 +312,6 @@ export const onVideosUpdated = onDocumentUpdated({
 // Administrative Deletion Cascade Trigger
 export const onAdminDeletionLogCreated = onDocumentCreated({
   document: "admin_deletion_logs/{logId}",
-  memory: "256MiB",
   secrets: [algoliaAdminApiKey],
 }, async (event) => {
   const logId = event.params.logId;
@@ -474,7 +467,7 @@ export const onAdminDeletionLogCreated = onDocumentCreated({
         const reporterNotificationBody =
           `The resource you reported "${resourceTitle}" has been reviewed by our moderation team and has been removed.\n\n` +
           `Reported Reason:\n${reportReason}\n\n` +
-          `Thank you for helping keep NotesSharing safe.`;
+          `Thank you for helping keep Campus Pages safe.`;
 
         const notificationId = crypto
           .createHash("md5")

@@ -8,7 +8,7 @@ import { logger } from "firebase-functions";
  */
 export const updateTrendingScores = onSchedule({
   schedule: "every 24 hours",
-  memory: "256MiB",
+  memory: "512MiB",
   timeoutSeconds: 300,
 }, async (event) => {
   logger.info("Starting scheduled updateTrendingScores function execution.");

@@ -6,7 +6,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
  * Expects { documentId, collectionName } in the request data.
  */
 export const upvote = onCall({
-  memory: "128MiB",
+  memory: "512MiB",
 }, async (request) => {
   // 1. Ensure user is authenticated
   if (!request.auth) {

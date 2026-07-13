@@ -108,12 +108,12 @@ private fun WidgetContent(
         ) {
             Image(
                 provider = ImageProvider(R.drawable.app_logo_normal),
-                contentDescription = "NotesSharing Logo",
+                contentDescription = "Campus Pages Logo",
                 modifier = GlanceModifier.size(16.dp)
             )
             Spacer(modifier = GlanceModifier.width(6.dp))
             Text(
-                text = "NotesSharing",
+                text = "Campus Pages",
                 style = TextStyle(
                     color = androidx.glance.unit.ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
                     fontSize = 11.sp,

@@ -46,7 +46,7 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
         Log.d("FCM_SERVICE", "onMessageReceived: Message data payload = ${remoteMessage.data}")
 
         // 1. Read notification title and body
-        val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "NotesSharing Update"
+        val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Campus Pages Update"
         val body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
 
         // 2. Read optional data payload fields

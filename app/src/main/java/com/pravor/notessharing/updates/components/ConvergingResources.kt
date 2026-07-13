@@ -140,7 +140,7 @@ fun ConvergingResourcesVisual(isActive: Boolean) {
             ) {
                 Image(
                     painter = painterResource(R.drawable.app_logo_normal),
-                    contentDescription = "NotesSharing Logo",
+                    contentDescription = "Campus Pages Logo",
                     modifier = Modifier.size(56.dp)
                 )
             }

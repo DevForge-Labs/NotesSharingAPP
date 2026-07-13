@@ -37,7 +37,7 @@ export const enqueueVideoIndexing = onCall(async (request) => {
  * Checks if searchIndexed is false, indexes the video, and sets searchIndexed = true.
  */
 export const repairVideoSearchIndexTask = onTaskDispatched({
-  memory: "256MiB",
+  memory: "512MiB",
   secrets: [algoliaAdminApiKey],
   retryConfig: {
     maxAttempts: 1, // Let trendingScore cron rescue on persistent failure

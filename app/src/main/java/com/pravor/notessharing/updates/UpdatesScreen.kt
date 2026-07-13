@@ -106,7 +106,7 @@ fun UpdatesScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
-                        text = "Join NotesSharing",
+                        text = "Join Campus Pages",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface

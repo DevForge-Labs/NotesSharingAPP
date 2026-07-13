@@ -24,7 +24,7 @@ object OnboardingPages {
         ),
         UpdatePageModel(
             pageIndex = 3,
-            headline = "Why Students Use Notes Sharing",
+            headline = "Why Students Use Campus Pages",
             supportingText = "Unlock the power of shared knowledge to speed up your learning and help others.",
             layoutType = UpdatePageModel.LayoutType.WHY_USE_APP
         ),
