@@ -105,6 +105,9 @@ export const onNotificationCreated = onDocumentCreated({
         title,
         body,
       },
+      android: {
+        priority: "high" as const,
+      },
     };
 
     const response = await getMessaging().send(message);
