@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.*
 
 @Composable
 fun DocumentErrorState(
@@ -77,70 +78,91 @@ fun DocumentErrorState(
             modifier = Modifier.padding(24.dp)
         ) {
             // Visual Illustration container (same size as StudyLoadingIndicator)
-            Box(
-                modifier = Modifier.size(160.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Glow effect in background (harmonized error tint)
+            val isNotAvailable = title == "Not Available" || message == "This resource is no longer available."
+            if (isNotAvailable) {
+                val compositionResult = rememberLottieComposition(
+                    LottieCompositionSpec.Asset("App_animations/search_not_found.json")
+                )
+                val composition = compositionResult.value
+                val progress by animateLottieCompositionAsState(
+                    composition = composition,
+                    iterations = LottieConstants.IterateForever
+                )
+                if (composition != null) {
+                    LottieAnimation(
+                        composition = composition,
+                        progress = { progress },
+                        modifier = Modifier.size(200.dp)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.size(200.dp))
+                }
+            } else {
                 Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
-                                    Color.Transparent
+                    modifier = Modifier.size(160.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Glow effect in background (harmonized error tint)
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                        Color.Transparent
+                                    )
                                 )
                             )
+                    )
+
+                    // Center stationary notebook (MenuBook)
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer {
+                                translationY = notebookFloatOffset.dp.toPx()
+                            }
+                    )
+
+                    // Orbit-like element 1 (Left PDF Page/Description)
+                    Box(
+                        modifier = Modifier.size(115.dp),
+                        contentAlignment = Alignment.BottomStart
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .graphicsLayer {
+                                    translationY = pageFloatOffset.dp.toPx()
+                                    rotationZ = -15f
+                                }
                         )
-                )
+                    }
 
-                // Center stationary notebook (MenuBook)
-                Icon(
-                    imageVector = Icons.Default.MenuBook,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .graphicsLayer {
-                            translationY = notebookFloatOffset.dp.toPx()
-                        }
-                )
-
-                // Orbit-like element 1 (Left PDF Page/Description)
-                Box(
-                    modifier = Modifier.size(115.dp),
-                    contentAlignment = Alignment.BottomStart
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer {
-                                translationY = pageFloatOffset.dp.toPx()
-                                rotationZ = -15f
-                            }
-                    )
-                }
-
-                // Orbit-like element 2 (Right Pencil/Edit)
-                Box(
-                    modifier = Modifier.size(115.dp),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        tint = Color(0xFFFFB74D).copy(alpha = 0.8f), // Soft Amber
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer {
-                                translationY = pencilFloatOffset.dp.toPx()
-                                rotationZ = 30f
-                            }
-                    )
+                    // Orbit-like element 2 (Right Pencil/Edit)
+                    Box(
+                        modifier = Modifier.size(115.dp),
+                        contentAlignment = Alignment.TopEnd
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = Color(0xFFFFB74D).copy(alpha = 0.8f), // Soft Amber
+                            modifier = Modifier
+                                .size(24.dp)
+                                .graphicsLayer {
+                                    translationY = pencilFloatOffset.dp.toPx()
+                                    rotationZ = 30f
+                                }
+                        )
+                    }
                 }
             }
 
