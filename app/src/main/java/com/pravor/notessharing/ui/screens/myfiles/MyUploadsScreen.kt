@@ -46,6 +46,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -76,6 +78,7 @@ fun MyUploadsScreen(
     val scrollState = rememberScrollState()
     val bottomPadding = LocalBottomBarPadding.current
     var selectedFilter by remember { mutableStateOf("All") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -122,6 +125,9 @@ fun MyUploadsScreen(
                 // Search Bar
                 NotesSearchBar(
                     placeholder = "Search uploaded files...",
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    isReadOnly = false,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -199,10 +205,16 @@ fun MyUploadsScreen(
                             }
                             
                             val displayEmpty = uploadedFiles.isEmpty()
-                            val filteredFiles = if (displayEmpty) {
-                                emptyList()
-                            } else {
-                                uploadedFiles.filter { it.matchesFilter(selectedFilter) }
+                            val filteredFiles by remember(uploadedFiles, selectedFilter, searchQuery) {
+                                derivedStateOf {
+                                    if (displayEmpty) {
+                                        emptyList()
+                                    } else {
+                                        uploadedFiles
+                                            .filter { it.matchesFilter(selectedFilter) }
+                                            .filter { it.matchesSearchQuery(searchQuery) }
+                                    }
+                                }
                             }
                             
                             if (displayEmpty) {
@@ -247,36 +259,45 @@ fun MyUploadsScreen(
                                 }
                             } else {
                                 if (filteredFiles.isEmpty()) {
-                                    val emptyTitle = when (selectedFilter) {
-                                        "Notes" -> "No notes"
-                                        "PYQs" -> "No PYQs"
-                                        "Assignments" -> "No assignments"
-                                        "Cheat Sheets" -> "No cheat sheets"
-                                        "Videos" -> "No videos"
-                                        else -> "No content"
+                                    if (searchQuery.isNotEmpty()) {
+                                        PremiumEmptyState(
+                                            title = "No matching uploads found.",
+                                            message = null,
+                                            icon = Icons.Default.UploadFile,
+                                            accentColor = Color(0xFF58D6D1)
+                                        )
+                                    } else {
+                                        val emptyTitle = when (selectedFilter) {
+                                            "Notes" -> "No notes"
+                                            "PYQs" -> "No PYQs"
+                                            "Assignments" -> "No assignments"
+                                            "Cheat Sheets" -> "No cheat sheets"
+                                            "Videos" -> "No videos"
+                                            else -> "No content"
+                                        }
+                                        val emptyIcon = when (selectedFilter) {
+                                            "Notes" -> Icons.Default.Description
+                                            "PYQs" -> Icons.Default.Help
+                                            "Assignments" -> Icons.Default.Assignment
+                                            "Cheat Sheets" -> Icons.Default.Bolt
+                                            "Videos" -> Icons.Default.PlayArrow
+                                            else -> Icons.Default.FilePresent
+                                        }
+                                        val emptyColor = when (selectedFilter) {
+                                            "Notes" -> Color(0xFF58D6D1)
+                                            "PYQs" -> Color(0xFFFFB45C)
+                                            "Assignments" -> Color(0xFF7AD7FF)
+                                            "Cheat Sheets" -> Color(0xFFC7A6FF)
+                                            "Videos" -> Color(0xFFFF6B6B)
+                                            else -> Color(0xFFCFD8DC)
+                                        }
+                                        PremiumEmptyState(
+                                            title = emptyTitle,
+                                            message = null,
+                                            icon = emptyIcon,
+                                            accentColor = emptyColor
+                                        )
                                     }
-                                    val emptyIcon = when (selectedFilter) {
-                                        "Notes" -> Icons.Default.Description
-                                        "PYQs" -> Icons.Default.Help
-                                        "Assignments" -> Icons.Default.Assignment
-                                        "Cheat Sheets" -> Icons.Default.Bolt
-                                        "Videos" -> Icons.Default.PlayArrow
-                                        else -> Icons.Default.FilePresent
-                                    }
-                                    val emptyColor = when (selectedFilter) {
-                                        "Notes" -> Color(0xFF58D6D1)
-                                        "PYQs" -> Color(0xFFFFB45C)
-                                        "Assignments" -> Color(0xFF7AD7FF)
-                                        "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                        "Videos" -> Color(0xFFFF6B6B)
-                                        else -> Color(0xFFCFD8DC)
-                                    }
-                                    PremiumEmptyState(
-                                        title = emptyTitle,
-                                        message = null,
-                                        icon = emptyIcon,
-                                        accentColor = emptyColor
-                                    )
                                 } else {
                                     Box(Modifier.fillMaxSize()) {
                                         LazyColumn(

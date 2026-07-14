@@ -56,7 +56,20 @@ data class StudyFile(
     val sectionDisplay: String? = null,
     val availability: ResourceAvailability = ResourceAvailability.ACTIVE,
     val localThumbnailPath: String? = null
-)
+) {
+    fun matchesSearchQuery(query: String): Boolean {
+        if (query.isBlank()) return true
+        val normalizedQuery = query.trim().lowercase(java.util.Locale.ROOT)
+        
+        return title.lowercase(java.util.Locale.ROOT).contains(normalizedQuery) ||
+                subject?.lowercase(java.util.Locale.ROOT)?.contains(normalizedQuery) == true ||
+                documentType?.lowercase(java.util.Locale.ROOT)?.contains(normalizedQuery) == true ||
+                examYear?.lowercase(java.util.Locale.ROOT)?.contains(normalizedQuery) == true ||
+                examType?.lowercase(java.util.Locale.ROOT)?.contains(normalizedQuery) == true ||
+                sectionDisplay?.lowercase(java.util.Locale.ROOT)?.contains(normalizedQuery) == true ||
+                fileType.label.lowercase(java.util.Locale.ROOT).contains(normalizedQuery)
+    }
+}
 
 @Immutable
 data class TrendingTopic(

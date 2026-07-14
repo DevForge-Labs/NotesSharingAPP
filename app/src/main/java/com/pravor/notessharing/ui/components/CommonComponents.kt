@@ -63,6 +63,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PlayArrow
@@ -80,10 +82,14 @@ import com.pravor.notessharing.ui.theme.NotesSharingTheme
 fun NotesSearchBar(
     placeholder: String,
     modifier: Modifier = Modifier,
+    value: String = "",
+    onValueChange: (String) -> Unit = {},
+    isReadOnly: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val focusRequester = remember { FocusRequester() }
 
     val bgBrush = if (isPressed) {
         Brush.verticalGradient(
@@ -117,7 +123,13 @@ fun NotesSearchBar(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null, // pure tactile custom highlight response
-                onClick = onClick
+                onClick = {
+                    if (isReadOnly) {
+                        onClick()
+                    } else {
+                        focusRequester.requestFocus()
+                    }
+                }
             ),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, borderTint),
@@ -148,14 +160,60 @@ fun NotesSearchBar(
 
             Spacer(Modifier.width(14.dp))
 
-            Text(
-                text = placeholder,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.2.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-            )
+            if (isReadOnly) {
+                Text(
+                    text = placeholder,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.2.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.2.sp
+                    ),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF58D6D1)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    singleLine = true,
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (value.isEmpty()) {
+                                Text(
+                                    text = placeholder,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        letterSpacing = 0.2.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+
+                if (value.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onValueChange("") },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }

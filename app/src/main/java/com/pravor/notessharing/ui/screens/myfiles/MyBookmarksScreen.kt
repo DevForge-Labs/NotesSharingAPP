@@ -43,6 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +82,7 @@ fun MyBookmarksScreen(
     val bottomPadding = LocalBottomBarPadding.current
     var selectedFilter by remember { mutableStateOf("All") }
     var pendingRemoveBookmarkFile by remember { mutableStateOf<com.pravor.notessharing.model.StudyFile?>(null) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
     val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
@@ -180,6 +183,9 @@ fun MyBookmarksScreen(
                 // Search Bar
                 NotesSearchBar(
                     placeholder = "Search saved resources...",
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    isReadOnly = false,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -259,10 +265,16 @@ fun MyBookmarksScreen(
                             }
 
                             val displayEmpty = bookmarks.isEmpty()
-                            val filteredFiles = if (displayEmpty) {
-                                emptyList()
-                            } else {
-                                bookmarks.filter { it.matchesFilter(selectedFilter) }
+                            val filteredFiles by remember(bookmarks, selectedFilter, searchQuery) {
+                                derivedStateOf {
+                                    if (displayEmpty) {
+                                        emptyList()
+                                    } else {
+                                        bookmarks
+                                            .filter { it.matchesFilter(selectedFilter) }
+                                            .filter { it.matchesSearchQuery(searchQuery) }
+                                    }
+                                }
                             }
                             
                             if (displayEmpty) {
@@ -307,36 +319,45 @@ fun MyBookmarksScreen(
                                 }
                             } else {
                                 if (filteredFiles.isEmpty()) {
-                                    val emptyTitle = when (selectedFilter) {
-                                        "Notes" -> "No notes"
-                                        "PYQs" -> "No PYQs"
-                                        "Assignments" -> "No assignments"
-                                        "Cheat Sheets" -> "No cheat sheets"
-                                        "Videos" -> "No videos"
-                                        else -> "No content"
+                                    if (searchQuery.isNotEmpty()) {
+                                        PremiumEmptyState(
+                                            title = "No matching bookmarks found.",
+                                            message = null,
+                                            icon = Icons.Default.Bookmark,
+                                            accentColor = Color(0xFFFFB45C)
+                                        )
+                                    } else {
+                                        val emptyTitle = when (selectedFilter) {
+                                            "Notes" -> "No notes"
+                                            "PYQs" -> "No PYQs"
+                                            "Assignments" -> "No assignments"
+                                            "Cheat Sheets" -> "No cheat sheets"
+                                            "Videos" -> "No videos"
+                                            else -> "No content"
+                                        }
+                                        val emptyIcon = when (selectedFilter) {
+                                            "Notes" -> Icons.Default.Description
+                                            "PYQs" -> Icons.Default.Help
+                                            "Assignments" -> Icons.Default.Assignment
+                                            "Cheat Sheets" -> Icons.Default.Bolt
+                                            "Videos" -> Icons.Default.PlayArrow
+                                            else -> Icons.Default.FilePresent
+                                        }
+                                        val emptyColor = when (selectedFilter) {
+                                            "Notes" -> Color(0xFF58D6D1)
+                                            "PYQs" -> Color(0xFFFFB45C)
+                                            "Assignments" -> Color(0xFF7AD7FF)
+                                            "Cheat Sheets" -> Color(0xFFC7A6FF)
+                                            "Videos" -> Color(0xFFFF6B6B)
+                                            else -> Color(0xFFCFD8DC)
+                                        }
+                                        PremiumEmptyState(
+                                            title = emptyTitle,
+                                            message = null,
+                                            icon = emptyIcon,
+                                            accentColor = emptyColor
+                                        )
                                     }
-                                    val emptyIcon = when (selectedFilter) {
-                                        "Notes" -> Icons.Default.Description
-                                        "PYQs" -> Icons.Default.Help
-                                        "Assignments" -> Icons.Default.Assignment
-                                        "Cheat Sheets" -> Icons.Default.Bolt
-                                        "Videos" -> Icons.Default.PlayArrow
-                                        else -> Icons.Default.FilePresent
-                                    }
-                                    val emptyColor = when (selectedFilter) {
-                                        "Notes" -> Color(0xFF58D6D1)
-                                        "PYQs" -> Color(0xFFFFB45C)
-                                        "Assignments" -> Color(0xFF7AD7FF)
-                                        "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                        "Videos" -> Color(0xFFFF6B6B)
-                                        else -> Color(0xFFCFD8DC)
-                                    }
-                                    PremiumEmptyState(
-                                        title = emptyTitle,
-                                        message = null,
-                                        icon = emptyIcon,
-                                        accentColor = emptyColor
-                                    )
                                 } else {
                                     Box(Modifier.fillMaxSize()) {
                                          LazyColumn(
