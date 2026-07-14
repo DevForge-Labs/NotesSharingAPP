@@ -354,7 +354,34 @@ fun DocumentDetailScreen(
                         DocumentDetailSuccessContent(
                             doc = successState.document,
                             contributorLevel = successState.contributorLevel,
-                            relatedDocuments = successState.relatedDocuments,
+                            relatedDocuments = successState.relatedDocuments.filter { doc ->
+                                val cleanedTitle = doc.title.trim().lowercase(java.util.Locale.ROOT)
+                                val cleanedSubject = doc.subject.trim().lowercase(java.util.Locale.ROOT)
+                                val cleanedDisplaySubject = (doc.displaySubject ?: "").trim().lowercase(java.util.Locale.ROOT)
+                                
+                                val isTitleValid = doc.title.isNotBlank() &&
+                                    cleanedTitle != "untitled document" &&
+                                    cleanedTitle != "untitled" &&
+                                    cleanedTitle != "unknown" &&
+                                    cleanedTitle != "placeholder" &&
+                                    !cleanedTitle.startsWith("untitled")
+                                
+                                val isSubjectValid = doc.subject.isNotBlank() &&
+                                    cleanedSubject != "unknown" &&
+                                    cleanedSubject != "untitled" &&
+                                    cleanedSubject != "placeholder" &&
+                                    !cleanedSubject.startsWith("untitled")
+                                
+                                val isDisplaySubjectValid = doc.displaySubject.isNullOrBlank() || (
+                                    cleanedDisplaySubject != "unknown" &&
+                                    cleanedDisplaySubject != "untitled" &&
+                                    cleanedDisplaySubject != "placeholder"
+                                )
+
+                                val hasFiles = doc.fileUrls.isNotEmpty() && doc.fileUrls.any { it.isNotBlank() }
+
+                                isTitleValid && isSubjectValid && isDisplaySubjectValid && hasFiles
+                            },
                             downloadState = downloadState,
                             shareLoading = shareLoading,
                             onNavigateToDetail = onNavigateToDetail,

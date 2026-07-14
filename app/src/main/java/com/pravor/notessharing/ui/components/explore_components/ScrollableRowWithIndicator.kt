@@ -53,8 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pravor.notessharing.ui.components.AdaptiveScrollbar
-import com.pravor.notessharing.ui.components.ScrollbarOrientation
+import com.pravor.notessharing.ui.components.explore_components.RunningSquirrelScrollbar
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -296,9 +295,8 @@ fun ScrollableRowWithIndicator(
                 contentPadding = PaddingValues(end = 6.dp),
                 content = content
             )
-            AdaptiveScrollbar(
-                listState = state,
-                orientation = ScrollbarOrientation.Horizontal
+            RunningSquirrelScrollbar(
+                listState = state
             )
         }
     }
