@@ -54,6 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.*
 import androidx.compose.ui.draw.clip
 import coil.compose.AsyncImage
 import androidx.compose.ui.window.Dialog
@@ -510,8 +511,27 @@ fun StatePanel(
 ) {
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val isNotAvailable = title == "Not Available" || message == "This resource is no longer available."
             if (loading) {
                 CircularProgressIndicator()
+            } else if (isNotAvailable) {
+                val compositionResult = rememberLottieComposition(
+                    LottieCompositionSpec.Asset("App_animations/search_not_found.json")
+                )
+                val composition = compositionResult.value
+                val progress by animateLottieCompositionAsState(
+                    composition = composition,
+                    iterations = LottieConstants.IterateForever
+                )
+                if (composition != null) {
+                    LottieAnimation(
+                        composition = composition,
+                        progress = { progress },
+                        modifier = Modifier.size(160.dp)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.size(160.dp))
+                }
             } else {
                 Icon(
                     imageVector = Icons.Default.ErrorOutline,

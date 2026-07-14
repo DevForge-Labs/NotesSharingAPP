@@ -197,5 +197,3 @@ export const NotificationService = {
   createNotification,
   createNotificationsForUsers,
 };
-
-

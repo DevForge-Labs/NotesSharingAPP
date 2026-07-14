@@ -11,7 +11,11 @@ setGlobalOptions({
 });
 
 // 3. Export Firestore triggers
-export * from "./firestoreTriggers.js";
+export * from "./triggers/resourceCreate.js";
+export * from "./triggers/resourceUpdate.js";
+export * from "./triggers/notificationTrigger.js";
+export * from "./triggers/adminDeletionTrigger.js";
+export * from "./triggers/reportTrigger.js";
 export * from "./upvote.js";
 export * from "./trending.js";
 export * from "./videoRepair.js";

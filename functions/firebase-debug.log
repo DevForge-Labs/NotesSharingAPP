@@ -1,0 +1,104 @@
+[debug] [2026-07-14T12:26:58.965Z] ----------------------------------------------------------------------
+[debug] [2026-07-14T12:26:58.968Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\KIIT\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:shell
+[debug] [2026-07-14T12:26:58.968Z] CLI Version:   15.22.2
+[debug] [2026-07-14T12:26:58.968Z] Platform:      win32
+[debug] [2026-07-14T12:26:58.968Z] Node Version:  v24.12.0
+[debug] [2026-07-14T12:26:58.968Z] Detected Agent: antigravity
+[debug] [2026-07-14T12:26:58.968Z] Time:          Tue Jul 14 2026 17:56:58 GMT+0530 (India Standard Time)
+[debug] [2026-07-14T12:26:58.968Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-14T12:26:58.971Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-07-14T12:27:04.899Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-14T12:27:04.899Z] > authorizing via signed-in user (pratyush.deve@gmail.com)
+[debug] [2026-07-14T12:27:04.899Z] [iam] checking project notessharingapp-dfee3 for permissions ["firebase.projects.get"]
+[debug] [2026-07-14T12:27:04.901Z] Checked if tokens are valid: false, expires at: 1783942716562
+[debug] [2026-07-14T12:27:04.901Z] Checked if tokens are valid: false, expires at: 1783942716562
+[debug] [2026-07-14T12:27:04.901Z] > refreshing access token with scopes: []
+[debug] [2026-07-14T12:27:04.902Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-07-14T12:27:04.902Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-14T12:27:05.272Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-07-14T12:27:05.272Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-14T12:27:05.291Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/notessharingapp-dfee3:testIamPermissions [none]
+[debug] [2026-07-14T12:27:05.291Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/notessharingapp-dfee3:testIamPermissions  x-goog-user-project=notessharingapp-dfee3
+[debug] [2026-07-14T12:27:05.291Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/notessharingapp-dfee3:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-07-14T12:27:05.715Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-07-14T12:27:05.715Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-07-14T12:27:06.989Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/notessharingapp-dfee3:testIamPermissions 200
+[debug] [2026-07-14T12:27:06.990Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/notessharingapp-dfee3:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-07-14T12:27:06.994Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-14T12:27:07.010Z] defaultcredentials: writing to file C:\Users\KIIT\AppData\Roaming\firebase\pratyush_deve_gmail.com_application_default_credentials.json
+[debug] [2026-07-14T12:27:07.011Z] DEBUG: Setting GAC to C:\Users\KIIT\AppData\Roaming\firebase\pratyush_deve_gmail.com_application_default_credentials.json
+[debug] [2026-07-14T12:27:07.012Z] Checked if tokens are valid: true, expires at: 1784035624272
+[debug] [2026-07-14T12:27:07.012Z] Checked if tokens are valid: true, expires at: 1784035624272
+[debug] [2026-07-14T12:27:07.012Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/notessharingapp-dfee3/adminSdkConfig [none]
+[debug] [2026-07-14T12:27:08.226Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/notessharingapp-dfee3/adminSdkConfig 200
+[debug] [2026-07-14T12:27:08.227Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/notessharingapp-dfee3/adminSdkConfig {"projectId":"notessharingapp-dfee3","storageBucket":"notessharingapp-dfee3.firebasestorage.app"}
+[debug] [2026-07-14T12:27:08.238Z] [functions] Watching "C:\Users\KIIT\AndroidStudioProjects\NotesSharing\functions" for Cloud Functions...
+[debug] [2026-07-14T12:27:08.240Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-07-14T12:27:09.907Z] > [functions] package.json contents: {
+  "name": "functions",
+  "scripts": {
+    "lint": "eslint --ext .js,.ts .",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "algoliasearch": "^4.24.0",
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^6.0.1",
+    "sharp": "^0.33.2",
+    "pdfjs-dist": "^4.0.379",
+    "@napi-rs/canvas": "^0.1.55"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.12.0",
+    "@typescript-eslint/parser": "^5.12.0",
+    "eslint": "^8.9.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-import": "^2.25.4",
+    "firebase-functions-test": "^3.4.1",
+    "typescript": "^5.1.6"
+  },
+  "private": true
+}
+[debug] [2026-07-14T12:27:09.907Z] Building nodejs source
+[debug] [2026-07-14T12:27:09.908Z] Failed to find version of module node: reached end of search path C:\Users\KIIT\AndroidStudioProjects\NotesSharing\functions\node_modules
+[warn] !  functions: Your requested "node" version "20" doesn't match your global version "24". Using node@24 from host. 
+[info] i  functions: Loaded environment variables from .env.notessharingapp-dfee3. 
+[debug] [2026-07-14T12:27:09.912Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-07-14T12:27:09.924Z] Found firebase-functions binary at 'C:\Users\KIIT\AndroidStudioProjects\NotesSharing\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8961
+
+[debug] [2026-07-14T12:27:12.936Z] Got response from /__/functions.yaml {"endpoints":{"onNotesCreated":{"availableMemoryMb":1024,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"notes/{docId}"},"retry":false},"entryPoint":"onNotesCreated"},"onPyqsCreated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"pyqs/{docId}"},"retry":false},"entryPoint":"onPyqsCreated"},"onAssignmentsCreated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"assignments/{docId}"},"retry":false},"entryPoint":"onAssignmentsCreated"},"onCheatsheetsCreated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"cheatsheets/{docId}"},"retry":false},"entryPoint":"onCheatsheetsCreated"},"onNotesUpdated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"notes/{docId}"},"retry":false},"entryPoint":"onNotesUpdated"},"onPyqsUpdated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"pyqs/{docId}"},"retry":false},"entryPoint":"onPyqsUpdated"},"onAssignmentsUpdated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"assignments/{docId}"},"retry":false},"entryPoint":"onAssignmentsUpdated"},"onCheatsheetsUpdated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"cheatsheets/{docId}"},"retry":false},"entryPoint":"onCheatsheetsUpdated"},"onVideosUpdated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"videos/{docId}"},"retry":false},"entryPoint":"onVideosUpdated"},"onNotificationCreated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"users/{userId}/notifications/{notificationId}"},"retry":false},"entryPoint":"onNotificationCreated"},"onAdminDeletionLogCreated":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"admin_deletion_logs/{logId}"},"retry":false},"entryPoint":"onAdminDeletionLogCreated"},"onReportResolved":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"reports/{reportId}"},"retry":false},"entryPoint":"onReportResolved"},"upvote":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"upvote"},"updateTrendingScores":{"availableMemoryMb":512,"timeoutSeconds":300,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"every 24 hours","retryConfig":{}},"entryPoint":"updateTrendingScores"},"enqueueVideoIndexing":{"availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"enqueueVideoIndexing"},"repairVideoSearchIndexTask":{"platform":"gcfv2","availableMemoryMb":512,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"secretEnvironmentVariables":[{"key":"ALGOLIA_ADMIN_API_KEY"}],"labels":{},"taskQueueTrigger":{"retryConfig":{"maxAttempts":1,"maxDoublings":null,"maxBackoffSeconds":null,"maxRetrySeconds":null,"minBackoffSeconds":null},"rateLimits":{"maxConcurrentDispatches":null,"maxDispatchesPerSecond":null}},"entryPoint":"repairVideoSearchIndexTask"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."},{"api":"cloudtasks.googleapis.com","reason":"Needed for task queue functions"}],"extensions":{},"params":[{"name":"ALGOLIA_APP_ID","type":"string"},{"type":"secret","name":"ALGOLIA_ADMIN_API_KEY"},{"name":"ALGOLIA_INDEX_NAME","type":"string","default":"resources"}]}
+[debug] [2026-07-14T12:27:17.001Z] [functions] Loaded functions definitions from source: onNotesCreated, onPyqsCreated, onAssignmentsCreated, onCheatsheetsCreated, onNotesUpdated, onPyqsUpdated, onAssignmentsUpdated, onCheatsheetsUpdated, onVideosUpdated, onNotificationCreated, onAdminDeletionLogCreated, onReportResolved, upvote, updateTrendingScores, enqueueVideoIndexing, repairVideoSearchIndexTask.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onNotesCreated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onPyqsCreated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onAssignmentsCreated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onCheatsheetsCreated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onNotesUpdated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onPyqsUpdated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onAssignmentsUpdated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onCheatsheetsUpdated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onVideosUpdated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onNotificationCreated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onAdminDeletionLogCreated]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-onReportResolved]] function ignored because the firestore emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-upvote]] http function initialized (http://127.0.0.1:5000/notessharingapp-dfee3/us-central1/upvote).
+[debug] [2026-07-14T12:27:17.001Z] [functions[us-central1-updateTrendingScores]] function ignored because the pubsub emulator does not exist or is not running.
+[debug] [2026-07-14T12:27:17.002Z] [functions[us-central1-enqueueVideoIndexing]] http function initialized (http://127.0.0.1:5000/notessharingapp-dfee3/us-central1/enqueueVideoIndexing).
+[debug] [2026-07-14T12:27:17.002Z] addTaskQueueTrigger {"retryConfig":{"maxAttempts":1,"maxRetrySeconds":null,"maxBackoffSeconds":null,"maxDoublings":null,"minBackoffSeconds":null},"rateLimits":{"maxConcurrentDispatches":null,"maxDispatchesPerSecond":null}}
+[debug] [2026-07-14T12:27:17.002Z] addTaskQueueTrigger TQ not running
+[debug] [2026-07-14T12:27:17.002Z] [functions[us-central1-repairVideoSearchIndexTask]] function ignored because the http emulator does not exist or is not running.
+[info] i  functions: Loaded functions: onNotesCreated, onPyqsCreated, onAssignmentsCreated, onCheatsheetsCreated, onNotesUpdated, onPyqsUpdated, onAssignmentsUpdated, onCheatsheetsUpdated, onVideosUpdated, onNotificationCreated, onAdminDeletionLogCreated, onReportResolved, upvote, updateTrendingScores, enqueueVideoIndexing, repairVideoSearchIndexTask 
+[warn] !  functions: The following emulators are not running, calls to these services will affect production: firestore, database, pubsub, storage, eventarc, tasks 
