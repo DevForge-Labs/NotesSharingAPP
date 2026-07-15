@@ -80,6 +80,25 @@ data class TrendingTopic(
 
 
 
+object ContributorLevels {
+    val THRESHOLDS = listOf(
+        0,   // Level 1
+        5,   // Level 2
+        15,  // Level 3
+        30,  // Level 4
+        50   // Level 5
+    )
+}
+
+fun calculateLevel(totalUploads: Int): Int {
+    for (i in ContributorLevels.THRESHOLDS.indices.reversed()) {
+        if (totalUploads >= ContributorLevels.THRESHOLDS[i]) {
+            return i + 1
+        }
+    }
+    return 1
+}
+
 @Immutable
 data class Profile(
     val uid: String = "",
@@ -90,10 +109,9 @@ data class Profile(
     val section: String = "",
     val profileImageUrl: String = "",
     val role: String = "user",
-    val uploads: Int = 0,
+    val totalUploads: Int = 0,
     val bookmarks: Int = 0,
     val upvotes: Int = 0,
-    val notesUploaded: Int = 0,
     val contributorLevel: Int = 1,
     val branch: String = "Computer Science",
     val createdAt: Long = System.currentTimeMillis(),
@@ -103,7 +121,7 @@ data class Profile(
     val notesUploads: Int = 0,
     val assignmentUploads: Int = 0,
     val cheatSheetUploads: Int = 0,
-    val youtubeUploads: Int = 0,
+    val youtubeResourceUploads: Int = 0,
     
     // Auth-only property (ignored in Firestore using @Exclude)
     @get:com.google.firebase.firestore.Exclude
@@ -131,69 +149,34 @@ data class LevelProgress(
     val nextLevelText: String
 )
 
-fun calculateLevelProgress(uploads: Int): LevelProgress {
-    return when {
-        uploads < 5 -> {
-            val progress = uploads.toFloat() / 5f
-            LevelProgress(
-                currentLevel = 1,
-                nextLevel = 2,
-                currentUploads = uploads,
-                targetUploads = 5,
-                progress = progress,
-                nextLevelText = "$uploads / 5 uploads completed"
-            )
-        }
-        uploads < 15 -> {
-            val completedInLevel = uploads - 5
-            val neededInLevel = 15 - 5 // 10
-            val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
-            LevelProgress(
-                currentLevel = 2,
-                nextLevel = 3,
-                currentUploads = uploads,
-                targetUploads = 15,
-                progress = progress,
-                nextLevelText = "$uploads / 15 uploads completed"
-            )
-        }
-        uploads < 30 -> {
-            val completedInLevel = uploads - 15
-            val neededInLevel = 30 - 15 // 15
-            val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
-            LevelProgress(
-                currentLevel = 3,
-                nextLevel = 4,
-                currentUploads = uploads,
-                targetUploads = 30,
-                progress = progress,
-                nextLevelText = "$uploads / 30 uploads completed"
-            )
-        }
-        uploads < 50 -> {
-            val completedInLevel = uploads - 30
-            val neededInLevel = 50 - 30 // 20
-            val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
-            LevelProgress(
-                currentLevel = 4,
-                nextLevel = 5,
-                currentUploads = uploads,
-                targetUploads = 50,
-                progress = progress,
-                nextLevelText = "$uploads / 50 uploads completed"
-            )
-        }
-        else -> {
-            LevelProgress(
-                currentLevel = 5,
-                nextLevel = 5,
-                currentUploads = uploads,
-                targetUploads = uploads,
-                progress = 1.0f,
-                nextLevelText = "Max Level 5 Contributor ($uploads uploads)"
-            )
-        }
+fun calculateLevelProgress(totalUploads: Int): LevelProgress {
+    val currentLevel = calculateLevel(totalUploads)
+    if (currentLevel >= 5) {
+        return LevelProgress(
+            currentLevel = 5,
+            nextLevel = 5,
+            currentUploads = totalUploads,
+            targetUploads = totalUploads,
+            progress = 1.0f,
+            nextLevelText = "Max Level 5 Contributor ($totalUploads uploads)"
+        )
     }
+    
+    val currentThreshold = ContributorLevels.THRESHOLDS[currentLevel - 1]
+    val nextThreshold = ContributorLevels.THRESHOLDS[currentLevel]
+    
+    val completedInLevel = totalUploads - currentThreshold
+    val neededInLevel = nextThreshold - currentThreshold
+    val progress = completedInLevel.toFloat() / neededInLevel.toFloat()
+    
+    return LevelProgress(
+        currentLevel = currentLevel,
+        nextLevel = currentLevel + 1,
+        currentUploads = totalUploads,
+        targetUploads = nextThreshold,
+        progress = progress.coerceIn(0f, 1f),
+        nextLevelText = "$totalUploads / $nextThreshold uploads completed"
+    )
 }
 
 enum class FileType(val label: String) {

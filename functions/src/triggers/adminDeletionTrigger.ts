@@ -46,7 +46,7 @@ export const onAdminDeletionLogCreated = onDocumentCreated({
     await notifyUploader(uploaderUid, logId, resourceTitle, deletionReason, resourceId, resourceType);
 
     // 3. Update uploader upload counts and contributor level
-    await updateUploaderStats(uploaderUid, resourceType);
+    await updateUploaderStats(uploaderUid, resourceType, resourceId);
 
     // 3.5 Notify the reporter (only for report-based deletions)
     await notifyReporter(triggeredByReport, reporterUid, reportNotificationSent, logId, resourceTitle, resourceId, resourceType, reportReason, reportId, logRef);

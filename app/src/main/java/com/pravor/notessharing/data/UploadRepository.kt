@@ -298,7 +298,7 @@ class UploadRepository(private val context: Context) {
                 android.util.Log.e("UploadRepository", "Failed to enqueue video indexing: ${e.message}")
             }
 
-            statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
+            statsService.incrementUserUploadsWithLevel(uploaderId, type, 1)
             onProgress(1.0f)
         } else if (type == UploadType.Pyq) {
             if (selectedFiles.size != 1) {
@@ -372,7 +372,7 @@ class UploadRepository(private val context: Context) {
                 }
                 firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
             }
-            statsService.incrementUserUploadsWithLevel(uploaderId, type.label, selectedFiles.size)
+            statsService.incrementUserUploadsWithLevel(uploaderId, type, selectedFiles.size)
         } else {
             val totalBytes = selectedFiles.sumOf { it.sizeBytes }
             var totalUploadedBytes = 0L
@@ -493,7 +493,7 @@ class UploadRepository(private val context: Context) {
                 doc["college"] = canonicalCollege
             }
             firestoreService.saveDocument(getCollectionName(type), filterNullValues(doc))
-            statsService.incrementUserUploadsWithLevel(uploaderId, type.label, 1)
+            statsService.incrementUserUploadsWithLevel(uploaderId, type, 1)
         }
     }
 

@@ -76,7 +76,7 @@ class ProfileViewModel(
             semester = "Not Set",
             profileImageUrl = currentFirebaseUser.photoUrl?.toString() ?: "",
             role = "user",
-            uploads = 0,
+            totalUploads = 0,
             bookmarks = 0,
             upvotes = 0,
             contributorLevel = 1,

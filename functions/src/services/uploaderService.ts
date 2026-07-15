@@ -47,57 +47,87 @@ export async function notifyUploader(
   }
 }
 
-export async function updateUploaderStats(uploaderUid: string | undefined, resourceType: string) {
+export const CONTRIBUTOR_LEVEL_THRESHOLDS = [
+  0, // Level 1
+  5, // Level 2
+  15, // Level 3
+  30, // Level 4
+  50, // Level 5
+];
+
+export function calculateLevel(totalUploads: number): number {
+  for (let i = CONTRIBUTOR_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (totalUploads >= CONTRIBUTOR_LEVEL_THRESHOLDS[i]) {
+      return i + 1;
+    }
+  }
+  return 1;
+}
+
+export function getUploadTypeField(resourceType: string): string | null {
+  const typeStr = resourceType.toLowerCase().replace(/[\s_-]/g, "");
+  if (typeStr === "notes") return "notesUploads";
+  if (typeStr === "pyq" || typeStr === "pyqs") return "pyqUploads";
+  if (typeStr === "assignment" || typeStr === "assignments") return "assignmentUploads";
+  if (typeStr === "cheatsheet" || typeStr === "cheatsheets") return "cheatSheetUploads";
+  if (typeStr === "video" || typeStr === "videos" || typeStr === "youtube" || typeStr === "youtuberesource") return "youtubeResourceUploads";
+  return null;
+}
+
+export async function updateUploaderStats(
+  uploaderUid: string | undefined,
+  resourceType: string,
+  resourceId?: string
+) {
   if (uploaderUid) {
     const db = getFirestore();
+
+    // 1. Idempotency Check (statsDecremented flag on resource document)
+    if (resourceId && resourceType) {
+      const resourceRef = db.collection(resourceType).doc(resourceId);
+      const alreadyDecremented = await db.runTransaction(async (transaction) => {
+        const resourceSnap = await transaction.get(resourceRef);
+        if (resourceSnap.exists) {
+          const data = resourceSnap.data();
+          if (data?.statsDecremented === true) {
+            return true; // Already decremented uploader stats for this resource
+          }
+          // Mark as decremented
+          transaction.update(resourceRef, { statsDecremented: true });
+        }
+        return false;
+      });
+
+      if (alreadyDecremented) {
+        logger.info(`Stats for resource ${resourceType}/${resourceId} were already decremented. Skipping.`);
+        return;
+      }
+    }
+
     const uploaderRef = db.collection("users").doc(uploaderUid);
     await db.runTransaction(async (transaction) => {
       const uploaderSnap = await transaction.get(uploaderRef);
       if (uploaderSnap.exists) {
         const uploaderData = uploaderSnap.data();
-        
-        // Map resource type to profile fields
-        const typeStr = resourceType.toLowerCase().replace(/[\s_-]/g, "");
-        const fieldsToDecrement: string[] = [];
-        if (typeStr === "notes") {
-          fieldsToDecrement.push("notesUploads", "notesUploaded");
-        } else if (typeStr === "pyq" || typeStr === "pyqs") {
-          fieldsToDecrement.push("pyqUploads");
-        } else if (typeStr === "assignment" || typeStr === "assignments") {
-          fieldsToDecrement.push("assignmentUploads");
-        } else if (typeStr === "cheatsheet" || typeStr === "cheatsheets") {
-          fieldsToDecrement.push("cheatSheetUploads");
-        } else if (typeStr === "video" || typeStr === "videos" || typeStr === "youtube" || typeStr === "youtuberesource") {
-          fieldsToDecrement.push("youtubeUploads");
-        }
 
-        const currentUploads = uploaderData?.uploads || 0;
-        const newUploads = Math.max(0, currentUploads - 1);
+        // Get mapped field name
+        const fieldToDecrement = getUploadTypeField(resourceType);
+
+        const currentTotal = uploaderData?.totalUploads ?? 0;
+        const newTotal = Math.max(0, currentTotal - 1);
 
         const updates: Record<string, any> = {
-          uploads: newUploads,
+          totalUploads: newTotal,
+          contributorLevel: calculateLevel(newTotal),
         };
 
-        for (const field of fieldsToDecrement) {
-          const currentVal = uploaderData?.[field] || 0;
-          updates[field] = Math.max(0, currentVal - 1);
+        if (fieldToDecrement) {
+          const currentVal = uploaderData?.[fieldToDecrement] ?? 0;
+          updates[fieldToDecrement] = Math.max(0, currentVal - 1);
         }
-
-        // Recalculate level
-        let newLevel = 1;
-        if (newUploads >= 50) {
-          newLevel = 5;
-        } else if (newUploads >= 30) {
-          newLevel = 4;
-        } else if (newUploads >= 15) {
-          newLevel = 3;
-        } else if (newUploads >= 5) {
-          newLevel = 2;
-        }
-        updates.contributorLevel = newLevel;
 
         transaction.update(uploaderRef, updates);
-        logger.info(`Decremented uploader ${uploaderUid} uploads to ${newUploads}. Level: ${newLevel}. Fields: ${fieldsToDecrement.join(", ")}`);
+        logger.info(`Decremented uploader ${uploaderUid} totalUploads to ${newTotal}. Level: ${updates.contributorLevel}. Field: ${fieldToDecrement}`);
       }
     });
   }

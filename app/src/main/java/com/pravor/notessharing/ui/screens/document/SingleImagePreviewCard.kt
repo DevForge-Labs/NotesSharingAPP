@@ -71,34 +71,10 @@ fun SingleImagePreviewCard(
                         }
                     },
                     error = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFF37474F),
-                                            Color(0xFF212121)
-                                        )
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Image,
-                                    contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(44.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Preview Unavailable",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
+                        com.pravor.notessharing.ui.components.DocumentPlaceholder(
+                            documentType = "Notes",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 )
             }

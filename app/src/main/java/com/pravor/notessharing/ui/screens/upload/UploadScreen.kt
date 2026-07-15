@@ -1401,19 +1401,17 @@ fun YoutubePreviewCard(
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (preview.thumbnailUrl.isNotBlank()) {
+                        var hasError by remember(preview.thumbnailUrl) { mutableStateOf(false) }
+                        if (preview.thumbnailUrl.isNotBlank() && !hasError) {
                             AsyncImage(
                                 model = preview.thumbnailUrl,
                                 contentDescription = "Video Thumbnail",
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                onError = { hasError = true }
                             )
                         } else {
-                            Icon(
-                                imageVector = Icons.Default.OndemandVideo,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            com.pravor.notessharing.ui.components.VideoPlaceholder(modifier = Modifier.fillMaxSize())
                         }
                     }
                     Spacer(Modifier.width(12.dp))

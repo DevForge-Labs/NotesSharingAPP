@@ -347,7 +347,7 @@ private fun ProfileContent(
             }
             item(key = "stats-row", contentType = "stats") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatCard("Uploads", profile.uploads.toString(), Icons.Default.UploadFile, Modifier.weight(1f))
+                    StatCard("Uploads", profile.totalUploads.toString(), Icons.Default.UploadFile, Modifier.weight(1f))
                     StatCard("Bookmarks", profile.bookmarks.toString(), Icons.Default.Bookmark, Modifier.weight(1f))
                     StatCard("Upvotes", profile.upvotes.toString(), Icons.Default.TrendingUp, Modifier.weight(1f))
                 }
@@ -634,7 +634,7 @@ fun UploadsBreakdownCard(profile: Profile) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                 StatBreakdownRow(
                     label = "YouTube Resources",
-                    count = profile.youtubeUploads,
+                    count = profile.youtubeResourceUploads,
                     icon = Icons.Default.Link,
                     tint = MaterialTheme.colorScheme.primary
                 )

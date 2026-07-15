@@ -63,7 +63,7 @@ fun LiquidContributorCard(
     profile: Profile,
     modifier: Modifier = Modifier
 ) {
-    val progressInfo = calculateLevelProgress(profile.uploads)
+    val progressInfo = calculateLevelProgress(profile.totalUploads)
     
     // Level transition animation state
     var displayedProgress by remember { mutableFloatStateOf(progressInfo.progress) }
@@ -280,7 +280,7 @@ fun LiquidContributorCard(
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Text(
-                            text = "${profile.uploads} Uploads",
+                            text = "${profile.totalUploads} Uploads",
                             color = Color.White,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
@@ -323,7 +323,7 @@ fun LiquidContributorCard(
                     val xpRemaining = if (displayedLevel == 5) {
                         "Congratulations, elite status achieved!"
                     } else {
-                        val needed = progressInfo.targetUploads - profile.uploads
+                        val needed = progressInfo.targetUploads - profile.totalUploads
                         "$needed more upload${if (needed > 1) "s" else ""} needed for Level ${progressInfo.nextLevel}"
                     }
 

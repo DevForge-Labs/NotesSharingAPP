@@ -67,17 +67,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         if (old.semester != new.semester) changes.add("semester")
         if (old.profileImageUrl != new.profileImageUrl) changes.add("profileImageUrl")
         if (old.role != new.role) changes.add("role")
-        if (old.uploads != new.uploads) changes.add("uploads")
+        if (old.totalUploads != new.totalUploads) changes.add("totalUploads")
         if (old.bookmarks != new.bookmarks) changes.add("bookmarks")
         if (old.upvotes != new.upvotes) changes.add("upvotes")
-        if (old.notesUploaded != new.notesUploaded) changes.add("notesUploaded")
         if (old.contributorLevel != new.contributorLevel) changes.add("contributorLevel")
         if (old.branch != new.branch) changes.add("branch")
         if (old.pyqUploads != new.pyqUploads) changes.add("pyqUploads")
         if (old.notesUploads != new.notesUploads) changes.add("notesUploads")
         if (old.assignmentUploads != new.assignmentUploads) changes.add("assignmentUploads")
         if (old.cheatSheetUploads != new.cheatSheetUploads) changes.add("cheatSheetUploads")
-        if (old.youtubeUploads != new.youtubeUploads) changes.add("youtubeUploads")
+        if (old.youtubeResourceUploads != new.youtubeResourceUploads) changes.add("youtubeResourceUploads")
         return changes
     }
 
@@ -220,7 +219,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val changedFields = getChangedFields(previousProfile, profile)
                 android.util.Log.d("PERF", "[PERF] Changed fields=$changedFields")
                 previousProfile = profile
-                _uploadsCount.value = profile?.uploads ?: 0
+                _uploadsCount.value = profile?.totalUploads ?: 0
 
                 val semester = profile?.semester
                 lastReloadCause = "ProfileUpdate"

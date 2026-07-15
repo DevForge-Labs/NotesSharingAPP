@@ -147,24 +147,7 @@ fun HomeFeedCard(
                             }
                         }
                     } else {
-                        // Fallback UI
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF1E1E24), Color(0xFF121214))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        com.pravor.notessharing.ui.components.VideoPlaceholder(modifier = Modifier.fillMaxSize())
                     }
                 }
 

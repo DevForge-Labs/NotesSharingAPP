@@ -89,7 +89,7 @@ class ExploreCacheRepository(context: Context) {
                     put("id", it.id)
                     put("name", it.name)
                     put("initials", it.initials)
-                    put("uploads", it.uploads)
+                    put("totalUploads", it.totalUploads)
                     put("rating", it.rating)
                 })
             }
@@ -221,7 +221,7 @@ class ExploreCacheRepository(context: Context) {
                         id = obj.getString("id"),
                         name = obj.getString("name"),
                         initials = obj.getString("initials"),
-                        uploads = obj.getInt("uploads"),
+                        totalUploads = obj.getInt("totalUploads"),
                         rating = obj.getDouble("rating")
                     ))
                 }

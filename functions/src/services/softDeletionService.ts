@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { chunkArray } from "../utils/chunkArray.js";
+import { updateUploaderStats } from "./uploaderService.js";
 
 export async function handleSoftDeletion(
   collectionName: string,
@@ -23,6 +24,11 @@ export async function handleSoftDeletion(
   const uploaderId = afterData?.uploaderId;
 
   try {
+    // Decrement uploader statistics
+    if (uploaderId) {
+      await updateUploaderStats(uploaderId, collectionName, docId);
+    }
+
     // 1. Query bookmarks
     const bookmarksSnap = await db.collection("bookmarks")
       .where("documentId", "==", docId)

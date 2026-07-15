@@ -3,8 +3,10 @@ package com.pravor.notessharing.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
+import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
+import com.pravor.notessharing.ui.components.explore_components.MonkeyMascot
+import com.pravor.notessharing.ui.components.explore_components.RunningSquirrelScrollbar
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -80,56 +82,17 @@ fun BoxScope.AdaptiveScrollbar(
     thickness: Dp = 3.dp,
     minThumbSize: Dp = 36.dp
 ) {
-    val scrollbarState = rememberScrollbarState(listState)
-    val alpha by animateFloatAsState(
-        targetValue = if (scrollbarState.isVisible) 0.75f else 0f,
-        label = "scrollbar-alpha"
-    )
-    val density = LocalDensity.current
-    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
-    val thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
-
     if (orientation == ScrollbarOrientation.Vertical) {
-        BoxWithConstraints(
+        ClimbingMascotScrollbar(
+            listState = listState,
             modifier = modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight()
-                .width(thickness)
-                .padding(vertical = 20.dp)
-                .alpha(alpha)
-                .background(trackColor, RoundedCornerShape(99.dp))
-        ) {
-            val trackHeightPx = with(density) { maxHeight.toPx() }
-            val thumbHeight = maxOf(minThumbSize, maxHeight * scrollbarState.thumbFraction)
-            val maxOffset = (trackHeightPx - with(density) { thumbHeight.toPx() }).coerceAtLeast(0f)
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(0, (maxOffset * scrollbarState.progress).roundToInt()) }
-                    .width(thickness)
-                    .height(thumbHeight)
-                    .background(thumbColor, RoundedCornerShape(99.dp))
-            )
+        ) { mod, isScrolling ->
+            MonkeyMascot(modifier = mod, isScrolling = isScrolling)
         }
     } else {
-        BoxWithConstraints(
+        RunningSquirrelScrollbar(
+            listState = listState,
             modifier = modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(thickness)
-                .padding(horizontal = 20.dp)
-                .alpha(alpha)
-                .background(trackColor, RoundedCornerShape(99.dp))
-        ) {
-            val trackWidthPx = with(density) { maxWidth.toPx() }
-            val thumbWidth = maxOf(minThumbSize, maxWidth * scrollbarState.thumbFraction)
-            val maxOffset = (trackWidthPx - with(density) { thumbWidth.toPx() }).coerceAtLeast(0f)
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset((maxOffset * scrollbarState.progress).roundToInt(), 0) }
-                    .height(thickness)
-                    .width(thumbWidth)
-                    .background(thumbColor, RoundedCornerShape(99.dp))
-            )
-        }
+        )
     }
 }

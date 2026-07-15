@@ -16,6 +16,15 @@ val UploadType.firestoreValue: String
         else -> this.label
     }
 
+val UploadType.dbField: String
+    get() = when (this) {
+        UploadType.Pyq -> "pyqUploads"
+        UploadType.Notes -> "notesUploads"
+        UploadType.CheatSheet -> "cheatSheetUploads"
+        UploadType.Assignment -> "assignmentUploads"
+        UploadType.Youtube -> "youtubeResourceUploads"
+    }
+
 
 enum class UploadFileSource {
     DocumentPicker,

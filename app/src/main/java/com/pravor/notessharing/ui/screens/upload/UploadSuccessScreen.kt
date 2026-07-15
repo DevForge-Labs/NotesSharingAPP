@@ -272,7 +272,7 @@ private fun ContributorStatsCard(profile: Profile) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatBreakdownRow(
                     label = "Total Uploads",
-                    count = profile.uploads,
+                    count = profile.totalUploads,
                     icon = Icons.Default.UploadFile,
                     tint = ElectricBlue
                 )
@@ -307,7 +307,7 @@ private fun ContributorStatsCard(profile: Profile) {
                 Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 StatBreakdownRow(
                     label = "YouTube Resources",
-                    count = profile.youtubeUploads,
+                    count = profile.youtubeResourceUploads,
                     icon = Icons.Default.Link,
                     tint = ElectricBlue
                 )
