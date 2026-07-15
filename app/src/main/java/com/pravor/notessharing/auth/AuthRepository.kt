@@ -37,10 +37,9 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
                 section = section,
                 profileImageUrl = "",
                 role = "user",
-                uploads = 0,
+                totalUploads = 0,
                 bookmarks = 0,
                 upvotes = 0,
-                notesUploaded = 0,
                 contributorLevel = 1,
                 createdAt = System.currentTimeMillis()
             )

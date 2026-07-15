@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.pravor.notessharing.ui.components.explore_components.RunningSquirrelScrollbar
 import com.pravor.notessharing.model.DocumentDetail
 
 @Composable
@@ -84,27 +86,32 @@ fun AttachmentPreviewSection(
                             .padding(horizontal = 16.dp)
                     )
                 } else {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp)
-                    ) {
-                        items(imageUrls) { url ->
-                            val index = urls.indexOf(url)
-                            val baseSize = doc.fileSize / urls.size
-                            val indSize = computeDeterministicSize(baseSize, index)
+                    val listState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        LazyRow(
+                            state = listState,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp)
+                        ) {
+                            items(imageUrls) { url ->
+                                val index = urls.indexOf(url)
+                                val baseSize = doc.fileSize / urls.size
+                                val indSize = computeDeterministicSize(baseSize, index)
 
-                            ImagePreviewCard(
-                                url = url,
-                                fileSize = indSize,
-                                onDownloadClick = { onDownloadClick(url) },
-                                onShareClick = { onShareClick(url) },
-                                onClick = { onAttachmentClick(url) },
-                                modifier = Modifier
-                                    .width(280.dp)
-                                    .height(380.dp)
-                            )
+                                ImagePreviewCard(
+                                    url = url,
+                                    fileSize = indSize,
+                                    onDownloadClick = { onDownloadClick(url) },
+                                    onShareClick = { onShareClick(url) },
+                                    onClick = { onAttachmentClick(url) },
+                                    modifier = Modifier
+                                        .width(280.dp)
+                                        .height(380.dp)
+                                )
+                            }
                         }
+                        RunningSquirrelScrollbar(listState = listState)
                     }
                 }
             }

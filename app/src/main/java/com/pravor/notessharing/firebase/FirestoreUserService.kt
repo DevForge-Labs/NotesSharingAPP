@@ -20,10 +20,9 @@ class FirestoreUserService {
                 val semester = snapshot.getString("semester") ?: "Not Set"
                 val profileImageUrl = snapshot.getString("profileImageUrl") ?: ""
                 val role = snapshot.getString("role") ?: "user"
-                val uploads = snapshot.getLong("uploads")?.toInt() ?: 0
+                val totalUploads = snapshot.getLong("totalUploads")?.toInt() ?: 0
                 val bookmarks = snapshot.getLong("bookmarks")?.toInt() ?: 0
                 val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
-                val notesUploaded = snapshot.getLong("notesUploaded")?.toInt() ?: 0
                 val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 val branch = snapshot.getString("branch") ?: "cse"
                 val college = snapshot.getString("college") ?: "kiit"
@@ -34,7 +33,7 @@ class FirestoreUserService {
                 val notesUploads = snapshot.getLong("notesUploads")?.toInt() ?: 0
                 val assignmentUploads = snapshot.getLong("assignmentUploads")?.toInt() ?: 0
                 val cheatSheetUploads = snapshot.getLong("cheatSheetUploads")?.toInt() ?: 0
-                val youtubeUploads = snapshot.getLong("youtubeUploads")?.toInt() ?: 0
+                val youtubeResourceUploads = snapshot.getLong("youtubeResourceUploads")?.toInt() ?: 0
 
                 Profile(
                     uid = uid,
@@ -45,10 +44,9 @@ class FirestoreUserService {
                     section = section,
                     profileImageUrl = profileImageUrl,
                     role = role,
-                    uploads = uploads,
+                    totalUploads = totalUploads,
                     bookmarks = bookmarks,
                     upvotes = upvotes,
-                    notesUploaded = notesUploaded,
                     contributorLevel = contributorLevel,
                     branch = branch,
                     createdAt = createdAt,
@@ -56,7 +54,7 @@ class FirestoreUserService {
                     notesUploads = notesUploads,
                     assignmentUploads = assignmentUploads,
                     cheatSheetUploads = cheatSheetUploads,
-                    youtubeUploads = youtubeUploads
+                    youtubeResourceUploads = youtubeResourceUploads
                 )
             } else {
                 null
@@ -79,10 +77,9 @@ class FirestoreUserService {
                     val semester = snapshot.getString("semester") ?: "Not Set"
                     val profileImageUrl = snapshot.getString("profileImageUrl") ?: ""
                     val role = snapshot.getString("role") ?: "user"
-                    val uploads = snapshot.getLong("uploads")?.toInt() ?: 0
+                    val totalUploads = snapshot.getLong("totalUploads")?.toInt() ?: 0
                     val bookmarks = snapshot.getLong("bookmarks")?.toInt() ?: 0
                     val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
-                    val notesUploaded = snapshot.getLong("notesUploaded")?.toInt() ?: 0
                     val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                     val branch = snapshot.getString("branch") ?: "cse"
                     val college = snapshot.getString("college") ?: "kiit"
@@ -93,7 +90,7 @@ class FirestoreUserService {
                     val notesUploads = snapshot.getLong("notesUploads")?.toInt() ?: 0
                     val assignmentUploads = snapshot.getLong("assignmentUploads")?.toInt() ?: 0
                     val cheatSheetUploads = snapshot.getLong("cheatSheetUploads")?.toInt() ?: 0
-                    val youtubeUploads = snapshot.getLong("youtubeUploads")?.toInt() ?: 0
+                    val youtubeResourceUploads = snapshot.getLong("youtubeResourceUploads")?.toInt() ?: 0
 
                     val profile = Profile(
                         uid = uid,
@@ -104,10 +101,9 @@ class FirestoreUserService {
                         section = section,
                         profileImageUrl = profileImageUrl,
                         role = role,
-                        uploads = uploads,
+                        totalUploads = totalUploads,
                         bookmarks = bookmarks,
                         upvotes = upvotes,
-                        notesUploaded = notesUploaded,
                         contributorLevel = contributorLevel,
                         branch = branch,
                         createdAt = createdAt,
@@ -115,7 +111,7 @@ class FirestoreUserService {
                         notesUploads = notesUploads,
                         assignmentUploads = assignmentUploads,
                         cheatSheetUploads = cheatSheetUploads,
-                        youtubeUploads = youtubeUploads
+                        youtubeResourceUploads = youtubeResourceUploads
                     )
                     trySend(profile)
                 } catch (e: Exception) {
@@ -129,27 +125,26 @@ class FirestoreUserService {
     }
 
     suspend fun createUserProfile(profile: Profile) {
-        val userMap = mapOf(
+        val userMap = linkedMapOf(
             "uid" to profile.uid,
             "name" to profile.name,
             "email" to profile.email,
-            "semester" to profile.semester,
-            "college" to com.pravor.notessharing.util.NormalizationUtil.normalizeCollege(profile.college),
-            "branch" to com.pravor.notessharing.util.NormalizationUtil.normalizeBranch(profile.branch),
-            "section" to com.pravor.notessharing.util.NormalizationUtil.normalizeSection(profile.section),
             "profileImageUrl" to profile.profileImageUrl,
             "role" to profile.role,
-            "uploads" to profile.uploads,
-            "bookmarks" to profile.bookmarks,
-            "upvotes" to profile.upvotes,
-            "notesUploaded" to profile.notesUploaded,
             "contributorLevel" to profile.contributorLevel,
-            "createdAt" to profile.createdAt,
-            "pyqUploads" to profile.pyqUploads,
+            "branch" to com.pravor.notessharing.util.NormalizationUtil.normalizeBranch(profile.branch),
+            "semester" to profile.semester,
+            "section" to com.pravor.notessharing.util.NormalizationUtil.normalizeSection(profile.section),
+            "college" to com.pravor.notessharing.util.NormalizationUtil.normalizeCollege(profile.college),
+            "totalUploads" to profile.totalUploads,
             "notesUploads" to profile.notesUploads,
             "assignmentUploads" to profile.assignmentUploads,
             "cheatSheetUploads" to profile.cheatSheetUploads,
-            "youtubeUploads" to profile.youtubeUploads
+            "pyqUploads" to profile.pyqUploads,
+            "youtubeResourceUploads" to profile.youtubeResourceUploads,
+            "bookmarks" to profile.bookmarks,
+            "upvotes" to profile.upvotes,
+            "createdAt" to profile.createdAt
         )
         usersCollection.document(profile.uid).set(userMap).await()
     }
@@ -190,10 +185,9 @@ class FirestoreUserService {
             profileImageUrl = profileImageUrl,
             semester = "Not Set",
             role = "user",
-            uploads = 0,
+            totalUploads = 0,
             bookmarks = 0,
             upvotes = 0,
-            notesUploaded = 0,
             contributorLevel = 1,
             college = "kiit",
             branch = "cse",

@@ -18,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import com.pravor.notessharing.ui.components.CustomPullRefreshIndicator
+import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
+import com.pravor.notessharing.ui.components.explore_components.MonkeyMascot
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -465,6 +467,9 @@ fun SubjectResourcesScreen(
                                     }
                                 }
                             }
+                        }
+                        ClimbingMascotScrollbar(listState = listState) { modifier, isScrolling ->
+                            MonkeyMascot(modifier = modifier, isScrolling = isScrolling)
                         }
                     }
                 }

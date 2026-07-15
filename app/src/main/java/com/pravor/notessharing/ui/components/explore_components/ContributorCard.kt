@@ -40,7 +40,7 @@ fun ContributorCard(contributor: Contributor) {
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${contributor.uploads} uploads | ${String.format("%.1f", contributor.rating)} rating",
+                text = "${contributor.totalUploads} uploads | ${String.format("%.1f", contributor.rating)} rating",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

@@ -228,10 +228,9 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                     section = section.trim(),
                     profileImageUrl = temp.profileImageUrl,
                     role = "user",
-                    uploads = 0,
+                    totalUploads = 0,
                     bookmarks = 0,
                     upvotes = 0,
-                    notesUploaded = 0,
                     contributorLevel = 1,
                     createdAt = System.currentTimeMillis()
                 )

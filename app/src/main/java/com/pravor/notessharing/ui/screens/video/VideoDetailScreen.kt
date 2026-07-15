@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.pravor.notessharing.ui.components.explore_components.RunningSquirrelScrollbar
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -433,16 +435,21 @@ private fun VideoDetailContent(
                 )
             }
             item(key = "related-carousel") {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(relatedVideos, key = { it.id }) { relatedVideo ->
-                        RelatedVideoCard(
-                            video = relatedVideo,
-                            onClick = { onNavigateToVideoDetail(relatedVideo.id) }
-                        )
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    LazyRow(
+                        state = listState,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(relatedVideos, key = { it.id }) { relatedVideo ->
+                            RelatedVideoCard(
+                                video = relatedVideo,
+                                onClick = { onNavigateToVideoDetail(relatedVideo.id) }
+                            )
+                        }
                     }
+                    RunningSquirrelScrollbar(listState = listState)
                 }
             }
         }

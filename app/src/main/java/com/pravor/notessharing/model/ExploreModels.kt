@@ -142,7 +142,7 @@ data class Contributor(
     val id: String,
     val name: String,
     val initials: String,
-    val uploads: Int,
+    val totalUploads: Int,
     val rating: Double
 )
 
