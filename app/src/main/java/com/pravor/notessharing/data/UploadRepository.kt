@@ -316,8 +316,10 @@ class UploadRepository(private val context: Context) {
                     (examType ?: "").trim().lowercase(java.util.Locale.ROOT).contains("end") -> "EndSem"
                     else -> (examType ?: "").trim().replace(" ", "")
                 }
-                val pyqFileName = "$normalizedYear.$normalizedExamType.pdf"
-                val storagePath = "pyqs/${semester.trim()}/$sanitizedSubject-pyq-$documentId/$pyqFileName"
+                val fileExtension = getFileExtension(file.displayName, file.uri)
+                val safeSubjectForFilename = displaySubject.replace("\\s+".toRegex(), "").replace("[^a-zA-Z0-9]".toRegex(), "")
+                val standardizedFileName = "$safeSubjectForFilename.$normalizedExamType.$normalizedYear.$fileExtension"
+                val storagePath = "pyqs/${semester.trim()}/$sanitizedSubject-pyq-$documentId/$standardizedFileName"
 
                 val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
                     val fileUploadedBytes = (fileProgress * file.sizeBytes).toLong()
@@ -333,7 +335,7 @@ class UploadRepository(private val context: Context) {
 
                 val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,
-                    "title" to pyqFileName,
+                    "title" to standardizedFileName,
                     "description" to description,
                     "branch" to canonicalBranch,
                     "semester" to semester,
@@ -355,7 +357,7 @@ class UploadRepository(private val context: Context) {
                     "storagePath" to uploadedPath,
                     "storagePaths" to listOf(uploadedPath),
                     "fileSize" to file.sizeBytes,
-                    "fileExtension" to "pdf",
+                    "fileExtension" to fileExtension,
                     "tags" to emptyList<String>(),
                     "attachmentCount" to 1,
                     "trendingScore" to 0.0

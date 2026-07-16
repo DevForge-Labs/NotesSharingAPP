@@ -48,16 +48,7 @@ fun AttachmentPreviewCard(
     val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
     val isPyq = documentType?.lowercase(java.util.Locale.ROOT)?.contains("pyq") == true
     
-    val fileName = if (isPyq && !examYear.isNullOrBlank() && !examType.isNullOrBlank()) {
-        val normalizedExamType = when {
-            examType.trim().lowercase(java.util.Locale.ROOT).contains("mid") -> "MidSem"
-            examType.trim().lowercase(java.util.Locale.ROOT).contains("end") -> "EndSem"
-            else -> examType.trim().replace(" ", "")
-        }
-        "${examYear.trim()}.$normalizedExamType.pdf"
-    } else {
-        getFileName(url)
-    }
+    val fileName = getFileName(url)
     val fileType = if (isPdf) "PDF Document" else "Document File"
  
     Card(
