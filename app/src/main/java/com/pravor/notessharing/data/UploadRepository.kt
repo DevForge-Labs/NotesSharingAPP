@@ -319,6 +319,7 @@ class UploadRepository(private val context: Context) {
                 val fileExtension = getFileExtension(file.displayName, file.uri)
                 val safeSubjectForFilename = displaySubject.replace("\\s+".toRegex(), "").replace("[^a-zA-Z0-9]".toRegex(), "")
                 val standardizedFileName = "$safeSubjectForFilename.$normalizedExamType.$normalizedYear.$fileExtension"
+                val standardizedTitle = "$safeSubjectForFilename.$normalizedExamType.$normalizedYear"
                 val storagePath = "pyqs/${semester.trim()}/$sanitizedSubject-pyq-$documentId/$standardizedFileName"
 
                 val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
@@ -335,7 +336,7 @@ class UploadRepository(private val context: Context) {
 
                 val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,
-                    "title" to standardizedFileName,
+                    "title" to standardizedTitle,
                     "description" to description,
                     "branch" to canonicalBranch,
                     "semester" to semester,
@@ -382,6 +383,7 @@ class UploadRepository(private val context: Context) {
             val storagePaths = mutableListOf<String>()
             
             val documentId = UUID.randomUUID().toString()
+            val formattedTitle = if (!title.isNullOrBlank()) title.trim() else subject.trim()
             
             val folderName = when (type) {
                 UploadType.Notes -> "notes"
@@ -405,12 +407,8 @@ class UploadRepository(private val context: Context) {
                     if (selectedFiles.size > 1) {
                         sanitizeFileName(file.displayName)
                     } else {
-                        val base = when (type) {
-                            UploadType.Assignment -> "solution"
-                            UploadType.CheatSheet -> "cheatsheet"
-                            else -> "notes"
-                        }
-                        "$base.pdf"
+                        val base = sanitizeFileName(formattedTitle)
+                        "$base.$ext"
                     }
                 } else {
                     "page${index + 1}.$ext"
@@ -444,7 +442,7 @@ class UploadRepository(private val context: Context) {
                 else -> "application/octet-stream"
             }
 
-            val formattedTitle = if (!title.isNullOrBlank()) title.trim() else subject.trim()
+
 
             val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,

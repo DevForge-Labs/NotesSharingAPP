@@ -103,7 +103,7 @@ fun Map<String, Any>.toDocumentDetail(id: String, collection: String = "notes"):
 
     return DocumentDetail(
         id = id,
-        title = this["title"] as? String ?: "Untitled Document",
+        title = (this["title"] as? String ?: "Untitled Document").removeFileExtension(),
         description = this["description"] as? String ?: "",
         branch = this["branch"] as? String ?: "",
         semester = this["semester"] as? String ?: "",
@@ -142,4 +142,14 @@ fun Map<String, Any>.toDocumentDetail(id: String, collection: String = "notes"):
         collection = collection,
         displaySubject = this["displaySubject"] as? String
     )
+}
+
+fun String.removeFileExtension(): String {
+    val extensions = listOf(".pdf", ".docx", ".pptx", ".jpg", ".jpeg", ".png", ".webp", ".gif")
+    for (ext in extensions) {
+        if (this.endsWith(ext, ignoreCase = true)) {
+            return this.substring(0, this.length - ext.length)
+        }
+    }
+    return this
 }

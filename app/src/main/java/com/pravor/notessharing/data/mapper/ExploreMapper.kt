@@ -23,6 +23,7 @@ import com.pravor.notessharing.model.FileType
 import com.pravor.notessharing.model.ResourceType
 import com.pravor.notessharing.model.TrendingNote
 import com.pravor.notessharing.model.extractYoutubePlaylistId
+import com.pravor.notessharing.model.removeFileExtension
 import com.pravor.notessharing.upvotes.UpvoteRepository
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -32,7 +33,7 @@ object ExploreMapper {
 
     fun documentToDiscoverNote(data: Map<String, Any?>): DiscoverFeedItem.Note? {
         val id = data["documentId"] as? String ?: ""
-        val title = data["title"] as? String ?: ""
+        val title = (data["title"] as? String ?: "").removeFileExtension()
         val uploaderId = data["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
         val subject = data["subject"] as? String ?: ""
@@ -102,7 +103,7 @@ object ExploreMapper {
     ): TrendingNote? {
         val data = doc.data ?: return null
         val id = data["documentId"] as? String ?: ""
-        val title = data["title"] as? String ?: data["videoTitle"] as? String ?: ""
+        val title = (data["title"] as? String ?: data["videoTitle"] as? String ?: "").removeFileExtension()
         val uploaderId = data["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
 
@@ -199,7 +200,7 @@ object ExploreMapper {
 
     fun documentToFeedItem(doc: Map<String, Any?>): FeedItem? {
         val id = doc["documentId"] as? String ?: ""
-        val title = doc["title"] as? String ?: ""
+        val title = (doc["title"] as? String ?: "").removeFileExtension()
         val uploaderId = doc["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
 
