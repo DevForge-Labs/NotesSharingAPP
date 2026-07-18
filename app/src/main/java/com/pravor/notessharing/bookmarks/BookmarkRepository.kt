@@ -3,6 +3,7 @@ package com.pravor.notessharing.bookmarks
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.model.FeedItem
 import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.model.removeFileExtension
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,7 @@ class BookmarkRepository {
                             val list = querySnapshot.documents.mapNotNull { doc ->
                                 val data = doc.data ?: return@mapNotNull null
                                 val docId = data["documentId"] as? String ?: ""
-                                val title = data["title"] as? String ?: ""
+                                val title = (data["title"] as? String ?: "").removeFileExtension()
                                 val docTypeStr = data["documentType"] as? String ?: "Notes"
                                 val fileType = when (docTypeStr.lowercase(Locale.US).replace(" ", "")) {
                                     "pyq" -> com.pravor.notessharing.model.FileType.Pyq

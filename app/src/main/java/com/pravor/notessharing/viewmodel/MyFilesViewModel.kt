@@ -10,6 +10,7 @@ import com.pravor.notessharing.data.download.DownloadDataStoreManager
 import com.pravor.notessharing.data.download.DownloadService
 import com.pravor.notessharing.model.FileType
 import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.model.removeFileExtension
 import com.pravor.notessharing.state.MyFilesContent
 import com.pravor.notessharing.state.MyFilesUiState
 import android.content.Context
@@ -205,7 +206,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
 
     private fun documentToStudyFile(doc: Map<String, Any>): StudyFile {
         val id = doc["documentId"] as? String ?: ""
-        val title = doc["title"] as? String ?: ""
+        val title = (doc["title"] as? String ?: "").removeFileExtension()
         val uploadedAt = doc["uploadedAt"] as? Long ?: (doc["uploadTimestamp"] as? Long ?: System.currentTimeMillis())
         val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
         val uploadDate = "Uploaded " + sdf.format(java.util.Date(uploadedAt))
