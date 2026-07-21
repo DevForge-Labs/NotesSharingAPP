@@ -338,8 +338,7 @@ private fun ProfileContent(
                 ProfileHeaderCard(
                     profile = profile,
                     resolvedCollegeName = resolvedCollegeName,
-                    resolvedBranchName = resolvedBranchName,
-                    onClick = onEditProfileClick
+                    resolvedBranchName = resolvedBranchName
                 )
             }
             item(key = "contributor-summary", contentType = "contributor-summary") {

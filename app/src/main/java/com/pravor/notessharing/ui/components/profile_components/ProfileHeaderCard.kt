@@ -64,21 +64,27 @@ import kotlin.math.min
 private fun PressScaleCard(
     shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.985f else 1f, label = "profile-card-press")
+    val scale by animateFloatAsState(if (pressed && onClick != null) 0.985f else 1f, label = "profile-card-press")
 
-    Card(
-        modifier = modifier
+    val cardModifier = if (onClick != null) {
+        modifier
             .scale(scale)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
-            ),
+            )
+    } else {
+        modifier
+    }
+
+    Card(
+        modifier = cardModifier,
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -151,7 +157,7 @@ fun ProfileHeaderCard(
     resolvedCollegeName: String,
     resolvedBranchName: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {}
+    onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var avatarBitmap by remember { mutableStateOf<Bitmap?>(null) }
