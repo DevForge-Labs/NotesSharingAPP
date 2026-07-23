@@ -19,8 +19,8 @@ android {
         applicationId = "com.pravor.notessharing"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4 //ready for production release…no need to change
-        versionName = "2.0"
+        versionCode = 5
+        versionName = "3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
