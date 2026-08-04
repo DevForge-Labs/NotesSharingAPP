@@ -55,6 +55,12 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
             val authResult = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             val user = authResult.user ?: throw Exception("Login failed: User is null.")
             val profile = userService.getUserProfile(user.uid) ?: throw Exception("User profile does not exist in database.")
+            
+            if (profile.isDisabled) {
+                firebaseAuth.signOut()
+                throw Exception("Your account has been disabled by an administrator.")
+            }
+
             emit(Result.success(profile))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -71,6 +77,10 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
             
             val existingProfile = userService.getUserProfile(user.uid)
             if (existingProfile != null) {
+                if (existingProfile.isDisabled) {
+                    firebaseAuth.signOut()
+                    throw Exception("Your account has been disabled by an administrator.")
+                }
                 emit(Result.success(existingProfile))
             } else {
                 val tempProfile = Profile(

@@ -20,6 +20,8 @@ class FirestoreUserService {
                 val semester = snapshot.getString("semester") ?: "Not Set"
                 val profileImageUrl = snapshot.getString("profileImageUrl") ?: ""
                 val role = snapshot.getString("role") ?: "user"
+                val accountStatus = snapshot.getString("accountStatus")
+                    ?: if (snapshot.getBoolean("isDisabled") == true) "DISABLED" else "ACTIVE"
                 val totalUploads = snapshot.getLong("totalUploads")?.toInt() ?: 0
                 val bookmarks = snapshot.getLong("bookmarks")?.toInt() ?: 0
                 val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
@@ -44,6 +46,7 @@ class FirestoreUserService {
                     section = section,
                     profileImageUrl = profileImageUrl,
                     role = role,
+                    accountStatus = accountStatus,
                     totalUploads = totalUploads,
                     bookmarks = bookmarks,
                     upvotes = upvotes,
@@ -77,6 +80,8 @@ class FirestoreUserService {
                     val semester = snapshot.getString("semester") ?: "Not Set"
                     val profileImageUrl = snapshot.getString("profileImageUrl") ?: ""
                     val role = snapshot.getString("role") ?: "user"
+                    val accountStatus = snapshot.getString("accountStatus")
+                        ?: if (snapshot.getBoolean("isDisabled") == true) "DISABLED" else "ACTIVE"
                     val totalUploads = snapshot.getLong("totalUploads")?.toInt() ?: 0
                     val bookmarks = snapshot.getLong("bookmarks")?.toInt() ?: 0
                     val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
@@ -101,6 +106,7 @@ class FirestoreUserService {
                         section = section,
                         profileImageUrl = profileImageUrl,
                         role = role,
+                        accountStatus = accountStatus,
                         totalUploads = totalUploads,
                         bookmarks = bookmarks,
                         upvotes = upvotes,
@@ -131,6 +137,7 @@ class FirestoreUserService {
             "email" to profile.email,
             "profileImageUrl" to profile.profileImageUrl,
             "role" to profile.role,
+            "accountStatus" to profile.accountStatus,
             "contributorLevel" to profile.contributorLevel,
             "branch" to com.pravor.notessharing.util.NormalizationUtil.normalizeBranch(profile.branch),
             "semester" to profile.semester,

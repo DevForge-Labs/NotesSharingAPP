@@ -94,8 +94,15 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
             if (currentUser != null) {
                 val profile = repository.getUserProfile(currentUser.uid)
                 if (profile != null) {
-                    tempGoogleProfile = null
-                    _sessionState.update { SessionState.LoggedIn }
+                    if (profile.isDisabled) {
+                        repository.logout()
+                        tempGoogleProfile = null
+                        _sessionState.update { SessionState.LoggedOut }
+                        _uiState.update { AuthUiState.Error("Your account has been disabled by an administrator.") }
+                    } else {
+                        tempGoogleProfile = null
+                        _sessionState.update { SessionState.LoggedIn }
+                    }
                 } else {
                     tempGoogleProfile = Profile(
                         uid = currentUser.uid,

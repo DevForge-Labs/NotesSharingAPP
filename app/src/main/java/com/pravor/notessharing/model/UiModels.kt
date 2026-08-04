@@ -109,6 +109,7 @@ data class Profile(
     val section: String = "",
     val profileImageUrl: String = "",
     val role: String = "user",
+    val accountStatus: String = "ACTIVE",
     val totalUploads: Int = 0,
     val bookmarks: Int = 0,
     val upvotes: Int = 0,
@@ -127,6 +128,10 @@ data class Profile(
     @get:com.google.firebase.firestore.Exclude
     val isOnboardingRequired: Boolean = false
 ) {
+    @get:Exclude
+    val isDisabled: Boolean
+        get() = accountStatus.equals("DISABLED", ignoreCase = true) || accountStatus.equals("AUTH_DELETED", ignoreCase = true)
+
     @get:Exclude
     val initials: String
         get() = if (name.isNotBlank()) {
