@@ -126,265 +126,233 @@ fun MyFilesScreen(
             )
         }
     ) { innerPadding ->
-        Column(
+        val bottomPadding = LocalBottomBarPadding.current
+        Box(
             modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Header Content aligned with unified layout hierarchy
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Your downloaded study collection",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Search Bar
-                NotesSearchBar(
-                    placeholder = "Search downloaded files...",
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    isReadOnly = false,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Chips/Filters Row - Horizontally scrollable
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(scrollState),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val filters = listOf("All", "Notes", "PYQs", "Assignments", "Cheat Sheets", "Videos")
-
-                    filters.forEach { filter ->
-                        val isSelected = filter == selectedFilter
-                        val background = if (isSelected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        }
-                        val contentColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                        val borderColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        } else {
-                            Color.Transparent
-                        }
-
-                        Surface(
-                            modifier = Modifier.clickable { selectedFilter = filter },
-                            shape = RoundedCornerShape(12.dp),
-                            color = background,
-                            border = BorderStroke(1.dp, borderColor)
-                        ) {
-                            Text(
-                                text = filter,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = contentColor,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Main Content Area
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                Crossfade(targetState = uiState, label = "my-files-state", modifier = Modifier.fillMaxSize()) { state ->
-                    when (state) {
-                        MyFilesUiState.Loading -> com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator(
-                            text = "Loading your library...",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        MyFilesUiState.Empty -> {
-                            if (selectedFilter == "All") {
-                                PremiumEmptyState(
-                                    title = "No downloads",
-                                    message = null,
-                                    icon = Icons.Default.Download,
-                                    accentColor = Color(0xFFCFD8DC)
-                                )
-                            } else {
-                                val emptyTitle = when (selectedFilter) {
-                                    "Notes" -> "No notes"
-                                    "PYQs" -> "No PYQs"
-                                    "Assignments" -> "No assignments"
-                                    "Cheat Sheets" -> "No cheat sheets"
-                                    "Videos" -> "No videos"
-                                    else -> "No content"
+            Crossfade(targetState = uiState, label = "my-files-state", modifier = Modifier.fillMaxSize()) { state ->
+                when (state) {
+                    MyFilesUiState.Loading -> com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator(
+                        text = "Loading your library...",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    is MyFilesUiState.Error -> StatePanel(
+                        title = "Downloads unavailable",
+                        message = state.message,
+                        modifier = Modifier.padding(top = 96.dp)
+                    )
+                    MyFilesUiState.Empty, is MyFilesUiState.Success -> {
+                        val downloadedFiles = if (state is MyFilesUiState.Success) state.content.savedFiles else emptyList()
+                        val displayEmpty = downloadedFiles.isEmpty()
+                        val filteredFiles by remember(downloadedFiles, selectedFilter, searchQuery) {
+                            derivedStateOf {
+                                if (displayEmpty) {
+                                    emptyList()
+                                } else {
+                                    downloadedFiles
+                                        .filter { it.matchesFilter(selectedFilter) }
+                                        .filter { it.matchesSearchQuery(searchQuery) }
                                 }
-                                val emptyIcon = when (selectedFilter) {
-                                    "Notes" -> Icons.Default.Description
-                                    "PYQs" -> Icons.Default.Help
-                                    "Assignments" -> Icons.Default.Assignment
-                                    "Cheat Sheets" -> Icons.Default.Bolt
-                                    "Videos" -> Icons.Default.PlayArrow
-                                    else -> Icons.Default.FilePresent
-                                }
-                                val emptyColor = when (selectedFilter) {
-                                    "Notes" -> Color(0xFF58D6D1)
-                                    "PYQs" -> Color(0xFFFFB45C)
-                                    "Assignments" -> Color(0xFF7AD7FF)
-                                    "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                    "Videos" -> Color(0xFFFF6B6B)
-                                    else -> Color(0xFFCFD8DC)
-                                }
-                                PremiumEmptyState(
-                                    title = emptyTitle,
-                                    message = null,
-                                    icon = emptyIcon,
-                                    accentColor = emptyColor
-                                )
                             }
                         }
-                        is MyFilesUiState.Error -> StatePanel(
-                            title = "Downloads unavailable",
-                            message = state.message,
-                            modifier = Modifier.padding(top = 96.dp)
-                        )
-                        is MyFilesUiState.Success -> {
-                            val downloadedFiles = state.content.savedFiles
-                            val displayEmpty = downloadedFiles.isEmpty()
-                            val filteredFiles by remember(downloadedFiles, selectedFilter, searchQuery) {
-                                derivedStateOf {
-                                    if (displayEmpty) {
-                                        emptyList()
-                                    } else {
-                                        downloadedFiles
-                                            .filter { it.matchesFilter(selectedFilter) }
-                                            .filter { it.matchesSearchQuery(searchQuery) }
-                                    }
-                                }
-                            }
 
-                            if (displayEmpty) {
-                                if (selectedFilter == "All") {
-                                    PremiumEmptyState(
-                                        title = "No downloads",
-                                        message = null,
-                                        icon = Icons.Default.Download,
-                                        accentColor = Color(0xFFCFD8DC)
-                                    )
-                                } else {
-                                    val emptyTitle = when (selectedFilter) {
-                                        "Notes" -> "No notes"
-                                        "PYQs" -> "No PYQs"
-                                        "Assignments" -> "No assignments"
-                                        "Cheat Sheets" -> "No cheat sheets"
-                                        "Videos" -> "No videos"
-                                        else -> "No content"
-                                    }
-                                    val emptyIcon = when (selectedFilter) {
-                                        "Notes" -> Icons.Default.Description
-                                        "PYQs" -> Icons.Default.Help
-                                        "Assignments" -> Icons.Default.Assignment
-                                        "Cheat Sheets" -> Icons.Default.Bolt
-                                        "Videos" -> Icons.Default.PlayArrow
-                                        else -> Icons.Default.FilePresent
-                                    }
-                                    val emptyColor = when (selectedFilter) {
-                                        "Notes" -> Color(0xFF58D6D1)
-                                        "PYQs" -> Color(0xFFFFB45C)
-                                        "Assignments" -> Color(0xFF7AD7FF)
-                                        "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                        "Videos" -> Color(0xFFFF6B6B)
-                                        else -> Color(0xFFCFD8DC)
-                                    }
-                                    PremiumEmptyState(
-                                        title = emptyTitle,
-                                        message = null,
-                                        icon = emptyIcon,
-                                        accentColor = emptyColor
+                        Box(Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                state = listState,
+                                contentPadding = PaddingValues(top = 8.dp, bottom = 14.dp + bottomPadding),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // 1. Subtitle Header Item
+                                item(key = "header_subtitle") {
+                                    Text(
+                                        text = "Your downloaded study collection",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 18.dp)
                                     )
                                 }
-                            } else {
-                                if (filteredFiles.isEmpty()) {
-                                    if (searchQuery.isNotEmpty()) {
-                                        PremiumEmptyState(
-                                            title = "No matching downloads found.",
-                                            message = null,
-                                            icon = Icons.Default.Download,
-                                            accentColor = Color(0xFFCFD8DC)
-                                        )
-                                    } else {
-                                        val emptyTitle = when (selectedFilter) {
-                                            "Notes" -> "No notes"
-                                            "PYQs" -> "No PYQs"
-                                            "Assignments" -> "No assignments"
-                                            "Cheat Sheets" -> "No cheat sheets"
-                                            "Videos" -> "No videos"
-                                            else -> "No content"
-                                        }
-                                        val emptyIcon = when (selectedFilter) {
-                                            "Notes" -> Icons.Default.Description
-                                            "PYQs" -> Icons.Default.Help
-                                            "Assignments" -> Icons.Default.Assignment
-                                            "Cheat Sheets" -> Icons.Default.Bolt
-                                            "Videos" -> Icons.Default.PlayArrow
-                                            else -> Icons.Default.FilePresent
-                                        }
-                                        val emptyColor = when (selectedFilter) {
-                                            "Notes" -> Color(0xFF58D6D1)
-                                            "PYQs" -> Color(0xFFFFB45C)
-                                            "Assignments" -> Color(0xFF7AD7FF)
-                                            "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                            "Videos" -> Color(0xFFFF6B6B)
-                                            else -> Color(0xFFCFD8DC)
-                                        }
-                                        PremiumEmptyState(
-                                            title = emptyTitle,
-                                            message = null,
-                                            icon = emptyIcon,
-                                            accentColor = emptyColor
+
+                                // 2. Search Bar Item
+                                item(key = "header_search") {
+                                    Box(modifier = Modifier.padding(horizontal = 18.dp)) {
+                                        NotesSearchBar(
+                                            placeholder = "Search downloaded files...",
+                                            value = searchQuery,
+                                            onValueChange = { searchQuery = it },
+                                            isReadOnly = false,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
-                                } else {
-                                    val bottomPadding = LocalBottomBarPadding.current
-                                    Box(Modifier.fillMaxSize()) {
-                                        LazyColumn(
-                                            modifier = Modifier.fillMaxSize(),
-                                            state = listState,
-                                            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
-                                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            items(filteredFiles, key = { it.id }, contentType = { "study-file" }) { file ->
-                                                StudyHubShelfCard(
-                                                    file = file,
-                                                    onClick = {
-                                                        if (file.id.contains("video", ignoreCase = true)) {
-                                                            onVideoClick(file.id)
-                                                        } else {
-                                                            onDocumentClick(file.id)
-                                                        }
-                                                    },
-                                                    onDeleteClick = {
-                                                        pendingDeleteFile = file
-                                                    }
+                                }
+
+                                // 3. Filter Chips Row Item
+                                item(key = "header_chips") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(scrollState)
+                                            .padding(horizontal = 18.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        val filters = listOf("All", "Notes", "PYQs", "Assignments", "Cheat Sheets", "Videos")
+
+                                        filters.forEach { filter ->
+                                            val isSelected = filter == selectedFilter
+                                            val background = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceContainerHigh
+                                            }
+                                            val contentColor = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                            val borderColor = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                            } else {
+                                                Color.Transparent
+                                            }
+
+                                            Surface(
+                                                modifier = Modifier.clickable { selectedFilter = filter },
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = background,
+                                                border = BorderStroke(1.dp, borderColor)
+                                            ) {
+                                                Text(
+                                                    text = filter,
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = contentColor,
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
                                             }
                                         }
-                                        AdaptiveScrollbar(listState = listState)
+                                    }
+                                }
+
+                                // 4. Content Items or Empty State
+                                if (displayEmpty) {
+                                    item(key = "empty_state_all") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 40.dp, bottom = 40.dp)
+                                        ) {
+                                            if (selectedFilter == "All") {
+                                                PremiumEmptyState(
+                                                    title = "No downloads",
+                                                    message = null,
+                                                    icon = Icons.Default.Download,
+                                                    accentColor = Color(0xFFCFD8DC)
+                                                )
+                                            } else {
+                                                val emptyTitle = when (selectedFilter) {
+                                                    "Notes" -> "No notes"
+                                                    "PYQs" -> "No PYQs"
+                                                    "Assignments" -> "No assignments"
+                                                    "Cheat Sheets" -> "No cheat sheets"
+                                                    "Videos" -> "No videos"
+                                                    else -> "No content"
+                                                }
+                                                val emptyIcon = when (selectedFilter) {
+                                                    "Notes" -> Icons.Default.Description
+                                                    "PYQs" -> Icons.Default.Help
+                                                    "Assignments" -> Icons.Default.Assignment
+                                                    "Cheat Sheets" -> Icons.Default.Bolt
+                                                    "Videos" -> Icons.Default.PlayArrow
+                                                    else -> Icons.Default.FilePresent
+                                                }
+                                                val emptyColor = when (selectedFilter) {
+                                                    "Notes" -> Color(0xFF58D6D1)
+                                                    "PYQs" -> Color(0xFFFFB45C)
+                                                    "Assignments" -> Color(0xFF7AD7FF)
+                                                    "Cheat Sheets" -> Color(0xFFC7A6FF)
+                                                    "Videos" -> Color(0xFFFF6B6B)
+                                                    else -> Color(0xFFCFD8DC)
+                                                }
+                                                PremiumEmptyState(
+                                                    title = emptyTitle,
+                                                    message = null,
+                                                    icon = emptyIcon,
+                                                    accentColor = emptyColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (filteredFiles.isEmpty()) {
+                                    item(key = "empty_state_filtered") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 40.dp, bottom = 40.dp)
+                                        ) {
+                                            if (searchQuery.isNotEmpty()) {
+                                                PremiumEmptyState(
+                                                    title = "No matching downloads found.",
+                                                    message = null,
+                                                    icon = Icons.Default.Download,
+                                                    accentColor = Color(0xFFCFD8DC)
+                                                )
+                                            } else {
+                                                val emptyTitle = when (selectedFilter) {
+                                                    "Notes" -> "No notes"
+                                                    "PYQs" -> "No PYQs"
+                                                    "Assignments" -> "No assignments"
+                                                    "Cheat Sheets" -> "No cheat sheets"
+                                                    "Videos" -> "No videos"
+                                                    else -> "No content"
+                                                }
+                                                val emptyIcon = when (selectedFilter) {
+                                                    "Notes" -> Icons.Default.Description
+                                                    "PYQs" -> Icons.Default.Help
+                                                    "Assignments" -> Icons.Default.Assignment
+                                                    "Cheat Sheets" -> Icons.Default.Bolt
+                                                    "Videos" -> Icons.Default.PlayArrow
+                                                    else -> Icons.Default.FilePresent
+                                                }
+                                                val emptyColor = when (selectedFilter) {
+                                                    "Notes" -> Color(0xFF58D6D1)
+                                                    "PYQs" -> Color(0xFFFFB45C)
+                                                    "Assignments" -> Color(0xFF7AD7FF)
+                                                    "Cheat Sheets" -> Color(0xFFC7A6FF)
+                                                    "Videos" -> Color(0xFFFF6B6B)
+                                                    else -> Color(0xFFCFD8DC)
+                                                }
+                                                PremiumEmptyState(
+                                                    title = emptyTitle,
+                                                    message = null,
+                                                    icon = emptyIcon,
+                                                    accentColor = emptyColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    items(filteredFiles, key = { it.id }, contentType = { "study-file" }) { file ->
+                                        Box(modifier = Modifier.padding(horizontal = 18.dp)) {
+                                            StudyHubShelfCard(
+                                                file = file,
+                                                onClick = {
+                                                    if (file.id.contains("video", ignoreCase = true)) {
+                                                        onVideoClick(file.id)
+                                                    } else {
+                                                        onDocumentClick(file.id)
+                                                    }
+                                                },
+                                                onDeleteClick = {
+                                                    pendingDeleteFile = file
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
+                            AdaptiveScrollbar(listState = listState)
                         }
                     }
                 }

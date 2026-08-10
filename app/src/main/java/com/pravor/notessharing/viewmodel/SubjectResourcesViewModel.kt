@@ -77,6 +77,8 @@ class SubjectResourcesViewModel(
         initialValue = emptyList()
     )
 
+    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+
     init {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (currentUid != null) {
@@ -113,12 +115,27 @@ class SubjectResourcesViewModel(
         _isRefreshing.value = true
         viewModelScope.launch {
             try {
+                val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
+                val rawCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+
+                if (rawCollege.isNullOrBlank()) {
+                    android.util.Log.d("SubjectResourcesVM", "No college found in user profile. Skipping resources load.")
+                    _rawResources.value = emptyList()
+                    return@launch
+                }
+
+                val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
                 val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
                 val allDocs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val deferreds = collections.map { col ->
                         async {
                             try {
-                                firestore.collection(col).get().await().documents
+                                firestore.collection(col)
+                                    .whereEqualTo("college", canonicalCollegeId)
+                                    .get()
+                                    .await()
+                                    .documents
                             } catch (e: Exception) {
                                 emptyList()
                             }

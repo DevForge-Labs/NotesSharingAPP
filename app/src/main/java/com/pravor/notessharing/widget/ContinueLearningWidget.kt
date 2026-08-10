@@ -194,7 +194,25 @@ class ContinueLearningWidget : GlanceAppWidget() {
                 try {
                     val decodeStartTime = System.currentTimeMillis()
                     android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Bitmap decoding thread=${Thread.currentThread().name}")
-                    val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+                    
+                    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(localFile.absolutePath, boundsOptions)
+
+                    var sampleSize = 1
+                    val reqWidth = 320
+                    val reqHeight = 320
+                    if (boundsOptions.outHeight > reqHeight || boundsOptions.outWidth > reqWidth) {
+                        val halfHeight = boundsOptions.outHeight / 2
+                        val halfWidth = boundsOptions.outWidth / 2
+                        while (halfHeight / sampleSize >= reqHeight && halfWidth / sampleSize >= reqWidth) {
+                            sampleSize *= 2
+                        }
+                    }
+
+                    val decodeOptions = BitmapFactory.Options().apply {
+                        inSampleSize = sampleSize
+                    }
+                    val bitmap = BitmapFactory.decodeFile(localFile.absolutePath, decodeOptions)
                     val decodeDuration = System.currentTimeMillis() - decodeStartTime
                     android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Bitmap decoding duration=${decodeDuration}ms thread=${Thread.currentThread().name}")
                     if (bitmap != null) {

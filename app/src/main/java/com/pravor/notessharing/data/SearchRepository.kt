@@ -34,25 +34,32 @@ open class SearchRepository(
      */
     suspend fun search(
         query: String,
+        userCollegeId: String? = null,
         selectedDocumentTypes: Set<String> = emptySet()
     ): List<SearchResultModel> = withContext(Dispatchers.IO) {
         if (appId.isBlank() || apiKey.isBlank()) {
             return@withContext emptyList()
         }
 
-        // Check the cache first (using normalized query internally in SearchCache)
-        val cachedResults = searchCache.get(query)
+        val canonicalCollegeId = userCollegeId?.takeIf { it.isNotBlank() }?.let {
+            com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(it)
+        }
+
+        if (canonicalCollegeId.isNullOrBlank()) {
+            android.util.Log.d("SearchRepository", "No college provided for search. Returning empty results.")
+            return@withContext emptyList()
+        }
+
+        val cacheKey = "${canonicalCollegeId}_$query"
+        val cachedResults = searchCache.get(cacheKey)
         val rawResults = cachedResults ?: try {
-            // Fetch raw, unfiltered results from Algolia on cache miss
-            val networkResults = executeNetworkSearch(query, emptySet())
-            // Cache successful raw results (including empty result lists)
-            searchCache.put(query, networkResults)
+            val networkResults = executeNetworkSearch(query, canonicalCollegeId, emptySet())
+            searchCache.put(cacheKey, networkResults)
             networkResults
         } catch (e: Exception) {
             throw e
         }
 
-        // Apply selected resource type filters locally
         if (selectedDocumentTypes.isNotEmpty()) {
             rawResults.filter { result ->
                 val type = if (result.documentType.isNotBlank()) result.documentType else result.type
@@ -75,20 +82,19 @@ open class SearchRepository(
         }
     }
 
-    /**
-     * Executes the actual network search using the Algolia client.
-     * Extracted and made open for unit testing.
-     */
     internal open suspend fun executeNetworkSearch(
         query: String,
+        userCollegeId: String,
         selectedDocumentTypes: Set<String>
     ): List<SearchResultModel> {
+        val collegeFilter = "college:$userCollegeId"
         val filterExpression = if (selectedDocumentTypes.isNotEmpty()) {
-            selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
+            val typeFilters = selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
                 "documentType:$it"
             }
+            "$collegeFilter AND $typeFilters"
         } else {
-            null
+            collegeFilter
         }
 
         val params = SearchParamsObject(

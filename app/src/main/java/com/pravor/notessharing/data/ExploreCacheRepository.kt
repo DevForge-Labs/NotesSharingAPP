@@ -9,11 +9,14 @@ import org.json.JSONObject
 class ExploreCacheRepository(context: Context) {
     private val preferences = context.getSharedPreferences("explore_cache", Context.MODE_PRIVATE)
 
-    companion object {
-        private const val KEY_EXPLORE_CONTENT = "cached_explore_content"
+    private fun getKey(collegeId: String): String {
+        val canonical = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        return if (canonical.isNotBlank()) "cached_explore_content_$canonical" else ""
     }
 
-    fun saveCache(content: ExploreContent) {
+    fun saveCache(collegeId: String, content: ExploreContent) {
+        val key = getKey(collegeId)
+        if (key.isBlank()) return
         try {
             val json = JSONObject()
             
@@ -115,14 +118,16 @@ class ExploreCacheRepository(context: Context) {
             }
             json.put("discoverItems", discoverArray)
 
-            preferences.edit().putString(KEY_EXPLORE_CONTENT, json.toString()).apply()
+            preferences.edit().putString(key, json.toString()).apply()
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    fun getCache(): ExploreContent? {
-        val raw = preferences.getString(KEY_EXPLORE_CONTENT, null) ?: return null
+    fun getCache(collegeId: String): ExploreContent? {
+        val key = getKey(collegeId)
+        if (key.isBlank()) return null
+        val raw = preferences.getString(key, null) ?: return null
         return try {
             val json = JSONObject(raw)
 

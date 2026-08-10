@@ -178,10 +178,10 @@ class DocumentDetailRepository {
         }
         
         val col = doc.collection
-        if (col.isBlank()) {
+        if (col.isBlank() || doc.college.isBlank()) {
             if (BuildConfig.DEBUG) {
-                Log.e("RECOMMENDATIONS", "getRelatedDocuments: collection is blank for docId=${doc.id}. Returning empty recommendations.")
-                Log.d("REC_TRACE", "[DOC] 1. Candidates fetched: 0 (collection is blank)")
+                Log.e("RECOMMENDATIONS", "getRelatedDocuments: collection or college is blank for docId=${doc.id}. Returning empty recommendations.")
+                Log.d("REC_TRACE", "[DOC] 1. Candidates fetched: 0 (collection or college is blank)")
                 Log.d("REC_TRACE", "[DOC] 2. Count after type filtering: 0")
                 Log.d("REC_TRACE", "[DOC] 3. Count after current-item exclusion: 0")
                 Log.d("REC_TRACE", "[DOC] 4. Counts after subject partitioning: sameSubject=0, otherSubjects=0")
@@ -191,8 +191,10 @@ class DocumentDetailRepository {
         }
         
         try {
+            val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(doc.college)
             val firestoreQueryStartTime = System.currentTimeMillis()
             val querySnapshot = firestore.collection(col)
+                .whereEqualTo("college", canonicalCollegeId)
                 .get()
                 .await()
             

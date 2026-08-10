@@ -27,9 +27,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private var isFirstLoad = true
     private val startupStartTime = System.currentTimeMillis()
 
-    private val _uiState = MutableStateFlow<ExploreUiState>(
-        exploreRepository.getCachedContent()?.let { ExploreUiState.Success(it) } ?: ExploreUiState.Loading
-    )
+    private val _uiState = MutableStateFlow<ExploreUiState>(ExploreUiState.Loading)
     val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
 
     private val firestore = FirebaseFirestore.getInstance()
@@ -49,7 +47,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
             try {
                 val profile = profileRepository.getProfile(currentUid)
-                val collegeId = profile?.college?.let { com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(it) } ?: "kiit"
+                val rawCollege = profile?.college?.takeIf { it.isNotBlank() } ?: return@launch
+                val collegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
                 val branchId = profile?.branch?.let { com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(it) } ?: "cse"
                 val semester = profile?.semester ?: "Semester 4"
 
@@ -145,12 +144,17 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
             android.util.Log.d("PERF", "[PERF] Explore startup START thread=${Thread.currentThread().name}")
         }
-        val cached = exploreRepository.getCachedContent()
-        if (cached != null) {
-            _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cached)) }
+        viewModelScope.launch {
+            val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
+            val userCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+            val cached = userCollege?.let { exploreRepository.getCachedContent(it) }
+            if (cached != null) {
+                _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cached)) }
+            }
+            loadRealDocuments(silent = cached != null)
+            loadCatalogSubjects()
         }
-        loadRealDocuments(silent = cached != null)
-        loadCatalogSubjects()
 
         viewModelScope.launch {
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
@@ -339,12 +343,36 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             if (com.pravor.notessharing.BuildConfig.DEBUG) {
                 android.util.Log.d("PERF", "[PERF] Explore load START thread=${Thread.currentThread().name}")
             }
+            var userCollege: String? = null
             try {
+                val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
+                userCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+
+                if (userCollege.isNullOrBlank()) {
+                    android.util.Log.d("ExploreViewModel", "No college in user profile. Skipping explore content fetch.")
+                    val emptyContent = ExploreContent(
+                        topics = emptyList(),
+                        popularUploads = emptyList(),
+                        notes = emptyList(),
+                        examPrep = emptyList(),
+                        assignments = emptyList(),
+                        videos = emptyList(),
+                        studyCollections = emptyList(),
+                        subjectHubs = emptyList(),
+                        topContributors = emptyList(),
+                        revisionCards = emptyList(),
+                        discoverItems = emptyList()
+                    )
+                    _uiState.value = ExploreUiState.Success(emptyContent)
+                    return@launch
+                }
+
                 if (!isPullToRefresh) {
-                    val cachedContent = exploreRepository.getCachedContent()
+                    val cachedContent = exploreRepository.getCachedContent(userCollege)
                     if (cachedContent != null) {
                         _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cachedContent)) }
-                        if (!exploreRepository.isCacheExpired()) {
+                        if (!exploreRepository.isCacheExpired(userCollege)) {
                             return@launch
                         }
                     } else {
@@ -354,7 +382,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                val freshContent = exploreRepository.fetchExploreContent()
+                val freshContent = exploreRepository.fetchExploreContent(userCollege)
                 _uiState.update { ExploreUiState.Success(mergeWithLatestStats(freshContent)) }
 
                 if (com.pravor.notessharing.BuildConfig.DEBUG) {
@@ -369,7 +397,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
             } catch (e: Exception) {
-                if (exploreRepository.getCachedContent() == null) {
+                val activeCollege = userCollege
+                val isCachedAvailable = activeCollege != null && exploreRepository.getCachedContent(activeCollege) != null
+                if (!isCachedAvailable) {
                     _uiState.update {
                         ExploreUiState.Error(e.localizedMessage ?: "Failed to load explore content")
                     }

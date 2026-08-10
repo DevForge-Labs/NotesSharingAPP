@@ -27,7 +27,7 @@ class FirestoreUserService {
                 val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
                 val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                 val branch = snapshot.getString("branch") ?: "cse"
-                val college = snapshot.getString("college") ?: "kiit"
+                val college = snapshot.getString("college") ?: ""
                 val section = snapshot.getString("section") ?: ""
                 val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
                 
@@ -87,7 +87,7 @@ class FirestoreUserService {
                     val upvotes = snapshot.getLong("upvotes")?.toInt() ?: 0
                     val contributorLevel = snapshot.getLong("contributorLevel")?.toInt() ?: 1
                     val branch = snapshot.getString("branch") ?: "cse"
-                    val college = snapshot.getString("college") ?: "kiit"
+                    val college = snapshot.getString("college") ?: ""
                     val section = snapshot.getString("section") ?: ""
                     val createdAt = snapshot.getLong("createdAt") ?: System.currentTimeMillis()
                     

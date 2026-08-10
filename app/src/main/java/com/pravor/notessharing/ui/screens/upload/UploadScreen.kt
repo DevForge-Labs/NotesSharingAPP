@@ -1078,13 +1078,25 @@ fun SingleImagePreviewCard(
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
-                val bitmap = remember(file.uri) {
+                val bitmap = remember(file.uri, imageInfo) {
                     runCatching {
                         val uri = Uri.parse(file.uri)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             context.contentResolver.loadThumbnail(uri, android.util.Size(640, 360), null)
                         } else {
-                            context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+                            val sampleSize = imageInfo?.let { (w, h) ->
+                                var sample = 1
+                                while (w / (sample * 2) >= 640 && h / (sample * 2) >= 360) {
+                                    sample *= 2
+                                }
+                                sample
+                            } ?: 1
+                            context.contentResolver.openInputStream(uri)?.use { stream ->
+                                val decodeOptions = BitmapFactory.Options().apply {
+                                    inSampleSize = sampleSize
+                                }
+                                BitmapFactory.decodeStream(stream, null, decodeOptions)
+                            }
                         }
                     }.getOrNull()
                 }
@@ -1218,13 +1230,25 @@ fun GridImagePreviewCard(
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
-                val bitmap = remember(file.uri) {
+                val bitmap = remember(file.uri, imageInfo) {
                     runCatching {
                         val uri = Uri.parse(file.uri)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             context.contentResolver.loadThumbnail(uri, android.util.Size(320, 240), null)
                         } else {
-                            context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+                            val sampleSize = imageInfo?.let { (w, h) ->
+                                var sample = 1
+                                while (w / (sample * 2) >= 320 && h / (sample * 2) >= 240) {
+                                    sample *= 2
+                                }
+                                sample
+                            } ?: 1
+                            context.contentResolver.openInputStream(uri)?.use { stream ->
+                                val decodeOptions = BitmapFactory.Options().apply {
+                                    inSampleSize = sampleSize
+                                }
+                                BitmapFactory.decodeStream(stream, null, decodeOptions)
+                            }
                         }
                     }.getOrNull()
                 }

@@ -162,247 +162,256 @@ fun MyBookmarksScreen(
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Screen header content matching unified family language
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Quick access to saved study material",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Search Bar
-                NotesSearchBar(
-                    placeholder = "Search saved resources...",
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    isReadOnly = false,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Chips/Filters Row - Horizontally scrollable
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(scrollState),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val filters = listOf("All", "Notes", "PYQs", "Assignments", "Cheat Sheets", "Videos")
-
-                    filters.forEach { filter ->
-                        val isSelected = filter == selectedFilter
-                        val background = if (isSelected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            Crossfade(targetState = uiState, label = "bookmarks-state", modifier = Modifier.fillMaxSize()) { state ->
+                when (state) {
+                    BookmarkUiState.Loading -> StatePanel(
+                        title = "Loading bookmarks",
+                        message = "Preparing your saved resources",
+                        loading = true,
+                        modifier = Modifier.padding(top = 96.dp)
+                    )
+                    is BookmarkUiState.Error -> StatePanel(
+                        title = "Bookmarks unavailable",
+                        message = state.message,
+                        modifier = Modifier.padding(top = 96.dp)
+                    )
+                    BookmarkUiState.Empty, is BookmarkUiState.Success -> {
+                        val bookmarks = if (state is BookmarkUiState.Success) {
+                            state.bookmarks
                         } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        }
-                        val contentColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                        val borderColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        } else {
-                            Color.Transparent
+                            emptyList()
                         }
 
-                        Surface(
-                            modifier = Modifier.clickable { selectedFilter = filter },
-                            shape = RoundedCornerShape(12.dp),
-                            color = background,
-                            border = BorderStroke(1.dp, borderColor)
-                        ) {
-                            Text(
-                                text = filter,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = contentColor,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Main Content Area
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                Crossfade(targetState = uiState, label = "bookmarks-state", modifier = Modifier.fillMaxSize()) { state ->
-                    when (state) {
-                        BookmarkUiState.Loading -> StatePanel(
-                            title = "Loading bookmarks",
-                            message = "Preparing your saved resources",
-                            loading = true,
-                            modifier = Modifier.padding(top = 96.dp)
-                        )
-                        is BookmarkUiState.Error -> StatePanel(
-                            title = "Bookmarks unavailable",
-                            message = state.message,
-                            modifier = Modifier.padding(top = 96.dp)
-                        )
-                        BookmarkUiState.Empty, is BookmarkUiState.Success -> {
-                            val bookmarks = if (state is BookmarkUiState.Success) {
-                                state.bookmarks
-                            } else {
-                                emptyList()
-                            }
-
-                            val displayEmpty = bookmarks.isEmpty()
-                            val filteredFiles by remember(bookmarks, selectedFilter, searchQuery) {
-                                derivedStateOf {
-                                    if (displayEmpty) {
-                                        emptyList()
-                                    } else {
-                                        bookmarks
-                                            .filter { it.matchesFilter(selectedFilter) }
-                                            .filter { it.matchesSearchQuery(searchQuery) }
-                                    }
+                        val displayEmpty = bookmarks.isEmpty()
+                        val filteredFiles by remember(bookmarks, selectedFilter, searchQuery) {
+                            derivedStateOf {
+                                if (displayEmpty) {
+                                    emptyList()
+                                } else {
+                                    bookmarks
+                                        .filter { it.matchesFilter(selectedFilter) }
+                                        .filter { it.matchesSearchQuery(searchQuery) }
                                 }
                             }
-                            
-                            if (displayEmpty) {
-                                if (selectedFilter == "All") {
-                                    PremiumEmptyState(
-                                        title = "No bookmarks",
-                                        message = null,
-                                        icon = Icons.Default.Bookmark,
-                                        accentColor = Color(0xFFFFB45C)
-                                    )
-                                } else {
-                                    val emptyTitle = when (selectedFilter) {
-                                        "Notes" -> "No notes"
-                                        "PYQs" -> "No PYQs"
-                                        "Assignments" -> "No assignments"
-                                        "Cheat Sheets" -> "No cheat sheets"
-                                        "Videos" -> "No videos"
-                                        else -> "No content"
-                                    }
-                                    val emptyIcon = when (selectedFilter) {
-                                        "Notes" -> Icons.Default.Description
-                                        "PYQs" -> Icons.Default.Help
-                                        "Assignments" -> Icons.Default.Assignment
-                                        "Cheat Sheets" -> Icons.Default.Bolt
-                                        "Videos" -> Icons.Default.PlayArrow
-                                        else -> Icons.Default.FilePresent
-                                    }
-                                    val emptyColor = when (selectedFilter) {
-                                        "Notes" -> Color(0xFF58D6D1)
-                                        "PYQs" -> Color(0xFFFFB45C)
-                                        "Assignments" -> Color(0xFF7AD7FF)
-                                        "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                        "Videos" -> Color(0xFFFF6B6B)
-                                        else -> Color(0xFFCFD8DC)
-                                    }
-                                    PremiumEmptyState(
-                                        title = emptyTitle,
-                                        message = null,
-                                        icon = emptyIcon,
-                                        accentColor = emptyColor
+                        }
+
+                        Box(Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                contentPadding = PaddingValues(top = 8.dp, bottom = 14.dp + bottomPadding),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                // 1. Subtitle Header Item
+                                item(key = "header_subtitle") {
+                                    Text(
+                                        text = "Quick access to saved study material",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 18.dp)
                                     )
                                 }
-                            } else {
-                                if (filteredFiles.isEmpty()) {
-                                    if (searchQuery.isNotEmpty()) {
-                                        PremiumEmptyState(
-                                            title = "No matching bookmarks found.",
-                                            message = null,
-                                            icon = Icons.Default.Bookmark,
-                                            accentColor = Color(0xFFFFB45C)
-                                        )
-                                    } else {
-                                        val emptyTitle = when (selectedFilter) {
-                                            "Notes" -> "No notes"
-                                            "PYQs" -> "No PYQs"
-                                            "Assignments" -> "No assignments"
-                                            "Cheat Sheets" -> "No cheat sheets"
-                                            "Videos" -> "No videos"
-                                            else -> "No content"
-                                        }
-                                        val emptyIcon = when (selectedFilter) {
-                                            "Notes" -> Icons.Default.Description
-                                            "PYQs" -> Icons.Default.Help
-                                            "Assignments" -> Icons.Default.Assignment
-                                            "Cheat Sheets" -> Icons.Default.Bolt
-                                            "Videos" -> Icons.Default.PlayArrow
-                                            else -> Icons.Default.FilePresent
-                                        }
-                                        val emptyColor = when (selectedFilter) {
-                                            "Notes" -> Color(0xFF58D6D1)
-                                            "PYQs" -> Color(0xFFFFB45C)
-                                            "Assignments" -> Color(0xFF7AD7FF)
-                                            "Cheat Sheets" -> Color(0xFFC7A6FF)
-                                            "Videos" -> Color(0xFFFF6B6B)
-                                            else -> Color(0xFFCFD8DC)
-                                        }
-                                        PremiumEmptyState(
-                                            title = emptyTitle,
-                                            message = null,
-                                            icon = emptyIcon,
-                                            accentColor = emptyColor
+
+                                // 2. Search Bar Item
+                                item(key = "header_search") {
+                                    Box(modifier = Modifier.padding(horizontal = 18.dp)) {
+                                        NotesSearchBar(
+                                            placeholder = "Search saved resources...",
+                                            value = searchQuery,
+                                            onValueChange = { searchQuery = it },
+                                            isReadOnly = false,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
+                                }
+
+                                // 3. Filter Chips Row Item
+                                item(key = "header_chips") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(scrollState)
+                                            .padding(horizontal = 18.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        val filters = listOf("All", "Notes", "PYQs", "Assignments", "Cheat Sheets", "Videos")
+
+                                        filters.forEach { filter ->
+                                            val isSelected = filter == selectedFilter
+                                            val background = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceContainerHigh
+                                            }
+                                            val contentColor = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                            val borderColor = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                            } else {
+                                                Color.Transparent
+                                            }
+
+                                            Surface(
+                                                modifier = Modifier.clickable { selectedFilter = filter },
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = background,
+                                                border = BorderStroke(1.dp, borderColor)
+                                            ) {
+                                                Text(
+                                                    text = filter,
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = contentColor,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 4. Content Items or Empty State
+                                if (displayEmpty) {
+                                    item(key = "empty_state_all") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 40.dp, bottom = 40.dp)
+                                        ) {
+                                            if (selectedFilter == "All") {
+                                                PremiumEmptyState(
+                                                    title = "No bookmarks",
+                                                    message = null,
+                                                    icon = Icons.Default.Bookmark,
+                                                    accentColor = Color(0xFFFFB45C)
+                                                )
+                                            } else {
+                                                val emptyTitle = when (selectedFilter) {
+                                                    "Notes" -> "No notes"
+                                                    "PYQs" -> "No PYQs"
+                                                    "Assignments" -> "No assignments"
+                                                    "Cheat Sheets" -> "No cheat sheets"
+                                                    "Videos" -> "No videos"
+                                                    else -> "No content"
+                                                }
+                                                val emptyIcon = when (selectedFilter) {
+                                                    "Notes" -> Icons.Default.Description
+                                                    "PYQs" -> Icons.Default.Help
+                                                    "Assignments" -> Icons.Default.Assignment
+                                                    "Cheat Sheets" -> Icons.Default.Bolt
+                                                    "Videos" -> Icons.Default.PlayArrow
+                                                    else -> Icons.Default.FilePresent
+                                                }
+                                                val emptyColor = when (selectedFilter) {
+                                                    "Notes" -> Color(0xFF58D6D1)
+                                                    "PYQs" -> Color(0xFFFFB45C)
+                                                    "Assignments" -> Color(0xFF7AD7FF)
+                                                    "Cheat Sheets" -> Color(0xFFC7A6FF)
+                                                    "Videos" -> Color(0xFFFF6B6B)
+                                                    else -> Color(0xFFCFD8DC)
+                                                }
+                                                PremiumEmptyState(
+                                                    title = emptyTitle,
+                                                    message = null,
+                                                    icon = emptyIcon,
+                                                    accentColor = emptyColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (filteredFiles.isEmpty()) {
+                                    item(key = "empty_state_filtered") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 40.dp, bottom = 40.dp)
+                                        ) {
+                                            if (searchQuery.isNotEmpty()) {
+                                                PremiumEmptyState(
+                                                    title = "No matching bookmarks found.",
+                                                    message = null,
+                                                    icon = Icons.Default.Bookmark,
+                                                    accentColor = Color(0xFFFFB45C)
+                                                )
+                                            } else {
+                                                val emptyTitle = when (selectedFilter) {
+                                                    "Notes" -> "No notes"
+                                                    "PYQs" -> "No PYQs"
+                                                    "Assignments" -> "No assignments"
+                                                    "Cheat Sheets" -> "No cheat sheets"
+                                                    "Videos" -> "No videos"
+                                                    else -> "No content"
+                                                }
+                                                val emptyIcon = when (selectedFilter) {
+                                                    "Notes" -> Icons.Default.Description
+                                                    "PYQs" -> Icons.Default.Help
+                                                    "Assignments" -> Icons.Default.Assignment
+                                                    "Cheat Sheets" -> Icons.Default.Bolt
+                                                    "Videos" -> Icons.Default.PlayArrow
+                                                    else -> Icons.Default.FilePresent
+                                                }
+                                                val emptyColor = when (selectedFilter) {
+                                                    "Notes" -> Color(0xFF58D6D1)
+                                                    "PYQs" -> Color(0xFFFFB45C)
+                                                    "Assignments" -> Color(0xFF7AD7FF)
+                                                    "Cheat Sheets" -> Color(0xFFC7A6FF)
+                                                    "Videos" -> Color(0xFFFF6B6B)
+                                                    else -> Color(0xFFCFD8DC)
+                                                }
+                                                PremiumEmptyState(
+                                                    title = emptyTitle,
+                                                    message = null,
+                                                    icon = emptyIcon,
+                                                    accentColor = emptyColor
+                                                )
+                                            }
+                                        }
+                                    }
                                 } else {
-                                    Box(Modifier.fillMaxSize()) {
-                                         LazyColumn(
-                                             state = listState,
-                                             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
-                                             verticalArrangement = Arrangement.spacedBy(12.dp),
-                                             modifier = Modifier.fillMaxSize()
-                                         ) {
-                                             items(filteredFiles, key = { it.id }) { file ->
-                                                 val isVideo = file.isVideo()
-                                                 val detail = videoDetailsMap[file.id]
-                                                 val isPlaylist = if (detail != null) {
-                                                     detail.youtubeResourceType == "playlist"
-                                                 } else {
-                                                     (file.documentType ?: "").lowercase(java.util.Locale.ROOT).trim().contains("playlist")
-                                                 }
-                                                 
-                                                 val upvoteCount = upvoteCountsMap[file.id] ?: file.upvotes
-                                                 val fileWithLiveStats = file.copy(
-                                                     upvotes = upvoteCount,
-                                                     documentType = if (isVideo) {
-                                                         if (isPlaylist) "Playlist" else "Video"
-                                                     } else {
-                                                         file.documentType
-                                                     }
-                                                 )
-                                                 StudyHubShelfCard(
-                                                     file = fileWithLiveStats,
-                                                     onClick = {
-                                                         if (isVideo) {
-                                                             onVideoClick(file.id)
-                                                         } else {
-                                                             onDocumentClick(file.id)
-                                                         }
-                                                     },
-                                                     onBookmarkClick = {
-                                                         pendingRemoveBookmarkFile = fileWithLiveStats
-                                                     }
-                                                 )
-                                             }
-                                         }
-                                        AdaptiveScrollbar(listState = listState)
+                                    items(filteredFiles, key = { it.id }) { file ->
+                                        Box(modifier = Modifier.padding(horizontal = 18.dp)) {
+                                            val isVideo = file.isVideo()
+                                            val detail = videoDetailsMap[file.id]
+                                            val isPlaylist = if (detail != null) {
+                                                detail.youtubeResourceType == "playlist"
+                                            } else {
+                                                (file.documentType ?: "").lowercase(java.util.Locale.ROOT).trim().contains("playlist")
+                                            }
+                                            
+                                            val upvoteCount = upvoteCountsMap[file.id] ?: file.upvotes
+                                            val fileWithLiveStats = file.copy(
+                                                upvotes = upvoteCount,
+                                                documentType = if (isVideo) {
+                                                    if (isPlaylist) "Playlist" else "Video"
+                                                } else {
+                                                    file.documentType
+                                                }
+                                            )
+                                            StudyHubShelfCard(
+                                                file = fileWithLiveStats,
+                                                onClick = {
+                                                    if (isVideo) {
+                                                        onVideoClick(file.id)
+                                                    } else {
+                                                        onDocumentClick(file.id)
+                                                    }
+                                                },
+                                                onBookmarkClick = {
+                                                    pendingRemoveBookmarkFile = fileWithLiveStats
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
+                            AdaptiveScrollbar(listState = listState)
                         }
                     }
                 }

@@ -374,12 +374,29 @@ private fun ProfileContent(
                                 .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ExitToApp,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
+                            val logoutLottieCompositionResult = rememberLottieComposition(
+                                LottieCompositionSpec.Asset("App_animations/log_out.json")
                             )
+                            val logoutLottieComposition = logoutLottieCompositionResult.value
+                            val logoutLottieProgress by animateLottieCompositionAsState(
+                                composition = logoutLottieComposition,
+                                iterations = LottieConstants.IterateForever
+                            )
+
+                            if (logoutLottieComposition != null) {
+                                LottieAnimation(
+                                    composition = logoutLottieComposition,
+                                    progress = { logoutLottieProgress },
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.ExitToApp,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {

@@ -28,6 +28,11 @@ import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -731,7 +736,9 @@ fun StudyHubCard(
     cardBrush: Brush,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    secondaryMetadata: String? = null
+    secondaryMetadata: String? = null,
+    lottieAsset: String? = null,
+    lottieScale: Float = 1.35f
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -778,12 +785,40 @@ fun StudyHubCard(
                         border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(22.dp)
-                            )
+                            if (lottieAsset != null) {
+                                val lottieCompositionResult = rememberLottieComposition(
+                                    LottieCompositionSpec.Asset(lottieAsset)
+                                )
+                                val lottieComposition = lottieCompositionResult.value
+                                val lottieProgress by animateLottieCompositionAsState(
+                                    composition = lottieComposition,
+                                    iterations = LottieConstants.IterateForever
+                                )
+
+                                if (lottieComposition != null) {
+                                    LottieAnimation(
+                                        composition = lottieComposition,
+                                        progress = { lottieProgress },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .scale(lottieScale)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
 

@@ -107,12 +107,17 @@ class VideoDetailRepository {
         android.util.Log.d("PERF", "[PERF] getRelatedVideos START id=${video.id} thread=${Thread.currentThread().name}")
         
         val collections = listOf("documents", "videos")
+        if (video.college.isBlank()) {
+            return@coroutineScope emptyList()
+        }
         
         try {
+            val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(video.college)
             val deferreds = collections.map { col ->
                 async {
                     try {
                         firestore.collection(col)
+                            .whereEqualTo("college", canonicalCollegeId)
                             .get()
                             .await()
                             .documents

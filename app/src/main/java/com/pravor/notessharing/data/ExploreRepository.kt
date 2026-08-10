@@ -17,7 +17,7 @@ class ExploreRepository(private val context: Context) {
     private val diskCache = ExploreCacheRepository(context)
 
     companion object {
-        private val exploreCache = TimedValueCache<ExploreContent>(5 * 60 * 1000L) // 5 minutes TTL
+        private val memoryCaches = java.util.concurrent.ConcurrentHashMap<String, TimedValueCache<ExploreContent>>()
         
         // Request deduplication safeguards
         private val mutex = Mutex()
@@ -25,24 +25,42 @@ class ExploreRepository(private val context: Context) {
         private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 
-    init {
-        // Hydrate in-memory cache from disk cache on startup (treated as expired to trigger immediate background refresh)
-        if (exploreCache.getExpiredButAvailable() == null) {
-            diskCache.getCache()?.let {
-                exploreCache.putExpired(it)
+    fun getCachedContent(collegeId: String): ExploreContent? {
+        val canonical = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        if (canonical.isBlank()) return null
+        val cache = memoryCaches.getOrPut(canonical) { TimedValueCache(5 * 60 * 1000L) }
+        if (cache.getExpiredButAvailable() == null) {
+            diskCache.getCache(canonical)?.let {
+                cache.putExpired(it)
             }
         }
+        return cache.getExpiredButAvailable()
     }
 
-    fun getCachedContent(): ExploreContent? {
-        return exploreCache.getExpiredButAvailable()
+    fun isCacheExpired(collegeId: String): Boolean {
+        val canonical = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        if (canonical.isBlank()) return true
+        val cache = memoryCaches[canonical] ?: return true
+        return cache.isExpired()
     }
 
-    fun isCacheExpired(): Boolean {
-        return exploreCache.isExpired()
-    }
-
-    suspend fun fetchExploreContent(): ExploreContent {
+    suspend fun fetchExploreContent(collegeId: String): ExploreContent {
+        val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        if (canonicalCollegeId.isBlank()) {
+            return ExploreContent(
+                topics = emptyList(),
+                popularUploads = emptyList(),
+                notes = emptyList(),
+                examPrep = emptyList(),
+                assignments = emptyList(),
+                videos = emptyList(),
+                studyCollections = emptyList(),
+                subjectHubs = emptyList(),
+                topContributors = emptyList(),
+                revisionCards = emptyList(),
+                discoverItems = emptyList()
+            )
+        }
         val deferred = mutex.withLock {
             val current = activeFetch
             if (current != null && current.isActive) {
@@ -50,7 +68,7 @@ class ExploreRepository(private val context: Context) {
             } else {
                 val next = repositoryScope.async {
                     try {
-                        doFetchExploreContent()
+                        doFetchExploreContent(canonicalCollegeId)
                     } finally {
                         mutex.withLock {
                             if (activeFetch === coroutineContext[Job]) {
@@ -66,14 +84,18 @@ class ExploreRepository(private val context: Context) {
         return deferred.await()
     }
 
-    private suspend fun doFetchExploreContent(): ExploreContent = withContext(Dispatchers.IO) {
+    private suspend fun doFetchExploreContent(canonicalCollegeId: String): ExploreContent = withContext(Dispatchers.IO) {
         val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
         
         val allDocs = coroutineScope {
             val deferreds = collections.map { col ->
                 async {
                     try {
-                        firestore.collection(col).get().await().documents
+                        firestore.collection(col)
+                            .whereEqualTo("college", canonicalCollegeId)
+                            .get()
+                            .await()
+                            .documents
                     } catch (e: Exception) {
                         emptyList()
                     }
@@ -121,8 +143,8 @@ class ExploreRepository(private val context: Context) {
         )
 
         // Sync with timed in-memory cache and SharedPreferences persistence fallback
-        exploreCache.put(freshContent)
-        diskCache.saveCache(freshContent)
+        memoryCaches.getOrPut(canonicalCollegeId) { TimedValueCache(5 * 60 * 1000L) }.put(freshContent)
+        diskCache.saveCache(canonicalCollegeId, freshContent)
 
         freshContent
     }

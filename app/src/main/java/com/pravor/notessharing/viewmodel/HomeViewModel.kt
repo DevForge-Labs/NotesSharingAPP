@@ -301,7 +301,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 android.util.Log.d("PERF", "[PERF] Home feed load START thread=${Thread.currentThread().name}")
                 android.util.Log.d("PERF", "[PERF] Feed reload trigger source=$lastReloadCause")
                 try {
-                    val userProfile = if (forcedSemester != null) null else run {
+                    val userProfile = previousProfile ?: run {
                         val currentUid = auth.currentUser?.uid
                         if (currentUid != null) {
                             userService.getUserProfile(currentUid)
@@ -312,7 +312,34 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
                     val semester = forcedSemester ?: userProfile?.semester
                     val rawBranch = userProfile?.branch
-                    val rawCollege = userProfile?.college
+                    val rawCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+
+                    if (rawCollege.isNullOrBlank()) {
+                        android.util.Log.d("HomeViewModel", "No college found in user profile. Skipping campus content fetch.")
+                        _uiState.update { current ->
+                            val lastOpened = recentlyOpenedRepository.getLastOpened()
+                            if (current is HomeUiState.Success) {
+                                current.copy(content = current.content.copy(
+                                    feedItems = emptyList(),
+                                    recentlyOpened = lastOpened,
+                                    isLoadingFeed = false
+                                ))
+                            } else {
+                                HomeUiState.Success(
+                                    HomeContent(
+                                        selectedCategory = Category.Notes,
+                                        categories = Category.entries,
+                                        feedItems = emptyList(),
+                                        recentlyOpened = lastOpened,
+                                        isLoadingFeed = false
+                                    )
+                                )
+                            }
+                        }
+                        return@launch
+                    }
+
+                    val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
 
                     val isNecessary = when (lastReloadCause) {
                         "NavigationReturn" -> {
@@ -345,9 +372,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val subjectIds = if (hasSemester && hasBranch) {
                         try {
                             val branchId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(rawBranch!!)
-                            val collegeId = rawCollege?.takeIf { it.isNotBlank() } ?: "kiit"
                             val doc = firestore.collection("curriculum")
-                                .document(collegeId.lowercase())
+                                .document(canonicalCollegeId.lowercase())
                                 .get()
                                 .await()
 
@@ -378,19 +404,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                                         // Chunk/batch the subjectIds to handle Firestore's whereIn list limits transparently
                                         val chunks = subjectIds.chunked(30)
                                         chunks.flatMap { chunk ->
-                                            colRef.whereIn("subjectId", chunk)
+                                            colRef.whereEqualTo("college", canonicalCollegeId)
+                                                .whereIn("subjectId", chunk)
                                                 .get()
                                                 .await()
                                                 .documents
                                         }
                                     } else if (hasSemester) {
                                         firestore.collection(col)
+                                            .whereEqualTo("college", canonicalCollegeId)
                                             .whereEqualTo("semester", semester)
                                             .get()
                                             .await()
                                             .documents
                                     } else {
                                         firestore.collection(col)
+                                            .whereEqualTo("college", canonicalCollegeId)
                                             .get()
                                             .await()
                                             .documents

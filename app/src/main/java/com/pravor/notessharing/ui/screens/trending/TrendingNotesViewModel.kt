@@ -82,6 +82,14 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         }
     )
 
+    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+
+    private suspend fun getUserCollegeId(): String? {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return null
+        val profile = profileRepository.getProfile(currentUid)
+        return profile?.college?.takeIf { it.isNotBlank() }
+    }
+
     init {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (currentUid != null) {
@@ -103,19 +111,32 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         }
         // Background refresh on start (Stale-While-Revalidate)
         viewModelScope.launch {
-            repository.refresh()
+            val collegeId = getUserCollegeId()
+            if (!collegeId.isNullOrBlank()) {
+                repository.refresh(collegeId)
+            } else {
+                repository.refresh("")
+            }
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            repository.refresh()
+            val collegeId = getUserCollegeId()
+            if (!collegeId.isNullOrBlank()) {
+                repository.refresh(collegeId)
+            } else {
+                repository.refresh("")
+            }
         }
     }
 
     fun loadMore() {
         viewModelScope.launch {
-            repository.loadMore()
+            val collegeId = getUserCollegeId()
+            if (!collegeId.isNullOrBlank()) {
+                repository.loadMore(collegeId)
+            }
         }
     }
 

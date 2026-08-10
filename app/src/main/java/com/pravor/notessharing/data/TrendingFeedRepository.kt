@@ -45,15 +45,18 @@ class TrendingFeedRepository(private val context: Context) {
     }
 
     init {
-        // Load cache immediately
-        _trendingNotes.value = getCachedNotes()
-
-        // Coil image loader is initialized globally in NotesSharingApplication
-        // to ensure caching is enabled immediately at app startup (for the Home screen).
+        // Init with empty list; college-scoped cache is hydrated in refresh(collegeId)
     }
 
-    private fun getCachedNotes(): List<TrendingNote> {
-        val raw = preferences.getString(KEY_FEED, null) ?: return emptyList()
+    private fun getCacheKey(collegeId: String): String {
+        val canonical = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        return if (canonical.isNotBlank()) "cached_trending_notes_$canonical" else ""
+    }
+
+    private fun getCachedNotes(collegeId: String): List<TrendingNote> {
+        val key = getCacheKey(collegeId)
+        if (key.isBlank()) return emptyList()
+        val raw = preferences.getString(key, null) ?: return emptyList()
         return try {
             val array = JSONArray(raw)
             val list = mutableListOf<TrendingNote>()
@@ -67,13 +70,15 @@ class TrendingFeedRepository(private val context: Context) {
         }
     }
 
-    private fun saveCachedNotes(notes: List<TrendingNote>) {
+    private fun saveCachedNotes(collegeId: String, notes: List<TrendingNote>) {
+        val key = getCacheKey(collegeId)
+        if (key.isBlank()) return
         try {
             val array = JSONArray()
             notes.take(CACHE_LIMIT).forEach {
                 array.put(serializeTrendingNote(it))
             }
-            preferences.edit().putString(KEY_FEED, array.toString()).apply()
+            preferences.edit().putString(key, array.toString()).apply()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -133,13 +138,27 @@ class TrendingFeedRepository(private val context: Context) {
         )
     }
 
-    suspend fun refresh() {
+    suspend fun refresh(collegeId: String) {
+        val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        if (canonicalCollegeId.isBlank()) {
+            _trendingNotes.value = emptyList()
+            return
+        }
+        
+        // Hydrate from college-specific disk cache if memory state is empty
+        if (_trendingNotes.value.isEmpty()) {
+            val cached = getCachedNotes(canonicalCollegeId)
+            if (cached.isNotEmpty()) {
+                _trendingNotes.value = cached
+            }
+        }
+
         if (_isRefreshing.value) return
         _isRefreshing.value = true
         try {
-            val newNotes = fetchPageFromFirestore(isRefresh = true)
+            val newNotes = fetchPageFromFirestore(canonicalCollegeId, isRefresh = true)
             _trendingNotes.value = newNotes
-            saveCachedNotes(newNotes)
+            saveCachedNotes(canonicalCollegeId, newNotes)
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
@@ -147,15 +166,20 @@ class TrendingFeedRepository(private val context: Context) {
         }
     }
 
-    suspend fun loadMore() {
+    suspend fun loadMore(collegeId: String) {
+        val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        if (canonicalCollegeId.isBlank()) {
+            _trendingNotes.value = emptyList()
+            return
+        }
         if (_isLoadingMore.value || isAllCollectionsEnded()) return
         _isLoadingMore.value = true
         try {
-            val nextNotes = fetchPageFromFirestore(isRefresh = false)
+            val nextNotes = fetchPageFromFirestore(canonicalCollegeId, isRefresh = false)
             if (nextNotes.isNotEmpty()) {
                 val merged = (_trendingNotes.value + nextNotes).distinctBy { it.id }
                 _trendingNotes.value = merged
-                saveCachedNotes(merged)
+                saveCachedNotes(canonicalCollegeId, merged)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -169,7 +193,7 @@ class TrendingFeedRepository(private val context: Context) {
         return collections.all { isCollectionEnd[it] == true }
     }
 
-    private suspend fun fetchPageFromFirestore(isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
+    private suspend fun fetchPageFromFirestore(canonicalCollegeId: String, isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
             android.util.Log.d("PERF", "[PERF] Trending page fetch START thread=${Thread.currentThread().name}")
@@ -190,6 +214,7 @@ class TrendingFeedRepository(private val context: Context) {
                     if (isCollectionEnd[col] == true) return@async Pair(emptyList<DocumentSnapshot>(), null)
                     try {
                         var query = firestore.collection(col)
+                            .whereEqualTo("college", canonicalCollegeId)
                             .orderBy("trendingScore", Query.Direction.DESCENDING)
                             .limit(PAGE_SIZE.toLong())
 

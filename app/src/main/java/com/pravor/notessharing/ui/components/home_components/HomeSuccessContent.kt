@@ -273,6 +273,7 @@ fun HomeSuccessContent(
                     metadata = uploadsText,
                     contextHint = "Your contributions to the community",
                     icon = Icons.Default.UploadFile,
+                    lottieAsset = "App_animations/uploading_screen_logo.json",
                     accentColor = Color(0xFF58D6D1), // Premium soft teal/blue
                     cardBrush = Brush.verticalGradient(listOf(Color(0xFF13201F), Color(0xFF0C1312))),
                     onClick = onMyUploadsClick
@@ -286,6 +287,7 @@ fun HomeSuccessContent(
                     metadata = bookmarksText,
                     contextHint = "Quick access to saved study material",
                     icon = Icons.Default.Bookmark,
+                    lottieAsset = "App_animations/bookmark_screen_icon.json",
                     accentColor = Color(0xFFFFB45C), // Premium warm tint
                     cardBrush = Brush.verticalGradient(listOf(Color(0xFF241C15), Color(0xFF16110D))),
                     onClick = onMyBookmarksClick
@@ -326,6 +328,7 @@ fun HomeSuccessContent(
                     metadata = downloadsText,
                     contextHint = "Your downloaded study collection",
                     icon = Icons.Default.Download,
+                    lottieAsset = "App_animations/download_screen_logo.json",
                     accentColor = Color(0xFFCFD8DC), // Muted slate/academic tint
                     cardBrush = Brush.verticalGradient(listOf(Color(0xFF1D2124), Color(0xFF111315))),
                     onClick = onMyDownloadsClick,
