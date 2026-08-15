@@ -5,16 +5,18 @@ import com.pravor.notessharing.data.mapper.ExploreMapper
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.BuildConfig
 import com.pravor.notessharing.data.cache.TimedValueCache
+import com.pravor.notessharing.data.repository.ExploreRoomRepository
 import com.pravor.notessharing.model.*
 import com.pravor.notessharing.state.ExploreContent
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 class ExploreRepository(private val context: Context) {
     private val firestore = FirebaseFirestore.getInstance()
-    private val diskCache = ExploreCacheRepository(context)
+    private val roomRepository = ExploreRoomRepository(context)
 
     companion object {
         private val memoryCaches = java.util.concurrent.ConcurrentHashMap<String, TimedValueCache<ExploreContent>>()
@@ -25,16 +27,22 @@ class ExploreRepository(private val context: Context) {
         private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 
-    fun getCachedContent(collegeId: String): ExploreContent? {
+    fun observeExploreContent(collegeId: String): Flow<ExploreContent?> {
+        return roomRepository.observeExploreContent(collegeId)
+    }
+
+    suspend fun getCachedContent(collegeId: String): ExploreContent? {
         val canonical = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
         if (canonical.isBlank()) return null
         val cache = memoryCaches.getOrPut(canonical) { TimedValueCache(5 * 60 * 1000L) }
-        if (cache.getExpiredButAvailable() == null) {
-            diskCache.getCache(canonical)?.let {
-                cache.putExpired(it)
-            }
+        val inMemory = cache.getExpiredButAvailable()
+        if (inMemory != null) return inMemory
+        
+        val fromRoom = roomRepository.getCachedContent(canonical)
+        if (fromRoom != null) {
+            cache.putExpired(fromRoom)
         }
-        return cache.getExpiredButAvailable()
+        return fromRoom
     }
 
     fun isCacheExpired(collegeId: String): Boolean {
@@ -115,7 +123,6 @@ class ExploreRepository(private val context: Context) {
             ExploreMapper.documentToTrendingNote(doc, bookmarkedIds)
         }
 
-        // Sort all resources deterministically using our single ranking utility
         val sortedResources = ExploreRankingUtils.sortResources(allResources)
 
         val notesList = ExploreRankingUtils.filterNotes(sortedResources)
@@ -142,11 +149,10 @@ class ExploreRepository(private val context: Context) {
             discoverItems = realDiscover.distinctBy { it.id }
         )
 
-        // Sync with timed in-memory cache and SharedPreferences persistence fallback
+        // Sync with timed in-memory cache and Room DB persistence
         memoryCaches.getOrPut(canonicalCollegeId) { TimedValueCache(5 * 60 * 1000L) }.put(freshContent)
-        diskCache.saveCache(canonicalCollegeId, freshContent)
+        roomRepository.saveExploreContent(canonicalCollegeId, freshContent)
 
         freshContent
     }
-
 }
