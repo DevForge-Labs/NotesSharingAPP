@@ -85,7 +85,6 @@ class ProfileViewModel(
         )
 
         viewModelScope.launch {
-            _uiState.update { ProfileUiState.Loading }
             profileRepository.observeProfile(currentFirebaseUser.uid)
                 .catch { throwable ->
                     // Fallback safely to current auth user details and defaults, never crash
@@ -95,8 +94,15 @@ class ProfileViewModel(
                 }
                 .collect { profile ->
                     val baseProfile = profile ?: fallbackProfile
-                    try {
-                        coroutineScope {
+                    val collegeName = metadataRepository.resolveCollegeName(baseProfile.college)
+                    val branchName = metadataRepository.resolveBranchName(baseProfile.college, baseProfile.branch)
+                    
+                    // Render UI immediately from Room DB (NO SPINNER when cached profile exists!)
+                    _uiState.update { ProfileUiState.Success(baseProfile, collegeName, branchName) }
+
+                    // Refresh counts asynchronously in background without blocking UI
+                    launch {
+                        try {
                             val bookmarksDeferred = async {
                                 try {
                                     FirebaseFirestore.getInstance().collection("bookmarks")
@@ -105,7 +111,7 @@ class ProfileViewModel(
                                         .await()
                                         .size()
                                 } catch (e: Exception) {
-                                    0
+                                    baseProfile.bookmarks
                                 }
                             }
                             
@@ -129,18 +135,16 @@ class ProfileViewModel(
                             val finalBookmarks = bookmarksDeferred.await()
                             val finalUpvotes = upvotesDeferred.awaitAll().sum()
                             
-                            val updatedProfile = baseProfile.copy(
-                                bookmarks = finalBookmarks,
-                                upvotes = finalUpvotes
-                            )
-                            val collegeName = metadataRepository.resolveCollegeName(updatedProfile.college)
-                            val branchName = metadataRepository.resolveBranchName(updatedProfile.college, updatedProfile.branch)
-                            _uiState.update { ProfileUiState.Success(updatedProfile, collegeName, branchName) }
+                            if (finalBookmarks != baseProfile.bookmarks || finalUpvotes != baseProfile.upvotes) {
+                                val updatedProfile = baseProfile.copy(
+                                    bookmarks = finalBookmarks,
+                                    upvotes = finalUpvotes
+                                )
+                                profileRepository.saveProfile(updatedProfile)
+                            }
+                        } catch (e: Exception) {
+                            // Ignore background count refresh failure; UI is already successfully displayed
                         }
-                    } catch (e: Exception) {
-                        val collegeName = metadataRepository.resolveCollegeName(baseProfile.college)
-                        val branchName = metadataRepository.resolveBranchName(baseProfile.college, baseProfile.branch)
-                        _uiState.update { ProfileUiState.Success(baseProfile, collegeName, branchName) }
                     }
                 }
         }

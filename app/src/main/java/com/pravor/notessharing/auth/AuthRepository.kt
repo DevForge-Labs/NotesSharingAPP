@@ -9,7 +9,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 
-class AuthRepository(private val userService: FirestoreUserService = FirestoreUserService()) {
+import com.pravor.notessharing.profile.ProfileRepository
+
+class AuthRepository(
+    private val userService: FirestoreUserService = FirestoreUserService(),
+    private val profileRepository: ProfileRepository = ProfileRepository()
+) {
     private val firebaseAuth = FirebaseAuth.getInstance()
 
     val currentUser get() = firebaseAuth.currentUser
@@ -43,7 +48,7 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
                 contributorLevel = 1,
                 createdAt = System.currentTimeMillis()
             )
-            userService.createUserProfile(profile)
+            profileRepository.saveProfile(profile)
             emit(Result.success(profile))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -54,7 +59,7 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
         try {
             val authResult = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             val user = authResult.user ?: throw Exception("Login failed: User is null.")
-            val profile = userService.getUserProfile(user.uid) ?: throw Exception("User profile does not exist in database.")
+            val profile = profileRepository.getProfile(user.uid) ?: throw Exception("User profile does not exist in database.")
             
             if (profile.isDisabled) {
                 firebaseAuth.signOut()
@@ -75,7 +80,7 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
             val authResult = firebaseAuth.signInWithCredential(credential).await()
             val user = authResult.user ?: throw Exception("Google Sign-In failed: User is null.")
             
-            val existingProfile = userService.getUserProfile(user.uid)
+            val existingProfile = profileRepository.getProfile(user.uid)
             if (existingProfile != null) {
                 if (existingProfile.isDisabled) {
                     firebaseAuth.signOut()
@@ -99,14 +104,15 @@ class AuthRepository(private val userService: FirestoreUserService = FirestoreUs
     }
 
     suspend fun getUserProfile(uid: String): Profile? {
-        return userService.getUserProfile(uid)
+        return profileRepository.getProfile(uid)
     }
 
     suspend fun createUserProfile(profile: Profile) {
-        userService.createUserProfile(profile)
+        profileRepository.saveProfile(profile)
     }
 
     fun logout() {
+        profileRepository.stopObservingRemoteProfile()
         firebaseAuth.signOut()
     }
 }

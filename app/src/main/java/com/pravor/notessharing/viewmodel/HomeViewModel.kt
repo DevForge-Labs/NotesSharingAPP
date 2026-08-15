@@ -22,6 +22,9 @@ import kotlinx.coroutines.coroutineScope
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val recentlyOpenedRepository = RecentlyOpenedRepository(application)
+    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository(application)
+    private val homeFeedRepository = com.pravor.notessharing.data.repository.HomeFeedRepository(application)
+    private var feedObservationJob: kotlinx.coroutines.Job? = null
     private val notificationRepository = com.pravor.notessharing.data.NotificationRepository()
     val notifications = notificationRepository.notifications
     val unreadNotificationsCount = notificationRepository.unreadCount
@@ -213,17 +216,69 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun startObservingProfile(uid: String) {
         profileJob?.cancel()
         notificationRepository.startObserving(uid)
+        viewModelScope.launch {
+            upvoteRepository.loadInitialUpvotesIfNeeded(uid)
+        }
         profileJob = viewModelScope.launch {
-            userService.observeUserProfile(uid).collect { profile ->
+            profileRepository.observeProfile(uid).collect { profile ->
                 android.util.Log.d("PERF", "[PERF] Profile update received")
                 val changedFields = getChangedFields(previousProfile, profile)
                 android.util.Log.d("PERF", "[PERF] Changed fields=$changedFields")
                 previousProfile = profile
                 _uploadsCount.value = profile?.totalUploads ?: 0
 
+                val college = profile?.college?.takeIf { it.isNotBlank() } ?: "kiit"
+                observeRoomFeed(college)
+
                 val semester = profile?.semester
                 lastReloadCause = "ProfileUpdate"
                 loadRealDocuments(semester)
+            }
+        }
+    }
+
+    private fun observeRoomFeed(collegeId: String) {
+        feedObservationJob?.cancel()
+        feedObservationJob = viewModelScope.launch {
+            homeFeedRepository.observeHomeFeed(collegeId).collect { cachedItems ->
+                if (cachedItems.isNotEmpty()) {
+                    val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
+                    val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+                    val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
+                    val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+
+                    val updatedCached = cachedItems.map { item ->
+                        val isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
+                        val upvotesCount = upvoteCountsMap[item.id] ?: item.upvotes
+                        val downloadsCount = downloadCountsMap[item.id] ?: item.downloadsCount
+                        item.copy(
+                            isSaved = bookmarkedIds.contains(item.id),
+                            isUpvoted = isUpvoted,
+                            upvotes = upvotesCount,
+                            downloadsCount = downloadsCount
+                        )
+                    }
+                    _uiState.update { current ->
+                        val lastOpened = recentlyOpenedRepository.getLastOpened()
+                        if (current is HomeUiState.Success) {
+                            current.copy(content = current.content.copy(
+                                feedItems = updatedCached,
+                                recentlyOpened = lastOpened,
+                                isLoadingFeed = false
+                            ))
+                        } else {
+                            HomeUiState.Success(
+                                HomeContent(
+                                    selectedCategory = Category.Notes,
+                                    categories = Category.entries,
+                                    feedItems = updatedCached,
+                                    recentlyOpened = lastOpened,
+                                    isLoadingFeed = false
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -466,6 +521,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val feedAssemblyDuration = System.currentTimeMillis() - feedAssemblyStartTime
                     android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Feed assembly duration=${feedAssemblyDuration}ms thread=${Thread.currentThread().name}")
                     
+                    if (canonicalCollegeId.isNotBlank() && finalFeedItems.isNotEmpty()) {
+                        homeFeedRepository.saveHomeFeed(canonicalCollegeId, finalFeedItems)
+                    }
+
                     _uiState.update { current ->
                         val lastOpened = recentlyOpenedRepository.getLastOpened()
                         if (current is HomeUiState.Success) {
@@ -504,7 +563,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             null
                         }
                     }
-                    val hasSemester = !semester.isNullOrBlank() && semester != "Not Set"
                     
                     val currentUid = auth.currentUser?.uid
                     if (currentUid != null) {
@@ -513,12 +571,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                     
+                    val rawCollege = previousProfile?.college ?: "kiit"
+                    val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
+                    val cachedFallback = try {
+                        homeFeedRepository.getCachedHomeFeed(canonicalCollegeId)
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                    val fallbackItems = if (cachedFallback.isNotEmpty()) {
+                        cachedFallback.map { item -> item.copy(isSaved = bookmarkedIds.contains(item.id)) }
+                    } else {
+                        emptyList()
+                    }
+
                     _uiState.update { current ->
                         val lastOpened = recentlyOpenedRepository.getLastOpened()
-                        val fallbackItems = emptyList<FeedItem>()
                         if (current is HomeUiState.Success) {
+                            val itemsToUse = if (current.content.feedItems.isNotEmpty()) current.content.feedItems else fallbackItems
                             current.copy(content = current.content.copy(
-                                feedItems = fallbackItems,
+                                feedItems = itemsToUse,
                                 recentlyOpened = lastOpened,
                                 isLoadingFeed = false
                             ))

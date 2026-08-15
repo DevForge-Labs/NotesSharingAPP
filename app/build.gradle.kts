@@ -4,16 +4,13 @@ import java.io.FileInputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.pravor.notessharing"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pravor.notessharing"
@@ -59,6 +56,10 @@ android {
         disable.add("UnsafeOptInUsageError")
         disable.add("UnsafeOptInUsageWarning")
     }
+}
+
+ksp {
+    arg("room.generateKotlin", "true")
 }
 
 dependencies {
@@ -120,4 +121,9 @@ dependencies {
 
     // Lottie Animation
     implementation(libs.lottie.compose)
+
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 }

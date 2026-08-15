@@ -23,4 +23,14 @@ class NotesSharingApplication : Application(), ImageLoaderFactory {
             .respectCacheHeaders(false) // Bypass short-lived cache-control headers from Firebase Storage
             .build()
     }
+
+    override fun onCreate() {
+        super.onCreate()
+        appContext = applicationContext
+    }
+
+    companion object {
+        lateinit var appContext: android.content.Context
+            private set
+    }
 }

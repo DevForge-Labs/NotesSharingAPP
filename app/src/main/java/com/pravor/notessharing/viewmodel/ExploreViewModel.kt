@@ -147,8 +147,17 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
             val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
-            val userCollege = userProfile?.college?.takeIf { it.isNotBlank() }
-            val cached = userCollege?.let { exploreRepository.getCachedContent(it) }
+            val userCollege = userProfile?.college?.takeIf { it.isNotBlank() } ?: "kiit"
+
+            launch {
+                exploreRepository.observeExploreContent(userCollege).collect { roomContent ->
+                    if (roomContent != null) {
+                        _uiState.update { ExploreUiState.Success(mergeWithLatestStats(roomContent)) }
+                    }
+                }
+            }
+
+            val cached = exploreRepository.getCachedContent(userCollege)
             if (cached != null) {
                 _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cached)) }
             }
