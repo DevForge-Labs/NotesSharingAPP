@@ -277,26 +277,16 @@ fun NotesSharingApp(
                     destinations = bottomDestinations,
                     currentRoute = selectedBottomRoute,
                     onDestinationClick = { destination ->
-                        // Find the active tab root route in the backstack
-                        val activeTabRoute = navController.currentBackStack.value
-                            .lastOrNull { entry ->
-                                entry.destination.route in bottomDestinations.map { it.route }
-                            }?.destination?.route
-
-                        // Pop all nested destinations above the active tab root
-                        if (activeTabRoute != null) {
-                            navController.popBackStack(activeTabRoute, inclusive = false)
-                        }
-
-                        if (destination == AppDestination.Home) {
-                            navController.popBackStack(AppDestination.Home.route, inclusive = false)
-                        } else {
-                            navController.navigate(destination.route) {
-                                popUpTo(AppDestination.Home.route) {
-                                    saveState = true
+                        if (currentRoute != destination.route) {
+                            val popped = navController.popBackStack(destination.route, inclusive = false)
+                            if (!popped) {
+                                navController.navigate(destination.route) {
+                                    popUpTo(AppDestination.Home.route) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         }
                     }
