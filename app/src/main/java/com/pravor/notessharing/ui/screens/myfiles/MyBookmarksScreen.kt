@@ -60,7 +60,7 @@ import com.pravor.notessharing.ui.components.StudyHubShelfCard
 import com.pravor.notessharing.ui.components.SectionHeader
 import com.pravor.notessharing.ui.components.explore_components.VideoRecommendationCard
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
-import com.pravor.notessharing.model.VideoRecommendation
+import com.pravor.notessharing.domain.model.VideoRecommendation
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.AlertDialog
@@ -81,17 +81,17 @@ fun MyBookmarksScreen(
     val scrollState = rememberScrollState()
     val bottomPadding = LocalBottomBarPadding.current
     var selectedFilter by remember { mutableStateOf("All") }
-    var pendingRemoveBookmarkFile by remember { mutableStateOf<com.pravor.notessharing.model.StudyFile?>(null) }
+    var pendingRemoveBookmarkFile by remember { mutableStateOf<com.pravor.notessharing.domain.model.StudyFile?>(null) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
-    val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
-    val upvoteRepository = remember { com.pravor.notessharing.upvotes.UpvoteRepository() }
+    val upvotesMap by com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
+    val upvoteCountsMap by com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
+    val upvoteRepository = remember { com.pravor.notessharing.data.repository.UpvoteRepository() }
     val scope = rememberCoroutineScope()
     val currentUid = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid }
 
-    var videoDetailsMap by remember { mutableStateOf<Map<String, com.pravor.notessharing.model.VideoDetail>>(emptyMap()) }
-    val videoRepository = remember { com.pravor.notessharing.data.VideoDetailRepository() }
+    var videoDetailsMap by remember { mutableStateOf<Map<String, com.pravor.notessharing.domain.model.VideoDetail>>(emptyMap()) }
+    val videoRepository = remember { com.pravor.notessharing.data.repository.VideoDetailRepository() }
 
     LaunchedEffect(Unit) {
         viewModel.loadBookmarksForCurrentUser()
@@ -448,7 +448,7 @@ fun MyBookmarksScreen(
 }
 
 // Extracted matchesFilter helper based on the app's existing document classification
-private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String): Boolean {
+private fun com.pravor.notessharing.domain.model.StudyFile.matchesFilter(filter: String): Boolean {
     if (filter == "All") return true
     val docType = this.documentType ?: this.fileType.label
     val rawDocType = docType.lowercase(java.util.Locale.ROOT).trim()
@@ -456,7 +456,7 @@ private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String
     val isCheatSheet = rawDocType.contains("cheat") || rawDocType.contains("formula")
     val isAssignment = rawDocType.contains("assignment")
     val isNotes = rawDocType.contains("notes")
-    val isVideo = this.fileType == com.pravor.notessharing.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
+    val isVideo = this.fileType == com.pravor.notessharing.domain.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
 
     return when (filter) {
         "Notes" -> isNotes
@@ -468,8 +468,8 @@ private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String
     }
 }
 
-private fun com.pravor.notessharing.model.StudyFile.isVideo(): Boolean {
+private fun com.pravor.notessharing.domain.model.StudyFile.isVideo(): Boolean {
     val docType = this.documentType ?: this.fileType.label
     val rawDocType = docType.lowercase(java.util.Locale.ROOT).trim()
-    return this.fileType == com.pravor.notessharing.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
+    return this.fileType == com.pravor.notessharing.domain.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
 }

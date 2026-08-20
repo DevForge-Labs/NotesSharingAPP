@@ -1,5 +1,11 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.local.preferences.*
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel

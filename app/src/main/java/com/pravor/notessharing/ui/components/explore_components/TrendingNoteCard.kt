@@ -42,8 +42,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.pravor.notessharing.data.DocumentDetailRepository
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.data.repository.DocumentDetailRepository
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.components.DocumentPlaceholder
 import com.pravor.notessharing.ui.components.utils.SubjectBadge
 import com.pravor.notessharing.ui.components.utils.getDocumentTypeFromTitle

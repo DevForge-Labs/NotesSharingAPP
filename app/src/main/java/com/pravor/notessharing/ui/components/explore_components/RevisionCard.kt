@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pravor.notessharing.model.RevisionCard as RevisionCardModel
+import com.pravor.notessharing.domain.model.RevisionCard as RevisionCardModel
 
 @Composable
 fun RevisionCard(revision: RevisionCardModel) {

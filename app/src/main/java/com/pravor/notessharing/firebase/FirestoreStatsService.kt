@@ -1,9 +1,9 @@
 package com.pravor.notessharing.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.pravor.notessharing.model.UploadType
-import com.pravor.notessharing.model.dbField
-import com.pravor.notessharing.model.calculateLevel
+import com.pravor.notessharing.domain.model.UploadType
+import com.pravor.notessharing.domain.model.dbField
+import com.pravor.notessharing.domain.model.calculateLevel
 import kotlinx.coroutines.tasks.await
 
 class FirestoreStatsService {

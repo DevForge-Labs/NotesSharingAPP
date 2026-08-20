@@ -5,7 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import java.util.concurrent.atomic.AtomicInteger
 import androidx.compose.ui.Modifier
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.components.trending_components.TrendingNotesContent
 
 @Composable

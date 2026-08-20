@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.pravor.notessharing.model.DiscoverFeedItem
+import com.pravor.notessharing.domain.model.DiscoverFeedItem
 
 @Composable
 fun DiscoverFeedItem(item: DiscoverFeedItem, onClick: () -> Unit = {}) {

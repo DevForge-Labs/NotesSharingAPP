@@ -108,9 +108,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.pravor.notessharing.model.SelectedUploadFile
-import com.pravor.notessharing.model.UploadFileSource
-import com.pravor.notessharing.model.UploadType
+import com.pravor.notessharing.domain.model.SelectedUploadFile
+import com.pravor.notessharing.domain.model.UploadFileSource
+import com.pravor.notessharing.domain.model.UploadType
 import com.pravor.notessharing.state.UploadUiState
 import com.pravor.notessharing.state.YoutubePreview
 import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
@@ -209,9 +209,9 @@ fun UploadScreen(
         UploadType.Pyq -> uiState.selectedFiles.size == 1 && uiState.selectedExamYear.isNotBlank() && uiState.selectedExamType.isNotBlank()
         UploadType.Youtube -> uiState.youtubeUrl.isNotBlank() && (
             if (uiState.youtubeResourceType == "playlist") {
-                com.pravor.notessharing.model.extractYoutubePlaylistId(uiState.youtubeUrl) != null
+                com.pravor.notessharing.domain.model.extractYoutubePlaylistId(uiState.youtubeUrl) != null
             } else {
-                com.pravor.notessharing.model.extractYoutubeVideoId(uiState.youtubeUrl) != null
+                com.pravor.notessharing.domain.model.extractYoutubeVideoId(uiState.youtubeUrl) != null
             }
         )
         UploadType.Notes, UploadType.CheatSheet -> uiState.selectedFiles.isNotEmpty() && uiState.title.isNotBlank()

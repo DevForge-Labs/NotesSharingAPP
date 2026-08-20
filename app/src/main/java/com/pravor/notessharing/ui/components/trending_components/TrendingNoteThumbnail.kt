@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.pravor.notessharing.model.DocumentDetail
+import com.pravor.notessharing.domain.model.DocumentDetail
 import com.pravor.notessharing.ui.components.DocumentPlaceholder
 
 @Composable

@@ -1,9 +1,11 @@
 package com.pravor.notessharing.bookmarks
 
+import com.pravor.notessharing.data.repository.BookmarkRepository
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.domain.model.StudyFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

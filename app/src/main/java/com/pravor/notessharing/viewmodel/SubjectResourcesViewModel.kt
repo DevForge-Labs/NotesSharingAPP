@@ -1,12 +1,18 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.repository.BookmarkRepository
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.data.mapper.ExploreMapper
-import com.pravor.notessharing.model.TrendingNote
-import com.pravor.notessharing.model.VideoRecommendation
+import com.pravor.notessharing.domain.model.TrendingNote
+import com.pravor.notessharing.domain.model.VideoRecommendation
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,8 +30,8 @@ class SubjectResourcesViewModel(
 ) : AndroidViewModel(application) {
 
     private val firestore = FirebaseFirestore.getInstance()
-    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
-    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
+    private val bookmarkRepository = com.pravor.notessharing.data.repository.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.data.repository.UpvoteRepository()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -35,13 +41,13 @@ class SubjectResourcesViewModel(
     // Combine bookmarks, upvotes, and raw resources
     val resources: StateFlow<List<Any>> = combine(
         _rawResources,
-        com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow,
+        com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow,
         combine(
-            com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
-            com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow,
+            com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow,
+            com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow,
             ::Pair
         ),
-        com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow
+        com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow
     ) { rawList, bookmarks, upvoteStatePair, downloadCountsMap ->
         val (upvotesMap, upvoteCountsMap) = upvoteStatePair
         val bookmarkedIds = bookmarks.map { it.id }.toSet()
@@ -77,7 +83,7 @@ class SubjectResourcesViewModel(
         initialValue = emptyList()
     )
 
-    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+    private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
 
     init {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
@@ -125,7 +131,7 @@ class SubjectResourcesViewModel(
                     return@launch
                 }
 
-                val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
+                val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
                 val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
                 val allDocs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val deferreds = collections.map { col ->
@@ -146,7 +152,7 @@ class SubjectResourcesViewModel(
                     doc.getLong("uploadedAt") ?: 0L
                 }
 
-                val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+                val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                 val targetNormalized = com.pravor.notessharing.ui.components.utils.normalizeSubject(subjectName)
 
                 val filtered = allDocs.mapNotNull { doc ->
@@ -161,8 +167,8 @@ class SubjectResourcesViewModel(
 
                     val note = ExploreMapper.documentToTrendingNote(doc, bookmarkedIds) ?: return@mapNotNull null
 
-                    if (note.resourceType == com.pravor.notessharing.model.ResourceType.VIDEO ||
-                        note.resourceType == com.pravor.notessharing.model.ResourceType.PLAYLIST) {
+                    if (note.resourceType == com.pravor.notessharing.domain.model.ResourceType.VIDEO ||
+                        note.resourceType == com.pravor.notessharing.domain.model.ResourceType.PLAYLIST) {
                         note.toVideoRecommendation()
                     } else {
                         note
@@ -180,7 +186,7 @@ class SubjectResourcesViewModel(
 
     fun toggleBookmark(note: TrendingNote) {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
+        val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
 
         viewModelScope.launch {
             if (wasBookmarked) {
@@ -188,13 +194,13 @@ class SubjectResourcesViewModel(
             } else {
                 val docType = note.documentType.ifBlank { note.type ?: "Notes" }
                 val fileType = when (docType.lowercase(java.util.Locale.US)) {
-                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.model.FileType.CheatSheet
-                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
-                    "video" -> com.pravor.notessharing.model.FileType.Video
-                    else -> com.pravor.notessharing.model.FileType.Pdf
+                    "pyq" -> com.pravor.notessharing.domain.model.FileType.Pyq
+                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.domain.model.FileType.CheatSheet
+                    "assignment" -> com.pravor.notessharing.domain.model.FileType.Notes
+                    "video" -> com.pravor.notessharing.domain.model.FileType.Video
+                    else -> com.pravor.notessharing.domain.model.FileType.Pdf
                 }
-                val studyFile = com.pravor.notessharing.model.StudyFile(
+                val studyFile = com.pravor.notessharing.domain.model.StudyFile(
                     id = note.id,
                     title = note.title,
                     uploadDate = "Saved",
@@ -212,18 +218,18 @@ class SubjectResourcesViewModel(
 
     fun toggleVideoBookmark(video: VideoRecommendation) {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == video.id }
+        val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == video.id }
 
         viewModelScope.launch {
             if (wasBookmarked) {
                 bookmarkRepository.removeBookmark(video.id, currentUid)
             } else {
                 val docType = video.documentType.ifBlank { "Video" }
-                val studyFile = com.pravor.notessharing.model.StudyFile(
+                val studyFile = com.pravor.notessharing.domain.model.StudyFile(
                     id = video.id,
                     title = video.title,
                     uploadDate = "Saved",
-                    fileType = com.pravor.notessharing.model.FileType.Video,
+                    fileType = com.pravor.notessharing.domain.model.FileType.Video,
                     downloadsCount = 0,
                     upvotes = video.upvotes,
                     thumbnailUrl = video.thumbnailUrl ?: video.youtubeThumbnailUrl,

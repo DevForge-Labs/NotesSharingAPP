@@ -1,5 +1,8 @@
 package com.pravor.notessharing.updates.components
 
+import com.pravor.notessharing.domain.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.*
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background

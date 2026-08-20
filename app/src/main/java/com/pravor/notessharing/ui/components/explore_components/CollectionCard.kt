@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.pravor.notessharing.model.StudyCollection
+import com.pravor.notessharing.domain.model.StudyCollection
 
 @Composable
 fun CollectionCard(collection: StudyCollection) {

@@ -1,5 +1,7 @@
 package com.pravor.notessharing.ui.screens.profile
 
+import com.pravor.notessharing.data.local.preferences.*
+
 import android.annotation.SuppressLint
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -70,7 +72,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.ui.draw.shadow
-import com.pravor.notessharing.model.calculateLevelProgress
+import com.pravor.notessharing.domain.model.calculateLevelProgress
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -110,7 +112,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 import com.pravor.notessharing.state.AppSettingsUiState
 import com.pravor.notessharing.state.ProfileUiState
 import com.pravor.notessharing.state.ThemePreference

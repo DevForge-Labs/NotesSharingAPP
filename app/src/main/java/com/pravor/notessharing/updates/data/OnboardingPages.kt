@@ -1,6 +1,6 @@
 package com.pravor.notessharing.updates.data
 
-import com.pravor.notessharing.updates.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.UpdatePageModel
 
 object OnboardingPages {
     val pages = listOf(

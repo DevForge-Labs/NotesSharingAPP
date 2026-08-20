@@ -1,5 +1,11 @@
 package com.pravor.notessharing.ui.screens.auth
 
+import com.pravor.notessharing.data.repository.CollegeMetadata
+import com.pravor.notessharing.data.repository.BranchMetadata
+import com.pravor.notessharing.data.repository.*
+
+import com.pravor.notessharing.data.service.*
+
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,7 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
-import com.pravor.notessharing.auth.GoogleAuthHelper
+import com.pravor.notessharing.data.service.GoogleAuthHelper
 import kotlinx.coroutines.launch
 import com.pravor.notessharing.state.AuthUiState
 import com.pravor.notessharing.auth.AuthViewModel
@@ -438,7 +444,7 @@ fun SignUpScreen(
                     expanded = semesterExpanded,
                     onDismissRequest = { semesterExpanded = false }
                 ) {
-                    com.pravor.notessharing.model.AcademicCatalog.semesters.forEach { selectionOption ->
+                    com.pravor.notessharing.domain.model.AcademicCatalog.semesters.forEach { selectionOption ->
                         DropdownMenuItem(
                             text = { Text(selectionOption) },
                             onClick = {

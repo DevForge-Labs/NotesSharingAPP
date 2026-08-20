@@ -14,8 +14,8 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.scale
 import com.airbnb.lottie.compose.*
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.UploadType
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.UploadType
 
 // Centralized Fallback Mappings
 val UploadType.thumbnailFallbackAnimation: String

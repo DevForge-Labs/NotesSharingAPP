@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.model.DiscoverFeedItem
+import com.pravor.notessharing.domain.model.DiscoverFeedItem
 import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.explore_components.DiscoverFeedItem as DiscoverFeedItemCard

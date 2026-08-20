@@ -1,7 +1,7 @@
 package com.pravor.notessharing.ui.screens.trending
 
 import androidx.compose.runtime.Immutable
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.TrendingNote
 
 @Immutable
 sealed interface TrendingNotesUiState {

@@ -1,8 +1,8 @@
 package com.pravor.notessharing.data.mapper
 
 import com.pravor.notessharing.data.local.entity.HomeFeedItemEntity
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
 import org.json.JSONArray
 
 fun HomeFeedItemEntity.toDomainModel(): FeedItem {

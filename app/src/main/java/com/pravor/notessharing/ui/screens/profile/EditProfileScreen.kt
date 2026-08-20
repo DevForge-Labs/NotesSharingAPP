@@ -1,5 +1,9 @@
 package com.pravor.notessharing.ui.screens.profile
 
+import com.pravor.notessharing.data.repository.CollegeMetadata
+import com.pravor.notessharing.data.repository.BranchMetadata
+import com.pravor.notessharing.data.repository.*
+
 import android.net.Uri
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import androidx.activity.compose.BackHandler
@@ -74,7 +78,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 import com.pravor.notessharing.profile.ProfileViewModel
 import com.pravor.notessharing.state.EditProfileState
 import com.pravor.notessharing.state.ProfileUiState

@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.pravor.notessharing.ui.components.explore_components.RunningSquirrelScrollbar
-import com.pravor.notessharing.model.DocumentDetail
+import com.pravor.notessharing.domain.model.DocumentDetail
 
 @Composable
 fun AttachmentPreviewSection(

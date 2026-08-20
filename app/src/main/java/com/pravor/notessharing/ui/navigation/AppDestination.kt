@@ -1,5 +1,7 @@
 package com.pravor.notessharing.ui.navigation
 
+import com.pravor.notessharing.data.local.preferences.*
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Explore

@@ -1,10 +1,10 @@
 package com.pravor.notessharing.data.mapper
 
 import com.pravor.notessharing.data.local.entity.ExploreItemEntity
-import com.pravor.notessharing.model.DiscoverFeedItem
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.DiscoverFeedItem
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.TrendingNote
 import org.json.JSONArray
 
 fun ExploreItemEntity.toFeedItem(): FeedItem {

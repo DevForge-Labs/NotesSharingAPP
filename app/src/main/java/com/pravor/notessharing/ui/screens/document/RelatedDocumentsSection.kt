@@ -11,8 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pravor.notessharing.model.DocumentDetail
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.DocumentDetail
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.components.explore_components.TrendingNoteCard
 
 @Composable

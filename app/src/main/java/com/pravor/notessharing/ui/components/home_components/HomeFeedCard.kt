@@ -68,8 +68,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import coil.compose.AsyncImage
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatItem
 
@@ -175,7 +175,7 @@ fun HomeFeedCard(
                             modifier = Modifier.weight(1f)
                         )
                         val isYouTubePlaylist = item.youtubeVideoId.isNullOrBlank() ||
-                            (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
+                            (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.domain.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
                         val fileTypeLabel = if (isYouTubePlaylist) "YouTube Playlist" else "YouTube Video"
                         FileTypeBadge(fileTypeLabel)
                     }
@@ -419,7 +419,7 @@ fun ForYouGridCard(
 
     val isYouTubePlaylist = isVideo && (
         item.youtubeVideoId.isNullOrBlank() ||
-        (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
+        (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.domain.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
     )
 
     val docTypeStr = when {

@@ -1,8 +1,13 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.pravor.notessharing.ui.screens.home
 
+import com.pravor.notessharing.data.service.DownloadTracker
+import com.pravor.notessharing.data.service.*
+
+import com.pravor.notessharing.core.util.*
+
 import android.annotation.SuppressLint
-import com.pravor.notessharing.util.RefreshCooldownManager
+import com.pravor.notessharing.core.util.RefreshCooldownManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -74,8 +79,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.background
-import com.pravor.notessharing.model.getRelativeTime
-import com.pravor.notessharing.model.Notification
+import com.pravor.notessharing.domain.model.getRelativeTime
+import com.pravor.notessharing.domain.model.Notification
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -118,7 +123,7 @@ fun HomeRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
     val bookmarkUiState by bookmarkViewModel.uiState.collectAsStateWithLifecycle()
-    val activeDownloadsCount by com.pravor.notessharing.data.download.DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
+    val activeDownloadsCount by com.pravor.notessharing.data.service.DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
     val uploadsCount by viewModel.uploadsCount.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
@@ -197,7 +202,7 @@ fun HomeScreen(
     uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
-    notifications: List<com.pravor.notessharing.model.Notification>,
+    notifications: List<com.pravor.notessharing.domain.model.Notification>,
     unreadNotificationsCount: Int,
     onMarkNotificationRead: (String) -> Unit,
     onMarkAllNotificationsRead: () -> Unit,
@@ -223,7 +228,7 @@ fun HomeScreen(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
+    val repository = remember { com.pravor.notessharing.data.repository.UploadRepository(context) }
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
  
     var pendingRemoveBookmarkId by remember { mutableStateOf<String?>(null) }
@@ -337,7 +342,7 @@ fun HomeScreen(
                         unreadNotificationsCount = unreadNotificationsCount,
                         onBellClick = { showBottomSheet = true },
                         onUpvoteClick = { itemId ->
-                            val isCurrentlyUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] == true
+                            val isCurrentlyUpvoted = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value[itemId] == true
                             if (isCurrentlyUpvoted) {
                                 pendingRemoveUpvoteId = itemId
                             } else {
@@ -365,7 +370,7 @@ fun HomeScreen(
                             val uploadedFile = (myFilesUiState as? MyFilesUiState.Success)?.content?.uploadedFiles?.find { it.id == docId }
                             val fileType = feedItem?.fileType ?: savedFile?.fileType ?: uploadedFile?.fileType
                             
-                            if (fileType == com.pravor.notessharing.model.FileType.Video) {
+                            if (fileType == com.pravor.notessharing.domain.model.FileType.Video) {
                                 onVideoClick(docId)
                             } else {
                                 onDocumentClick(docId)
@@ -386,7 +391,7 @@ fun HomeScreen(
                     try {
                         if (viewerData.id.isNotEmpty()) {
                             coroutineScope.launch {
-                                com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCount(viewerData.id)
+                                com.pravor.notessharing.data.repository.ViewTrackingRepository().incrementViewCount(viewerData.id)
                             }
                         }
                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
@@ -731,7 +736,7 @@ fun HomeScreen(
 
 @Composable
 private fun NotificationItemRow(
-    notification: com.pravor.notessharing.model.Notification,
+    notification: com.pravor.notessharing.domain.model.Notification,
     isHighlighted: Boolean = false,
     onMarkRead: () -> Unit,
     onNavigate: () -> Unit
@@ -841,7 +846,7 @@ private fun NotificationItemRow(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = com.pravor.notessharing.model.getRelativeTime(notification.createdAt),
+                        text = com.pravor.notessharing.domain.model.getRelativeTime(notification.createdAt),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 11.sp
                         ),
@@ -894,7 +899,7 @@ private fun NotificationItemRow(
 }
 
 private val previewFeedItems = listOf(
-    com.pravor.notessharing.model.FeedItem(
+    com.pravor.notessharing.domain.model.FeedItem(
         id = "feed-dbms-4",
         uploaderName = "Aarav Mehta",
         uploaderInitials = "AM",
@@ -902,14 +907,14 @@ private val previewFeedItems = listOf(
         title = "DBMS Unit 4 Complete Notes",
         description = "Normalization, transactions, indexing, and recovery notes cleaned up.",
         tags = listOf("DBMS", "CSE", "Unit 4"),
-        fileType = com.pravor.notessharing.model.FileType.Pdf,
+        fileType = com.pravor.notessharing.domain.model.FileType.Pdf,
         upvotes = 128,
         comments = 18,
         downloadsCount = 642,
         isUpvoted = false,
         isSaved = false
     ),
-    com.pravor.notessharing.model.FeedItem(
+    com.pravor.notessharing.domain.model.FeedItem(
         id = "feed-os-pyq",
         uploaderName = "Nisha Rao",
         uploaderInitials = "NR",
@@ -917,7 +922,7 @@ private val previewFeedItems = listOf(
         title = "Operating Systems PYQ Set 2021-2025",
         description = "Semester-wise solved questions with short hints.",
         tags = listOf("OS", "PYQ", "Exam"),
-        fileType = com.pravor.notessharing.model.FileType.Pyq,
+        fileType = com.pravor.notessharing.domain.model.FileType.Pyq,
         upvotes = 214,
         comments = 32,
         downloadsCount = 980,
@@ -927,11 +932,11 @@ private val previewFeedItems = listOf(
 )
 
 private val previewUploadedFiles = listOf(
-    com.pravor.notessharing.model.StudyFile(
+    com.pravor.notessharing.domain.model.StudyFile(
         id = "uploaded-java",
         title = "Java OOP Lab Manual",
         uploadDate = "Uploaded May 12",
-        fileType = com.pravor.notessharing.model.FileType.Pdf,
+        fileType = com.pravor.notessharing.domain.model.FileType.Pdf,
         downloadsCount = 89,
         upvotes = 24
     )
@@ -944,8 +949,8 @@ private fun HomePreview() {
         HomeScreen(
             uiState = HomeUiState.Success(
                 HomeContent(
-                    com.pravor.notessharing.model.Category.entries.first(),
-                    com.pravor.notessharing.model.Category.entries,
+                    com.pravor.notessharing.domain.model.Category.entries.first(),
+                    com.pravor.notessharing.domain.model.Category.entries,
                     previewFeedItems
                 )
             ),

@@ -17,14 +17,14 @@
 package com.pravor.notessharing.data.mapper
 
 import com.google.firebase.firestore.DocumentSnapshot
-import com.pravor.notessharing.model.DiscoverFeedItem
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.ResourceType
-import com.pravor.notessharing.model.TrendingNote
-import com.pravor.notessharing.model.extractYoutubePlaylistId
-import com.pravor.notessharing.model.removeFileExtension
-import com.pravor.notessharing.upvotes.UpvoteRepository
+import com.pravor.notessharing.domain.model.DiscoverFeedItem
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.ResourceType
+import com.pravor.notessharing.domain.model.TrendingNote
+import com.pravor.notessharing.domain.model.extractYoutubePlaylistId
+import com.pravor.notessharing.domain.model.removeFileExtension
+import com.pravor.notessharing.data.repository.UpvoteRepository
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

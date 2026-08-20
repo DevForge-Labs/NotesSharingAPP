@@ -1,7 +1,9 @@
 package com.pravor.notessharing.ui.screens.explore
 
+import com.pravor.notessharing.core.util.*
+
 import androidx.compose.foundation.background
-import com.pravor.notessharing.util.RefreshCooldownManager
+import com.pravor.notessharing.core.util.RefreshCooldownManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues

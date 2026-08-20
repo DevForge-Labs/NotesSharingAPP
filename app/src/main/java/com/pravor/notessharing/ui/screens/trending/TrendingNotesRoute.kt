@@ -1,7 +1,9 @@
 package com.pravor.notessharing.ui.screens.trending
 
+import com.pravor.notessharing.core.util.*
+
 import androidx.compose.runtime.Composable
-import com.pravor.notessharing.util.RefreshCooldownManager
+import com.pravor.notessharing.core.util.RefreshCooldownManager
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -9,7 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.TrendingNote
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton

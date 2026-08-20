@@ -1,5 +1,8 @@
 package com.pravor.notessharing.updates
 
+import com.pravor.notessharing.domain.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager

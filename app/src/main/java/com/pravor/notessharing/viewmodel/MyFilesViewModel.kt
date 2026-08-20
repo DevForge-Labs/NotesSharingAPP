@@ -1,16 +1,24 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.local.preferences.*
+
+import com.pravor.notessharing.data.service.*
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.pravor.notessharing.data.DocumentDetailRepository
-import com.pravor.notessharing.data.download.DownloadDataStoreManager
-import com.pravor.notessharing.data.download.DownloadService
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.StudyFile
-import com.pravor.notessharing.model.removeFileExtension
+import com.pravor.notessharing.data.repository.DocumentDetailRepository
+import com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager
+import com.pravor.notessharing.data.service.DownloadService
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.StudyFile
+import com.pravor.notessharing.domain.model.removeFileExtension
 import com.pravor.notessharing.state.MyFilesContent
 import com.pravor.notessharing.state.MyFilesUiState
 import android.content.Context
@@ -86,7 +94,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
                                     examYear = doc.examYear,
                                     examType = doc.examType,
                                     sectionDisplay = doc.sectionDisplay,
-                                    availability = com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD,
+                                    availability = com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD,
                                     localThumbnailPath = if (thumbnailExists) doc.localThumbnailPath else null
                                 )
                             )
@@ -172,7 +180,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun docDetailToStudyFile(
-        detail: com.pravor.notessharing.model.DocumentDetail,
+        detail: com.pravor.notessharing.domain.model.DocumentDetail,
         downloadedAt: Long,
         localThumbnailPath: String?
     ): StudyFile {

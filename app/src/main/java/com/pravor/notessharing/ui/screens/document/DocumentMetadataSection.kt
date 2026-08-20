@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pravor.notessharing.model.DocumentDetail
+import com.pravor.notessharing.domain.model.DocumentDetail
 
 @Composable
 fun DocumentMetadataSection(

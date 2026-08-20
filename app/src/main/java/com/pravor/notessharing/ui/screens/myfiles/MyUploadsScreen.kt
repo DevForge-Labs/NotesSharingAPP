@@ -320,7 +320,7 @@ fun MyUploadsScreen(
                                             StudyHubShelfCard(
                                                 file = file,
                                                 onClick = {
-                                                    if (file.fileType == com.pravor.notessharing.model.FileType.Video) {
+                                                    if (file.fileType == com.pravor.notessharing.domain.model.FileType.Video) {
                                                         onVideoClick(file.id)
                                                     } else {
                                                         onDocumentClick(file.id)
@@ -341,7 +341,7 @@ fun MyUploadsScreen(
 }
 
 // Extracted matchesFilter helper based on the app's existing document classification
-private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String): Boolean {
+private fun com.pravor.notessharing.domain.model.StudyFile.matchesFilter(filter: String): Boolean {
     if (filter == "All") return true
     val docType = this.documentType ?: this.fileType.label
     val rawDocType = docType.lowercase(java.util.Locale.ROOT).trim()
@@ -349,7 +349,7 @@ private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String
     val isCheatSheet = rawDocType.contains("cheat") || rawDocType.contains("formula")
     val isAssignment = rawDocType.contains("assignment")
     val isNotes = rawDocType.contains("notes")
-    val isVideo = this.fileType == com.pravor.notessharing.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
+    val isVideo = this.fileType == com.pravor.notessharing.domain.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
 
     return when (filter) {
         "Notes" -> isNotes

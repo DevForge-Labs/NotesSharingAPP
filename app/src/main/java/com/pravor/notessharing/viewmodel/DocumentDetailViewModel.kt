@@ -1,19 +1,29 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.repository.BookmarkRepository
+
+import com.pravor.notessharing.data.local.preferences.*
+
+import com.pravor.notessharing.data.service.*
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.pravor.notessharing.data.DocumentDetailRepository
-import com.pravor.notessharing.data.download.DownloadDataStoreManager
-import com.pravor.notessharing.data.download.DownloadService
-import com.pravor.notessharing.data.download.DownloadTracker
-import com.pravor.notessharing.data.download.DownloadForegroundService
-import com.pravor.notessharing.data.download.ShareStorageProvider
-import com.pravor.notessharing.model.DocumentDetail
-import com.pravor.notessharing.model.toDocumentDetail
+import com.pravor.notessharing.data.repository.DocumentDetailRepository
+import com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager
+import com.pravor.notessharing.data.service.DownloadService
+import com.pravor.notessharing.data.service.DownloadTracker
+import com.pravor.notessharing.data.service.DownloadForegroundService
+import com.pravor.notessharing.data.service.ShareStorageProvider
+import com.pravor.notessharing.domain.model.DocumentDetail
+import com.pravor.notessharing.domain.model.toDocumentDetail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -68,8 +78,8 @@ class DocumentDetailViewModel(
     private val _shareEvent = MutableSharedFlow<ShareEvent>()
     val shareEvent: SharedFlow<ShareEvent> = _shareEvent.asSharedFlow()
 
-    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
-    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.data.repository.UpvoteRepository()
+    private val bookmarkRepository = com.pravor.notessharing.data.repository.BookmarkRepository()
     private val auth = FirebaseAuth.getInstance()
 
     init {
@@ -84,7 +94,7 @@ class DocumentDetailViewModel(
         }
 
         viewModelScope.launch {
-            com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
+            com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
                 val bookmarkedIds = bookmarks.map { it.id }.toSet()
                 _uiState.update { current ->
                     if (current is DocumentDetailUiState.Success) {
@@ -107,8 +117,8 @@ class DocumentDetailViewModel(
 
         viewModelScope.launch {
             combine(
-                com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
-                com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+                com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow,
+                com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow
             ) { upvotesMap, upvoteCountsMap ->
                 Pair(upvotesMap, upvoteCountsMap)
             }.collect { (upvotesMap, upvoteCountsMap) ->
@@ -143,7 +153,7 @@ class DocumentDetailViewModel(
         }
 
         viewModelScope.launch {
-            com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
+            com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
                 _uiState.update { current ->
                     if (current is DocumentDetailUiState.Success) {
                         val mainId = current.document.id
@@ -204,7 +214,7 @@ class DocumentDetailViewModel(
             successState.relatedDocuments.find { it.id == itemId } ?: return
         }
 
-        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == itemId }
+        val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == itemId }
 
         viewModelScope.launch {
             if (wasBookmarked) {
@@ -212,13 +222,13 @@ class DocumentDetailViewModel(
             } else {
                 val docType = doc.documentType.ifBlank { "Notes" }
                 val fileType = when (docType.lowercase(java.util.Locale.US)) {
-                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.model.FileType.CheatSheet
-                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
-                    "video" -> com.pravor.notessharing.model.FileType.Video
-                    else -> com.pravor.notessharing.model.FileType.Pdf
+                    "pyq" -> com.pravor.notessharing.domain.model.FileType.Pyq
+                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.domain.model.FileType.CheatSheet
+                    "assignment" -> com.pravor.notessharing.domain.model.FileType.Notes
+                    "video" -> com.pravor.notessharing.domain.model.FileType.Video
+                    else -> com.pravor.notessharing.domain.model.FileType.Pdf
                 }
-                val studyFile = com.pravor.notessharing.model.StudyFile(
+                val studyFile = com.pravor.notessharing.domain.model.StudyFile(
                     id = doc.id,
                     title = doc.title,
                     uploadDate = "Saved",
@@ -235,10 +245,10 @@ class DocumentDetailViewModel(
     }
 
     private fun DocumentDetail.withLiveMetadata(): DocumentDetail {
-        val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
-        val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
-        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
-        val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
+        val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+        val upvotesMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
+        val downloadCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.value
 
         return this.copy(
             isBookmarked = bookmarkedIds.contains(this.id),
@@ -277,7 +287,7 @@ class DocumentDetailViewModel(
         val currentUid = auth.currentUser?.uid
         if (!currentUid.isNullOrBlank()) {
             viewModelScope.launch {
-                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(documentId, currentUid, forceRefresh = true)
+                com.pravor.notessharing.data.repository.ReportRepository.instance.hasUserReported(documentId, currentUid, forceRefresh = true)
             }
         }
 
@@ -338,7 +348,7 @@ class DocumentDetailViewModel(
                             val downloadedDocsList = db.getDownloadedDocuments()
                             val localDoc = downloadedDocsList.find { it.documentId == documentId }
                             if (localDoc != null) {
-                                val archivedDocDetail = com.pravor.notessharing.model.DocumentDetail(
+                                val archivedDocDetail = com.pravor.notessharing.domain.model.DocumentDetail(
                                     id = documentId,
                                     title = localDoc.title.ifBlank { "Archived Download" },
                                     description = "This resource has been removed from the platform but remains available on your device.",
@@ -552,7 +562,7 @@ class DocumentDetailViewModel(
         super.onCleared()
         val docId = loadedDocumentId
         if (docId != null) {
-            com.pravor.notessharing.data.ReportRepository.instance.removeReportListener(docId)
+            com.pravor.notessharing.data.repository.ReportRepository.instance.removeReportListener(docId)
         }
         clearUpvotesObservation()
     }
@@ -566,7 +576,7 @@ class DocumentDetailViewModel(
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return DocumentDetailViewModel(
                     repository = repository,
-                    storageProvider = com.pravor.notessharing.data.download.AndroidShareStorageProvider(context.applicationContext)
+                    storageProvider = com.pravor.notessharing.data.service.AndroidShareStorageProvider(context.applicationContext)
                 ) as T
             }
         }

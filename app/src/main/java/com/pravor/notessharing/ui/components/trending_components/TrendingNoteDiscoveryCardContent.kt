@@ -1,5 +1,7 @@
 package com.pravor.notessharing.ui.components.trending_components
 
+import com.pravor.notessharing.ui.components.trending_components.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,8 +46,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.pravor.notessharing.model.DocumentDetail
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.DocumentDetail
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.DocumentPlaceholder
 import com.pravor.notessharing.ui.components.utils.SubjectBadge

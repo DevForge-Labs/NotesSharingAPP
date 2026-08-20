@@ -1,7 +1,7 @@
 package com.pravor.notessharing.data.mapper
 
 import com.pravor.notessharing.data.local.entity.UserProfileEntity
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 
 fun UserProfileEntity.toDomainModel(): Profile {
     return Profile(

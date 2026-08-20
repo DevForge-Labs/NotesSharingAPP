@@ -33,8 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pravor.notessharing.model.Profile
-import com.pravor.notessharing.model.calculateLevelProgress
+import com.pravor.notessharing.domain.model.Profile
+import com.pravor.notessharing.domain.model.calculateLevelProgress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch

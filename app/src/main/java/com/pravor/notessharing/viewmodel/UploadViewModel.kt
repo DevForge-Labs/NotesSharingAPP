@@ -1,5 +1,9 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.app.Application
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -8,14 +12,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.FirebaseAuth
-import com.pravor.notessharing.profile.ProfileRepository
-import com.pravor.notessharing.util.NormalizationUtil
-import com.pravor.notessharing.data.UploadRepository
-import com.pravor.notessharing.model.SelectedUploadFile
-import com.pravor.notessharing.model.UploadFileSource
-import com.pravor.notessharing.model.UploadType
-import com.pravor.notessharing.model.extractYoutubeVideoId
-import com.pravor.notessharing.model.extractYoutubePlaylistId
+import com.pravor.notessharing.data.repository.ProfileRepository
+import com.pravor.notessharing.core.util.NormalizationUtil
+import com.pravor.notessharing.data.repository.UploadRepository
+import com.pravor.notessharing.domain.model.SelectedUploadFile
+import com.pravor.notessharing.domain.model.UploadFileSource
+import com.pravor.notessharing.domain.model.UploadType
+import com.pravor.notessharing.domain.model.extractYoutubeVideoId
+import com.pravor.notessharing.domain.model.extractYoutubePlaylistId
 import com.pravor.notessharing.state.CatalogSubject
 import com.pravor.notessharing.state.UploadUiState
 import com.pravor.notessharing.state.YoutubePreview
@@ -46,8 +50,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _uiState = MutableStateFlow(
         UploadUiState(
-            branches = com.pravor.notessharing.model.AcademicCatalog.branches,
-            semesters = com.pravor.notessharing.model.AcademicCatalog.semesters,
+            branches = com.pravor.notessharing.domain.model.AcademicCatalog.branches,
+            semesters = com.pravor.notessharing.domain.model.AcademicCatalog.semesters,
             examYears = listOf("2026", "2025", "2024", "2023", "2022", "2021", "2020"),
             examTypes = listOf("Midsem", "Endsem")
         )

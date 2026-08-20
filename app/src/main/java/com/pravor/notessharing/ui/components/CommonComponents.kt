@@ -72,10 +72,10 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
-import com.pravor.notessharing.model.Category
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.domain.model.Category
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.StudyFile
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 
 @Composable
@@ -960,7 +960,7 @@ fun StudyHubShelfCard(
                 }
 
                 val imageModel = remember(file.thumbnailUrl, file.localThumbnailPath, file.availability) {
-                    if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) {
+                    if (file.availability == com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD) {
                         file.localThumbnailPath?.let { java.io.File(it) }
                     } else {
                         if (!file.localThumbnailPath.isNullOrBlank()) {
@@ -1036,7 +1036,7 @@ fun StudyHubShelfCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) {
+                    if (file.availability == com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = Color(0xFF94A3B8).copy(alpha = 0.12f),
@@ -1092,9 +1092,9 @@ fun StudyHubShelfCard(
 
                 // Upload Date
                 Text(
-                    text = if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) "Removed from platform" else file.uploadDate,
+                    text = if (file.availability == com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD) "Removed from platform" else file.uploadDate,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = if (file.availability == com.pravor.notessharing.model.ResourceAvailability.ARCHIVED_DOWNLOAD) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    color = if (file.availability == com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

@@ -1,5 +1,9 @@
 package com.pravor.notessharing.ui.screens.auth
 
+import com.pravor.notessharing.data.repository.CollegeMetadata
+import com.pravor.notessharing.data.repository.BranchMetadata
+import com.pravor.notessharing.data.repository.*
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -59,8 +63,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.auth.AuthViewModel
-import com.pravor.notessharing.model.AcademicCatalog
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.AcademicCatalog
+import com.pravor.notessharing.domain.model.Profile
 import com.pravor.notessharing.state.AuthUiState
 import kotlinx.coroutines.launch
 

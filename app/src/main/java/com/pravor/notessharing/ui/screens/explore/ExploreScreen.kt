@@ -1,7 +1,9 @@
 package com.pravor.notessharing.ui.screens.explore
 
+import com.pravor.notessharing.core.util.*
+
 import androidx.compose.animation.Crossfade
-import com.pravor.notessharing.util.RefreshCooldownManager
+import com.pravor.notessharing.core.util.RefreshCooldownManager
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,8 +39,8 @@ import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.loading.StudyLoadingIndicator
 import com.pravor.notessharing.ui.components.explore_components.ExploreSuccessContent
 import com.pravor.notessharing.viewmodel.ExploreViewModel
-import com.pravor.notessharing.model.TrendingNote
-import com.pravor.notessharing.model.VideoRecommendation
+import com.pravor.notessharing.domain.model.TrendingNote
+import com.pravor.notessharing.domain.model.VideoRecommendation
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -89,7 +91,7 @@ fun ExploreRoute(
 
     val onUpvoteClickRemembered = remember(viewModel) {
         { id: String, docType: String?, currentUpvotes: Int ->
-            val wasUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[id] ?: false
+            val wasUpvoted = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value[id] ?: false
             if (wasUpvoted) {
                 pendingRemoveUpvoteData = Triple(id, docType, currentUpvotes)
             } else {
@@ -231,7 +233,7 @@ fun ExploreScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val repository = remember { com.pravor.notessharing.data.UploadRepository(context) }
+    val repository = remember { com.pravor.notessharing.data.repository.UploadRepository(context) }
     var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.components.UploadViewerData?>(null) }
  
     val listState = rememberLazyListState()
@@ -324,7 +326,7 @@ fun ExploreScreen(
                     try {
                         if (viewerData.id.isNotEmpty()) {
                             coroutineScope.launch {
-                                com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCount(viewerData.id)
+                                com.pravor.notessharing.data.repository.ViewTrackingRepository().incrementViewCount(viewerData.id)
                             }
                         }
                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))

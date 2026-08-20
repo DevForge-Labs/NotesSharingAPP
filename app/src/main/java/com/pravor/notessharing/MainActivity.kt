@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         try {
-            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(applicationContext)
+            com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(applicationContext)
         } catch (ex: Exception) {
             android.util.Log.e("MainActivity", "Widget update error: ${ex.message}", ex)
         }

@@ -1,5 +1,7 @@
 package com.pravor.notessharing.ui.components.profile_components
 
+import com.pravor.notessharing.core.util.*
+
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -56,7 +58,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 import kotlin.math.max
 import kotlin.math.min
 
@@ -130,7 +132,7 @@ private fun getBranchAbbreviation(branchIdOrName: String): String {
     if (clean.contains("biotech") || clean == "bt") return "BT"
     
     // Fallback: resolve canonical ID and uppercase it
-    val resolvedId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(branchIdOrName)
+    val resolvedId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveBranchId(branchIdOrName)
     return resolvedId.uppercase(java.util.Locale.ROOT)
 }
 

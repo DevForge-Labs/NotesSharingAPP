@@ -1,5 +1,8 @@
 package com.pravor.notessharing.updates.components
 
+import com.pravor.notessharing.domain.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.*
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

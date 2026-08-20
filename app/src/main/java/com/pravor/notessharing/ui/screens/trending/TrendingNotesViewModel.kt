@@ -1,9 +1,11 @@
 package com.pravor.notessharing.ui.screens.trending
 
+import com.pravor.notessharing.data.repository.BookmarkRepository
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.pravor.notessharing.data.TrendingFeedRepository
+import com.pravor.notessharing.data.repository.TrendingFeedRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -16,21 +18,21 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
     val isRefreshing: StateFlow<Boolean> = repository.isRefreshing
     val isLoadingMore: StateFlow<Boolean> = repository.isLoadingMore
 
-    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
-    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
+    private val bookmarkRepository = com.pravor.notessharing.data.repository.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.data.repository.UpvoteRepository()
 
     private val upvoteState = combine(
-        com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
-        com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+        com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow,
+        com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow
     ) { upvotesMap, upvoteCountsMap ->
         Pair(upvotesMap, upvoteCountsMap)
     }
 
     val uiState: StateFlow<TrendingNotesUiState> = combine(
         repository.trendingNotes,
-        com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow,
+        com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow,
         upvoteState,
-        com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow,
+        com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow,
         repository.isRefreshing
     ) { notes, bookmarks, upvoteStatePair, downloadCountsMap, refreshing ->
         val (upvotesMap, upvoteCountsMap) = upvoteStatePair
@@ -59,10 +61,10 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = if (repository.trendingNotes.value.isNotEmpty()) {
-            val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
-            val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
-            val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
-            val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
+            val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+            val upvotesMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
+            val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
+            val downloadCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.value
             val updated = repository.trendingNotes.value.map { note ->
                 val isUpvoted = upvotesMap[note.id] ?: false
                 val upvotesCount = upvoteCountsMap[note.id] ?: note.upvotes
@@ -82,7 +84,7 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         }
     )
 
-    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+    private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
 
     private suspend fun getUserCollegeId(): String? {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return null
@@ -140,9 +142,9 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun toggleBookmark(note: com.pravor.notessharing.model.TrendingNote) {
+    fun toggleBookmark(note: com.pravor.notessharing.domain.model.TrendingNote) {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
+        val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
 
         viewModelScope.launch {
             if (wasBookmarked) {
@@ -150,13 +152,13 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
             } else {
                 val docType = note.documentType.ifBlank { note.type ?: "Notes" }
                 val fileType = when (docType.lowercase(java.util.Locale.US)) {
-                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.model.FileType.CheatSheet
-                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
-                    "video" -> com.pravor.notessharing.model.FileType.Video
-                    else -> com.pravor.notessharing.model.FileType.Pdf
+                    "pyq" -> com.pravor.notessharing.domain.model.FileType.Pyq
+                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.domain.model.FileType.CheatSheet
+                    "assignment" -> com.pravor.notessharing.domain.model.FileType.Notes
+                    "video" -> com.pravor.notessharing.domain.model.FileType.Video
+                    else -> com.pravor.notessharing.domain.model.FileType.Pdf
                 }
-                val studyFile = com.pravor.notessharing.model.StudyFile(
+                val studyFile = com.pravor.notessharing.domain.model.StudyFile(
                     id = note.id,
                     title = note.title,
                     uploadDate = "Saved",
@@ -172,7 +174,7 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun toggleUpvote(note: com.pravor.notessharing.model.TrendingNote) {
+    fun toggleUpvote(note: com.pravor.notessharing.domain.model.TrendingNote) {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
         val docType = note.documentType.ifBlank { note.type ?: "Notes" }
         val collection = when (docType.lowercase(java.util.Locale.US)) {

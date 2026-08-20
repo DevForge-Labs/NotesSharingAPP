@@ -1,8 +1,10 @@
 package com.pravor.notessharing.data.repository
 
+import com.pravor.notessharing.core.util.*
+
 import android.content.Context
 import com.pravor.notessharing.NotesSharingApplication
-import com.pravor.notessharing.data.local.AppDatabase
+import com.pravor.notessharing.data.local.db.AppDatabase
 import com.pravor.notessharing.data.local.dao.ExploreDao
 import com.pravor.notessharing.data.local.entity.ExploreItemEntity
 import com.pravor.notessharing.data.mapper.toDiscoverNote
@@ -20,7 +22,7 @@ class ExploreRoomRepository(
     private val exploreDao: ExploreDao = AppDatabase.getDatabase(context).exploreDao()
 ) {
     fun observeExploreContent(collegeId: String): Flow<ExploreContent?> {
-        val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
         return exploreDao.observeExploreItems(canonicalCollegeId).map { entities ->
             if (entities.isEmpty()) return@map null
             assembleExploreContent(entities)
@@ -28,14 +30,14 @@ class ExploreRoomRepository(
     }
 
     suspend fun getCachedContent(collegeId: String): ExploreContent? = withContext(Dispatchers.IO) {
-        val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
         val entities = exploreDao.getCachedExploreItems(canonicalCollegeId)
         if (entities.isEmpty()) return@withContext null
         assembleExploreContent(entities)
     }
 
     suspend fun saveExploreContent(collegeId: String, content: ExploreContent) = withContext(Dispatchers.IO) {
-        val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
         val entities = mutableListOf<ExploreItemEntity>()
 
         content.popularUploads.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "POPULAR")) }

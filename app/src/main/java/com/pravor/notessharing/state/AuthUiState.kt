@@ -1,6 +1,6 @@
 package com.pravor.notessharing.state
 
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 
 sealed interface AuthUiState {
     data object Idle : AuthUiState

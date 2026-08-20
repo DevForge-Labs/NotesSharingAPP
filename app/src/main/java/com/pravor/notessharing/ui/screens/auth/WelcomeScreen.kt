@@ -1,5 +1,7 @@
 package com.pravor.notessharing.ui.screens.auth
 
+import com.pravor.notessharing.data.service.*
+
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.R
-import com.pravor.notessharing.auth.GoogleAuthHelper
+import com.pravor.notessharing.data.service.GoogleAuthHelper
 import com.pravor.notessharing.auth.AuthViewModel
 import com.pravor.notessharing.state.AuthUiState
 import kotlinx.coroutines.launch

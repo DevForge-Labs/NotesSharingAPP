@@ -37,8 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.model.Profile
-import com.pravor.notessharing.model.calculateLevelProgress
+import com.pravor.notessharing.domain.model.Profile
+import com.pravor.notessharing.domain.model.calculateLevelProgress
 import com.pravor.notessharing.ui.components.LiquidContributorCard
 import com.pravor.notessharing.ui.theme.ElectricBlue
 import com.pravor.notessharing.viewmodel.ContributorStatsUiState

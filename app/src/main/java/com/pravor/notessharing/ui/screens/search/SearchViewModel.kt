@@ -3,7 +3,7 @@ package com.pravor.notessharing.ui.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pravor.notessharing.data.SearchRepository
+import com.pravor.notessharing.data.repository.SearchRepository
 import com.pravor.notessharing.data.local.search.SearchHistoryManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -137,7 +137,7 @@ class SearchViewModel(
 
             try {
                 val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+                val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
                 val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
                 val userCollege = userProfile?.college?.takeIf { it.isNotBlank() }
 

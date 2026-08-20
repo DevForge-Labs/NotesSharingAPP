@@ -38,7 +38,7 @@
         </provider>
 
         <service
-            android:name="com.pravor.notessharing.data.download.DownloadForegroundService"
+            android:name="com.pravor.notessharing.data.service.DownloadForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
@@ -52,7 +52,7 @@
         </service>
 
         <receiver
-            android:name="com.pravor.notessharing.widget.QuickActionsWidgetReceiver"
+            android:name="com.pravor.notessharing.core.widget.QuickActionsWidgetReceiver"
             android:exported="true"
             android:label="Campus Pages Quick Actions">
             <intent-filter>
@@ -64,7 +64,7 @@
         </receiver>
 
         <receiver
-            android:name="com.pravor.notessharing.widget.ContinueLearningWidgetReceiver"
+            android:name="com.pravor.notessharing.core.widget.ContinueLearningWidgetReceiver"
             android:exported="true"
             android:label="Campus Pages Continue Learning">
             <intent-filter>

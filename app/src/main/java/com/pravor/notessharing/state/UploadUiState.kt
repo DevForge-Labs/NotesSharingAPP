@@ -1,8 +1,8 @@
 package com.pravor.notessharing.state
 
 import androidx.compose.runtime.Immutable
-import com.pravor.notessharing.model.SelectedUploadFile
-import com.pravor.notessharing.model.UploadType
+import com.pravor.notessharing.domain.model.SelectedUploadFile
+import com.pravor.notessharing.domain.model.UploadType
 
 @Immutable
 data class CatalogSubject(

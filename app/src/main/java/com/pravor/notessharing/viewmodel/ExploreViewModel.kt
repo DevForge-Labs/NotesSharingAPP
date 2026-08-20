@@ -1,16 +1,22 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.repository.BookmarkRepository
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
-import com.pravor.notessharing.model.DiscoverFeedItem
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.domain.model.DiscoverFeedItem
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.state.CatalogSubject
-import com.pravor.notessharing.data.ExploreRepository
+import com.pravor.notessharing.data.repository.ExploreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,10 +37,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
 
     private val firestore = FirebaseFirestore.getInstance()
-    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
-    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
+    private val bookmarkRepository = com.pravor.notessharing.data.repository.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.data.repository.UpvoteRepository()
 
-    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository()
+    private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
     private val _allowedSubjects = MutableStateFlow<List<CatalogSubject>>(emptyList())
     val allowedSubjects: StateFlow<List<CatalogSubject>> = _allowedSubjects.asStateFlow()
 
@@ -48,8 +54,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val profile = profileRepository.getProfile(currentUid)
                 val rawCollege = profile?.college?.takeIf { it.isNotBlank() } ?: return@launch
-                val collegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
-                val branchId = profile?.branch?.let { com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(it) } ?: "cse"
+                val collegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
+                val branchId = profile?.branch?.let { com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveBranchId(it) } ?: "cse"
                 val semester = profile?.semester ?: "Semester 4"
 
                 val firestoreQueryStartTime = System.currentTimeMillis()
@@ -174,7 +180,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
 
         viewModelScope.launch {
-            com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
+            com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
                 val bookmarkedIds = bookmarks.map { it.id }.toSet()
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
@@ -214,8 +220,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             kotlinx.coroutines.flow.combine(
-                com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
-                com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+                com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow,
+                com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow
             ) { upvotesMap, upvoteCountsMap ->
                 Pair(upvotesMap, upvoteCountsMap)
             }.collect { (upvotesMap, upvoteCountsMap) ->
@@ -261,7 +267,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
 
         viewModelScope.launch {
-            com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
+            com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
                         val updatedPopular = current.content.popularUploads.map { item ->
@@ -285,7 +291,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             video.copy(downloadsCount = count)
                         }
                         val updatedDiscover = current.content.discoverItems.map { item ->
-                            if (item is com.pravor.notessharing.model.DiscoverFeedItem.Note) {
+                            if (item is com.pravor.notessharing.domain.model.DiscoverFeedItem.Note) {
                                 val count = downloadCountsMap[item.id] ?: item.downloadsCount
                                 item.copy(downloadsCount = count)
                             } else {
@@ -431,9 +437,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     }
 
 
-    fun toggleBookmark(note: com.pravor.notessharing.model.TrendingNote) {
+    fun toggleBookmark(note: com.pravor.notessharing.domain.model.TrendingNote) {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
+        val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == note.id }
 
         viewModelScope.launch {
             if (wasBookmarked) {
@@ -441,13 +447,13 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             } else {
                 val docType = note.documentType.ifBlank { note.type ?: "Notes" }
                 val fileType = when (docType.lowercase(java.util.Locale.US)) {
-                    "pyq" -> com.pravor.notessharing.model.FileType.Pyq
-                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.model.FileType.CheatSheet
-                    "assignment" -> com.pravor.notessharing.model.FileType.Notes
-                    "video" -> com.pravor.notessharing.model.FileType.Video
-                    else -> com.pravor.notessharing.model.FileType.Pdf
+                    "pyq" -> com.pravor.notessharing.domain.model.FileType.Pyq
+                    "cheat sheet", "cheatsheet", "cheatsheets" -> com.pravor.notessharing.domain.model.FileType.CheatSheet
+                    "assignment" -> com.pravor.notessharing.domain.model.FileType.Notes
+                    "video" -> com.pravor.notessharing.domain.model.FileType.Video
+                    else -> com.pravor.notessharing.domain.model.FileType.Pdf
                 }
-                val studyFile = com.pravor.notessharing.model.StudyFile(
+                val studyFile = com.pravor.notessharing.domain.model.StudyFile(
                     id = note.id,
                     title = note.title,
                     uploadDate = "Saved",
@@ -463,20 +469,20 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun toggleVideoBookmark(video: com.pravor.notessharing.model.VideoRecommendation) {
+    fun toggleVideoBookmark(video: com.pravor.notessharing.domain.model.VideoRecommendation) {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val wasBookmarked = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.any { it.id == video.id }
+        val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == video.id }
 
         viewModelScope.launch {
             if (wasBookmarked) {
                 bookmarkRepository.removeBookmark(video.id, currentUid)
             } else {
                 val docType = video.documentType.ifBlank { "Video" }
-                val studyFile = com.pravor.notessharing.model.StudyFile(
+                val studyFile = com.pravor.notessharing.domain.model.StudyFile(
                     id = video.id,
                     title = video.title,
                     uploadDate = "Saved",
-                    fileType = com.pravor.notessharing.model.FileType.Video,
+                    fileType = com.pravor.notessharing.domain.model.FileType.Video,
                     downloadsCount = 0,
                     upvotes = video.upvotes,
                     thumbnailUrl = video.thumbnailUrl ?: video.youtubeThumbnailUrl,
@@ -511,10 +517,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun mergeWithLatestStats(content: ExploreContent): ExploreContent {
-        val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
-        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
-        val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
-        val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+        val downloadCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
+        val upvotesMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
+        val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
 
         val updatedNotes = content.notes.map { note ->
             val count = downloadCountsMap[note.id] ?: note.downloadsCount
@@ -575,7 +581,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
 
         val updatedDiscover = content.discoverItems.map { item ->
-            if (item is com.pravor.notessharing.model.DiscoverFeedItem.Note) {
+            if (item is com.pravor.notessharing.domain.model.DiscoverFeedItem.Note) {
                 item.copy(downloadsCount = downloadCountsMap[item.id] ?: item.downloadsCount)
             } else {
                 item

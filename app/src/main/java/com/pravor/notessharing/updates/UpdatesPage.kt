@@ -35,7 +35,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.pravor.notessharing.updates.components.ConvergingResourcesVisual
 import com.pravor.notessharing.updates.components.RippleCommunityVisual
 import com.pravor.notessharing.updates.components.StaggeredCardsVisual
-import com.pravor.notessharing.updates.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.UpdatePageModel
 import com.pravor.notessharing.ui.theme.*
 
 @Composable

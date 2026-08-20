@@ -1,10 +1,12 @@
 package com.pravor.notessharing.auth
 
+import com.pravor.notessharing.data.repository.AuthRepository
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pravor.notessharing.state.AuthUiState
 import com.pravor.notessharing.state.SessionState
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,13 +23,13 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
     var tempGoogleProfile: Profile? = null
         private set
 
-    private val metadataRepository = com.pravor.notessharing.data.MetadataRepository()
+    private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
 
-    private val _colleges = MutableStateFlow<List<com.pravor.notessharing.data.CollegeMetadata>>(emptyList())
-    val colleges: StateFlow<List<com.pravor.notessharing.data.CollegeMetadata>> = _colleges.asStateFlow()
+    private val _colleges = MutableStateFlow<List<com.pravor.notessharing.data.repository.CollegeMetadata>>(emptyList())
+    val colleges: StateFlow<List<com.pravor.notessharing.data.repository.CollegeMetadata>> = _colleges.asStateFlow()
 
-    private val _branches = MutableStateFlow<List<com.pravor.notessharing.data.BranchMetadata>>(emptyList())
-    val branches: StateFlow<List<com.pravor.notessharing.data.BranchMetadata>> = _branches.asStateFlow()
+    private val _branches = MutableStateFlow<List<com.pravor.notessharing.data.repository.BranchMetadata>>(emptyList())
+    val branches: StateFlow<List<com.pravor.notessharing.data.repository.BranchMetadata>> = _branches.asStateFlow()
 
     private val _isCollegesLoading = MutableStateFlow(false)
     val isCollegesLoading: StateFlow<Boolean> = _isCollegesLoading.asStateFlow()

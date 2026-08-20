@@ -52,9 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pravor.notessharing.model.TrendingNote
-import com.pravor.notessharing.model.VideoRecommendation
-import com.pravor.notessharing.model.ResourceType
+import com.pravor.notessharing.domain.model.TrendingNote
+import com.pravor.notessharing.domain.model.VideoRecommendation
+import com.pravor.notessharing.domain.model.ResourceType
 import com.pravor.notessharing.state.ExploreContent
 import com.pravor.notessharing.ui.components.explore_components.ClimbingMascotScrollbar
 import com.pravor.notessharing.ui.components.explore_components.MonkeyMascot

@@ -1,11 +1,15 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.pravor.notessharing.data.VideoDetailRepository
-import com.pravor.notessharing.model.VideoDetail
-import com.pravor.notessharing.upvotes.UpvoteRepository
+import com.pravor.notessharing.data.repository.VideoDetailRepository
+import com.pravor.notessharing.domain.model.VideoDetail
+import com.pravor.notessharing.data.repository.UpvoteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +27,7 @@ sealed interface VideoDetailUiState {
 
 class VideoDetailViewModel(
     private val repository: VideoDetailRepository = VideoDetailRepository(),
-    private val viewTrackingRepository: com.pravor.notessharing.data.ViewTrackingRepository = com.pravor.notessharing.data.ViewTrackingRepository()
+    private val viewTrackingRepository: com.pravor.notessharing.data.repository.ViewTrackingRepository = com.pravor.notessharing.data.repository.ViewTrackingRepository()
 ) : ViewModel() {
     private var loadedVideoId: String? = null
     private val upvoteRepository = UpvoteRepository()
@@ -39,7 +43,7 @@ class VideoDetailViewModel(
         val currentUid = auth.currentUser?.uid
         if (!currentUid.isNullOrBlank()) {
             viewModelScope.launch {
-                com.pravor.notessharing.data.ReportRepository.instance.hasUserReported(videoId, currentUid, forceRefresh = true)
+                com.pravor.notessharing.data.repository.ReportRepository.instance.hasUserReported(videoId, currentUid, forceRefresh = true)
             }
         }
 
@@ -120,7 +124,7 @@ class VideoDetailViewModel(
         super.onCleared()
         val videoId = loadedVideoId
         if (videoId != null) {
-            com.pravor.notessharing.data.ReportRepository.instance.removeReportListener(videoId)
+            com.pravor.notessharing.data.repository.ReportRepository.instance.removeReportListener(videoId)
         }
         clearUpvotesObservation()
     }

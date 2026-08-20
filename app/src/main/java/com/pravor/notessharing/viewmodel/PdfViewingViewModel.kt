@@ -1,9 +1,15 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.local.preferences.*
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pravor.notessharing.data.download.DownloadDataStoreManager
+import com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +28,7 @@ sealed interface PdfViewingUiState {
 }
 
 class PdfViewingViewModel(
-    private val viewTrackingRepository: com.pravor.notessharing.data.ViewTrackingRepository = com.pravor.notessharing.data.ViewTrackingRepository()
+    private val viewTrackingRepository: com.pravor.notessharing.data.repository.ViewTrackingRepository = com.pravor.notessharing.data.repository.ViewTrackingRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<PdfViewingUiState>(PdfViewingUiState.Loading)
     val uiState: StateFlow<PdfViewingUiState> = _uiState.asStateFlow()

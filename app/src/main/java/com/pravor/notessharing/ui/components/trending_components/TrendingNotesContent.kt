@@ -1,5 +1,7 @@
 package com.pravor.notessharing.ui.components.trending_components
 
+import com.pravor.notessharing.ui.components.trending_components.*
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,8 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
-import com.pravor.notessharing.data.DocumentDetailRepository
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.data.repository.DocumentDetailRepository
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding

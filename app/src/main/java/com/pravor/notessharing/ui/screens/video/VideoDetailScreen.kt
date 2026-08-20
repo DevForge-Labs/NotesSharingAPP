@@ -34,18 +34,18 @@ import androidx.core.net.toUri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.pravor.notessharing.data.RecentlyOpenedRepository
-import com.pravor.notessharing.model.VideoDetail
-import com.pravor.notessharing.bookmarks.BookmarkRepository
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.data.repository.RecentlyOpenedRepository
+import com.pravor.notessharing.domain.model.VideoDetail
+import com.pravor.notessharing.data.repository.BookmarkRepository
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.StudyFile
 import com.google.firebase.auth.FirebaseAuth
 import com.pravor.notessharing.ui.components.Avatar
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.components.ReportBottomSheet
 import androidx.compose.material.icons.outlined.Flag
-import com.pravor.notessharing.data.ReportRepository
+import com.pravor.notessharing.data.repository.ReportRepository
 import com.pravor.notessharing.ui.navigation.LocalSnackbarHostState
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import com.pravor.notessharing.viewmodel.VideoDetailUiState
@@ -83,7 +83,7 @@ fun VideoDetailRoute(
                 documentType = "YouTube Resource",
                 youtubeThumbnailUrl = video.youtubeThumbnailUrl
             )
-            com.pravor.notessharing.data.ContinueLearningRepository(context).saveLastOpened(
+            com.pravor.notessharing.data.repository.ContinueLearningRepository(context).saveLastOpened(
                 id = video.id,
                 type = "video",
                 title = video.title,
@@ -96,7 +96,7 @@ fun VideoDetailRoute(
                 documentType = "YouTube Resource",
                 youtubeThumbnailUrl = video.youtubeThumbnailUrl
             )
-            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+            com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
         }
     }
 
@@ -142,7 +142,7 @@ fun VideoDetailScreen(
 
     val handleUpvoteClick = remember(onUpvoteClick) {
         { itemId: String ->
-            val wasUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] ?: false
+            val wasUpvoted = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value[itemId] ?: false
             if (wasUpvoted) {
                 pendingRemoveUpvoteId = itemId
             } else {
@@ -248,11 +248,11 @@ fun VideoDetailScreen(
                                 if (recentRepo.getLastOpened()?.id == videoId) {
                                     recentRepo.clearLastOpened()
                                 }
-                                val contRepo = com.pravor.notessharing.data.ContinueLearningRepository(context)
+                                val contRepo = com.pravor.notessharing.data.repository.ContinueLearningRepository(context)
                                 if (contRepo.getLastOpened()?.id == videoId) {
                                     contRepo.clearLastOpened()
                                 }
-                                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+                                com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
                             }
                         }
                         StatePanel(
@@ -910,8 +910,8 @@ fun VideoUpvoteButtonSection(
     onShowRemoveDialog: () -> Unit,
     enabled: Boolean = true
 ) {
-    val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
-    val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
+    val upvotesMap by com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
+    val upvoteCountsMap by com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
 
     val isUpvoted = remember(upvotesMap, videoId) {
         upvotesMap[videoId] == true

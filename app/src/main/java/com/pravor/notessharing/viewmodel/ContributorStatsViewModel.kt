@@ -1,10 +1,14 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.pravor.notessharing.data.ContributorStatsRepository
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.data.repository.ContributorStatsRepository
+import com.pravor.notessharing.domain.model.Profile
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 

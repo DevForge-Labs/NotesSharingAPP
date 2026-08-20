@@ -1,0 +1,19 @@
+package com.pravor.notessharing.domain.model
+
+import com.pravor.notessharing.domain.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.*
+
+data class UpdatePageModel(
+    val pageIndex: Int,
+    val headline: String,
+    val supportingText: String,
+    val layoutType: LayoutType
+) {
+    enum class LayoutType {
+        CONVERGING_RESOURCES,
+        STAGGERED_CARDS,
+        RIPPLE_COMMUNITY,
+        WHY_USE_APP,
+        WELCOME_INSPIRING
+    }
+}

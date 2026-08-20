@@ -1,5 +1,7 @@
 package com.pravor.notessharing.firebase
 
+import com.pravor.notessharing.data.local.preferences.*
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -126,8 +128,8 @@ class NotesFirebaseMessagingService : FirebaseMessagingService() {
             System.currentTimeMillis().toInt()
         }
 
-        val category = com.pravor.notessharing.data.NotificationCategoryResolver.resolve(type, title, body)
-        val notificationPrefs = com.pravor.notessharing.data.NotificationPreferences(this)
+        val category = com.pravor.notessharing.data.local.preferences.NotificationCategoryResolver.resolve(type, title, body)
+        val notificationPrefs = com.pravor.notessharing.data.local.preferences.NotificationPreferences(this)
         if (notificationPrefs.shouldShowSystemNotification(category)) {
             Log.d("FCM_SERVICE", "Displaying system notification: ID = $systemNotificationId (from raw ID: '$notificationId'), Category: $category")
             notificationManager.notify(systemNotificationId, builder.build())

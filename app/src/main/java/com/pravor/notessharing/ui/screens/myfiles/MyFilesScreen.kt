@@ -53,8 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.StudyFile
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.StudyFile
 import com.pravor.notessharing.state.MyFilesUiState
 import com.pravor.notessharing.ui.components.AdaptiveScrollbar
 import com.pravor.notessharing.ui.components.NotesSearchBar
@@ -390,7 +390,7 @@ fun MyFilesScreen(
 }
 
 // Extracted matchesFilter helper based on the app's existing document classification
-private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String): Boolean {
+private fun com.pravor.notessharing.domain.model.StudyFile.matchesFilter(filter: String): Boolean {
     if (filter == "All") return true
     val docType = this.documentType ?: this.fileType.label
     val rawDocType = docType.lowercase(java.util.Locale.ROOT).trim()
@@ -398,7 +398,7 @@ private fun com.pravor.notessharing.model.StudyFile.matchesFilter(filter: String
     val isCheatSheet = rawDocType.contains("cheat") || rawDocType.contains("formula")
     val isAssignment = rawDocType.contains("assignment")
     val isNotes = rawDocType.contains("notes")
-    val isVideo = this.fileType == com.pravor.notessharing.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
+    val isVideo = this.fileType == com.pravor.notessharing.domain.model.FileType.Video || rawDocType.contains("video") || rawDocType.contains("youtube")
 
     return when (filter) {
         "Notes" -> isNotes

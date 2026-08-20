@@ -1,5 +1,8 @@
 package com.pravor.notessharing.updates.components
 
+import com.pravor.notessharing.domain.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.*
+
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring

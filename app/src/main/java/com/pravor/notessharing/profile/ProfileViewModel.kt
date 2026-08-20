@@ -1,9 +1,14 @@
 package com.pravor.notessharing.profile
 
+import com.pravor.notessharing.data.repository.ProfileRepository
+import com.pravor.notessharing.domain.model.*
+
+import com.pravor.notessharing.core.util.*
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.pravor.notessharing.model.Profile
+import com.pravor.notessharing.domain.model.Profile
 import com.pravor.notessharing.state.ProfileUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,10 +33,10 @@ class ProfileViewModel(
     private val _editState = MutableStateFlow<EditProfileState>(EditProfileState.Idle)
     val editState: StateFlow<EditProfileState> = _editState.asStateFlow()
 
-    private val metadataRepository = com.pravor.notessharing.data.MetadataRepository()
+    private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
 
-    private val _branches = MutableStateFlow<List<com.pravor.notessharing.data.BranchMetadata>>(emptyList())
-    val branches: StateFlow<List<com.pravor.notessharing.data.BranchMetadata>> = _branches.asStateFlow()
+    private val _branches = MutableStateFlow<List<com.pravor.notessharing.data.repository.BranchMetadata>>(emptyList())
+    val branches: StateFlow<List<com.pravor.notessharing.data.repository.BranchMetadata>> = _branches.asStateFlow()
 
     private val _isBranchesLoading = MutableStateFlow(false)
     val isBranchesLoading: StateFlow<Boolean> = _isBranchesLoading.asStateFlow()
@@ -197,7 +202,7 @@ class ProfileViewModel(
                     finalImageUrl = profileRepository.uploadProfileImage(currentFirebaseUser.uid, newLocalImageUri)
                 }
 
-                val normalizedSection = com.pravor.notessharing.util.NormalizationUtil.normalizeSection(section)
+                val normalizedSection = com.pravor.notessharing.core.util.NormalizationUtil.normalizeSection(section)
 
                 profileRepository.updateProfileFields(
                     uid = currentFirebaseUser.uid,

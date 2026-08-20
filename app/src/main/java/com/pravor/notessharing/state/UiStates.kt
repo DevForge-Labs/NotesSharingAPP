@@ -1,17 +1,17 @@
 package com.pravor.notessharing.state
 
 import androidx.compose.runtime.Immutable
-import com.pravor.notessharing.model.Category
-import com.pravor.notessharing.model.Contributor
-import com.pravor.notessharing.model.DiscoverFeedItem
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.Profile
-import com.pravor.notessharing.model.RevisionCard
-import com.pravor.notessharing.model.StudyFile
-import com.pravor.notessharing.model.StudyCollection
-import com.pravor.notessharing.model.TrendingNote
-import com.pravor.notessharing.model.TrendingTopic
-import com.pravor.notessharing.model.VideoRecommendation
+import com.pravor.notessharing.domain.model.Category
+import com.pravor.notessharing.domain.model.Contributor
+import com.pravor.notessharing.domain.model.DiscoverFeedItem
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.Profile
+import com.pravor.notessharing.domain.model.RevisionCard
+import com.pravor.notessharing.domain.model.StudyFile
+import com.pravor.notessharing.domain.model.StudyCollection
+import com.pravor.notessharing.domain.model.TrendingNote
+import com.pravor.notessharing.domain.model.TrendingTopic
+import com.pravor.notessharing.domain.model.VideoRecommendation
 
 sealed interface HomeUiState {
     data object Loading : HomeUiState

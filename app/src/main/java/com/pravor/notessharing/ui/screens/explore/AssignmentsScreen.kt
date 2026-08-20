@@ -1,5 +1,8 @@
 package com.pravor.notessharing.ui.screens.explore
 
+import com.pravor.notessharing.ui.components.trending_components.TrendingNoteDiscoveryCardContent
+import com.pravor.notessharing.ui.components.trending_components.*
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -12,11 +15,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.state.ExploreUiState
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.trending_components.TrendingNoteDiscoveryCard
-import com.pravor.notessharing.data.DocumentDetailRepository
+import com.pravor.notessharing.data.repository.DocumentDetailRepository
 import com.pravor.notessharing.viewmodel.ExploreViewModel
 
 @Composable

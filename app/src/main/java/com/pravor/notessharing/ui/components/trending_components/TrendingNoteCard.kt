@@ -7,9 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.pravor.notessharing.data.DocumentDetailRepository
-import com.pravor.notessharing.model.DocumentDetail
-import com.pravor.notessharing.model.TrendingNote
+import com.pravor.notessharing.data.repository.DocumentDetailRepository
+import com.pravor.notessharing.domain.model.DocumentDetail
+import com.pravor.notessharing.domain.model.TrendingNote
 
 @Composable
 fun TrendingNoteDiscoveryCard(

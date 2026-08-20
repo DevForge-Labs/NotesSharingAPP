@@ -1,5 +1,10 @@
 package com.pravor.notessharing.updates
 
+import com.pravor.notessharing.domain.model.UpdatePageModel
+import com.pravor.notessharing.domain.model.*
+
+import com.pravor.notessharing.data.service.*
+
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -26,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.R
 import com.pravor.notessharing.auth.AuthViewModel
-import com.pravor.notessharing.auth.GoogleAuthHelper
+import com.pravor.notessharing.data.service.GoogleAuthHelper
 import com.pravor.notessharing.state.AuthUiState
 import kotlinx.coroutines.launch
 

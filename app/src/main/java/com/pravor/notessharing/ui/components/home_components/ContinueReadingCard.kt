@@ -1,5 +1,9 @@
 package com.pravor.notessharing.ui.components.home_components
 
+import com.pravor.notessharing.core.util.formatRelativeTime
+import com.pravor.notessharing.core.util.formatRelativeTime
+import com.pravor.notessharing.core.util.*
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,7 +71,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.pravor.notessharing.model.FeedItem
+import com.pravor.notessharing.domain.model.FeedItem
 import com.pravor.notessharing.ui.components.utils.SubjectBadge
 import java.io.File
 import java.io.FileOutputStream
@@ -115,10 +119,10 @@ fun ContinueReadingCard(
         android.util.Log.d("RECOMPOSE", "[RECOMPOSE] ContinueReadingCard count=${recompositionCount.incrementAndGet()}")
     }
 
-    val isVideo = item.fileType == com.pravor.notessharing.model.FileType.Video
+    val isVideo = item.fileType == com.pravor.notessharing.domain.model.FileType.Video
     
-    val repository = remember { com.pravor.notessharing.data.DocumentDetailRepository() }
-    val videoRepository = remember { com.pravor.notessharing.data.VideoDetailRepository() }
+    val repository = remember { com.pravor.notessharing.data.repository.DocumentDetailRepository() }
+    val videoRepository = remember { com.pravor.notessharing.data.repository.VideoDetailRepository() }
     var firstFileUrl by remember(item.id) { mutableStateOf<String?>(null) }
     var isImage by remember(item.id) { mutableStateOf(false) }
     var isLoading by remember(item.id) { mutableStateOf(true) }
@@ -268,7 +272,7 @@ fun ContinueReadingCard(
     val isPyq = when (rawDocType) {
         "pyq" -> true
         "cheatsheet", "cheat sheet", "assignment", "notes" -> false
-        else -> item.fileType == com.pravor.notessharing.model.FileType.Pyq ||
+        else -> item.fileType == com.pravor.notessharing.domain.model.FileType.Pyq ||
                 item.tags.any { it.equals("pyq", ignoreCase = true) } ||
                 item.title.contains("pyq", ignoreCase = true) ||
                 item.description.contains("pyq", ignoreCase = true)
@@ -277,7 +281,7 @@ fun ContinueReadingCard(
     val isCheatSheet = when (rawDocType) {
         "cheatsheet", "cheat sheet" -> true
         "pyq", "assignment", "notes" -> false
-        else -> item.fileType == com.pravor.notessharing.model.FileType.CheatSheet ||
+        else -> item.fileType == com.pravor.notessharing.domain.model.FileType.CheatSheet ||
                 item.tags.any { it.equals("cheat sheet", ignoreCase = true) || it.equals("cheatsheet", ignoreCase = true) || it.equals("formula", ignoreCase = true) } ||
                 item.title.contains("cheat", ignoreCase = true) ||
                 item.title.contains("formula", ignoreCase = true) ||
@@ -288,7 +292,7 @@ fun ContinueReadingCard(
     val isAssignment = when (rawDocType) {
         "assignment" -> true
         "pyq", "cheatsheet", "cheat sheet", "notes" -> false
-        else -> item.fileType == com.pravor.notessharing.model.FileType.LabManual ||
+        else -> item.fileType == com.pravor.notessharing.domain.model.FileType.LabManual ||
                 item.tags.any { it.equals("assignment", ignoreCase = true) } ||
                 item.title.contains("assignment", ignoreCase = true) ||
                 item.description.contains("assignment", ignoreCase = true)
@@ -297,7 +301,7 @@ fun ContinueReadingCard(
     val isNotes = when (rawDocType) {
         "notes" -> true
         "pyq", "cheatsheet", "cheat sheet", "assignment" -> false
-        else -> item.fileType == com.pravor.notessharing.model.FileType.Notes ||
+        else -> item.fileType == com.pravor.notessharing.domain.model.FileType.Notes ||
                 item.tags.any { it.equals("notes", ignoreCase = true) || it.equals("lecture", ignoreCase = true) } ||
                 item.title.contains("notes", ignoreCase = true) ||
                 item.title.contains("lecture", ignoreCase = true) ||
@@ -316,7 +320,7 @@ fun ContinueReadingCard(
 
     val isYouTubePlaylist = isVideo && (
         item.youtubeVideoId.isNullOrBlank() ||
-        (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
+        (!item.youtubeUrl.isNullOrBlank() && com.pravor.notessharing.domain.model.extractYoutubePlaylistId(item.youtubeUrl) != null)
     )
 
     val badgeText = when {

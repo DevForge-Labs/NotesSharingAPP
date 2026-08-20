@@ -1,13 +1,21 @@
 package com.pravor.notessharing.viewmodel
 
+import com.pravor.notessharing.data.repository.BookmarkRepository
+
+import com.pravor.notessharing.data.local.preferences.*
+
+import com.pravor.notessharing.domain.model.*
+import com.pravor.notessharing.data.repository.*
+import com.pravor.notessharing.core.util.*
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
-import com.pravor.notessharing.data.RecentlyOpenedRepository
-import com.pravor.notessharing.model.Category
-import com.pravor.notessharing.model.FeedItem
-import com.pravor.notessharing.model.FileType
+import com.pravor.notessharing.data.repository.RecentlyOpenedRepository
+import com.pravor.notessharing.domain.model.Category
+import com.pravor.notessharing.domain.model.FeedItem
+import com.pravor.notessharing.domain.model.FileType
 import com.pravor.notessharing.state.HomeContent
 import com.pravor.notessharing.state.HomeUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,10 +30,10 @@ import kotlinx.coroutines.coroutineScope
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val recentlyOpenedRepository = RecentlyOpenedRepository(application)
-    private val profileRepository = com.pravor.notessharing.profile.ProfileRepository(application)
+    private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository(application)
     private val homeFeedRepository = com.pravor.notessharing.data.repository.HomeFeedRepository(application)
     private var feedObservationJob: kotlinx.coroutines.Job? = null
-    private val notificationRepository = com.pravor.notessharing.data.NotificationRepository()
+    private val notificationRepository = com.pravor.notessharing.data.repository.NotificationRepository()
     val notifications = notificationRepository.notifications
     val unreadNotificationsCount = notificationRepository.unreadCount
 
@@ -50,18 +58,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
  
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-    private val userService = com.pravor.notessharing.firebase.FirestoreUserService()
+    private val userService = com.pravor.notessharing.core.firebase.FirestoreUserService()
     private var profileJob: kotlinx.coroutines.Job? = null
-    private val bookmarkRepository = com.pravor.notessharing.bookmarks.BookmarkRepository()
-    private val upvoteRepository = com.pravor.notessharing.upvotes.UpvoteRepository()
+    private val bookmarkRepository = com.pravor.notessharing.data.repository.BookmarkRepository()
+    private val upvoteRepository = com.pravor.notessharing.data.repository.UpvoteRepository()
 
     private var lastReloadCause = "InitialLoad"
     private var isFirstLoad = true
     private val startupStartTime = System.currentTimeMillis()
 
-    private var previousProfile: com.pravor.notessharing.model.Profile? = null
+    private var previousProfile: com.pravor.notessharing.domain.model.Profile? = null
 
-    private fun getChangedFields(old: com.pravor.notessharing.model.Profile?, new: com.pravor.notessharing.model.Profile?): List<String> {
+    private fun getChangedFields(old: com.pravor.notessharing.domain.model.Profile?, new: com.pravor.notessharing.domain.model.Profile?): List<String> {
         if (old == null || new == null) return listOf("all")
         val changes = mutableListOf<String>()
         if (old.uid != new.uid) changes.add("uid")
@@ -115,7 +123,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         refreshRecentlyOpened()
 
         viewModelScope.launch {
-            com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
+            com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
                 val bookmarkedIds = bookmarks.map { it.id }.toSet()
                 _uiState.update { current ->
                     if (current is HomeUiState.Success) {
@@ -132,8 +140,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             kotlinx.coroutines.flow.combine(
-                com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow,
-                com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow
+                com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow,
+                com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow
             ) { upvotesMap, upvoteCountsMap ->
                 Pair(upvotesMap, upvoteCountsMap)
             }.collect { (upvotesMap, upvoteCountsMap) ->
@@ -161,7 +169,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
+            com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
                 _uiState.update { current ->
                     if (current is HomeUiState.Success) {
                         val updatedFeed = current.content.feedItems.map { item ->
@@ -242,10 +250,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         feedObservationJob = viewModelScope.launch {
             homeFeedRepository.observeHomeFeed(collegeId).collect { cachedItems ->
                 if (cachedItems.isNotEmpty()) {
-                    val upvotesMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
-                    val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
-                    val downloadCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.downloadCountsFlow.value
-                    val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+                    val upvotesMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
+                    val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
+                    val downloadCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.value
+                    val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
 
                     val updatedCached = cachedItems.map { item ->
                         val isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
@@ -303,7 +311,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         if (lastOpened != null && lastOpened.fileType != FileType.Video) {
             viewModelScope.launch {
-                val db = com.pravor.notessharing.data.download.DownloadDataStoreManager(getApplication())
+                val db = com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager(getApplication())
                 val isDownloaded = db.isDocumentDownloaded(lastOpened.id)
                 var localFileExists = false
                 if (isDownloaded) {
@@ -315,7 +323,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val existsOnServer = checkDocumentExistsInFirestore(lastOpened.id)
                     if (!existsOnServer) {
                         recentlyOpenedRepository.clearLastOpened()
-                        val continueRepo = com.pravor.notessharing.data.ContinueLearningRepository(getApplication())
+                        val continueRepo = com.pravor.notessharing.data.repository.ContinueLearningRepository(getApplication())
                         continueRepo.clearLastOpened()
 
                         if (isDownloaded) {
@@ -394,7 +402,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         return@launch
                     }
 
-                    val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
+                    val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
 
                     val isNecessary = when (lastReloadCause) {
                         "NavigationReturn" -> {
@@ -426,7 +434,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
                     val subjectIds = if (hasSemester && hasBranch) {
                         try {
-                            val branchId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveBranchId(rawBranch!!)
+                            val branchId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveBranchId(rawBranch!!)
                             val doc = firestore.collection("curriculum")
                                 .document(canonicalCollegeId.lowercase())
                                 .get()
@@ -496,7 +504,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
                         upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
                     }
-                    val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+                    val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                     
                     val feedAssemblyStartTime = System.currentTimeMillis()
                     android.util.Log.d("PERF", "[PERF] MainThreadWork START operation=Feed assembly thread=${Thread.currentThread().name}")
@@ -569,10 +577,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         bookmarkRepository.loadInitialBookmarksIfNeeded(currentUid)
                         upvoteRepository.loadInitialUpvotesIfNeeded(currentUid)
                     }
-                    val bookmarkedIds = com.pravor.notessharing.bookmarks.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
+                    val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
                     
                     val rawCollege = previousProfile?.college ?: "kiit"
-                    val canonicalCollegeId = com.pravor.notessharing.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
+                    val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
                     val cachedFallback = try {
                         homeFeedRepository.getCachedHomeFeed(canonicalCollegeId)
                     } catch (_: Exception) {
@@ -676,8 +684,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val sectionField = doc["section"] as? String
         val sectionDisplayField = doc["sectionDisplay"] as? String
 
-        val upvotedMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value
-        val upvoteCountsMap = com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.value
+        val upvotedMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
+        val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
         val resolvedIsUpvoted = upvotedMap[id] ?: false
         val resolvedUpvotes = upvoteCountsMap[id] ?: upvotes
 

@@ -1,5 +1,9 @@
 package com.pravor.notessharing.ui.screens.document
 
+import com.pravor.notessharing.data.local.preferences.*
+
+import com.pravor.notessharing.domain.model.*
+
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
@@ -22,14 +26,14 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.outlined.Flag
 import com.pravor.notessharing.ui.components.ReportBottomSheet
-import com.pravor.notessharing.data.ReportRepository
+import com.pravor.notessharing.data.repository.ReportRepository
 import com.pravor.notessharing.ui.navigation.LocalSnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
-import com.pravor.notessharing.model.FileType
-import com.pravor.notessharing.model.StudyFile
-import com.pravor.notessharing.bookmarks.BookmarkRepository
+import com.pravor.notessharing.domain.model.FileType
+import com.pravor.notessharing.domain.model.StudyFile
+import com.pravor.notessharing.data.repository.BookmarkRepository
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
@@ -50,8 +54,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pravor.notessharing.data.RecentlyOpenedRepository
-import com.pravor.notessharing.model.DocumentDetail
+import com.pravor.notessharing.data.repository.RecentlyOpenedRepository
+import com.pravor.notessharing.domain.model.DocumentDetail
 import com.pravor.notessharing.ui.components.StatePanel
 import com.pravor.notessharing.ui.components.utils.getSubjectColor
 import com.pravor.notessharing.ui.components.utils.normalizeSubject
@@ -123,7 +127,7 @@ fun DocumentDetailRoute(
                 section = doc.section,
                 sectionDisplay = doc.sectionDisplay
             )
-            com.pravor.notessharing.data.ContinueLearningRepository(context).saveLastOpened(
+            com.pravor.notessharing.data.repository.ContinueLearningRepository(context).saveLastOpened(
                 id = doc.id,
                 type = "document",
                 title = doc.title,
@@ -140,7 +144,7 @@ fun DocumentDetailRoute(
                 section = doc.section,
                 sectionDisplay = doc.sectionDisplay
             )
-            com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+            com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
         }
     }
 
@@ -203,7 +207,7 @@ fun DocumentDetailScreen(
 
     val handleUpvoteClick = remember(onUpvoteClick) {
         { itemId: String ->
-            val wasUpvoted = com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.value[itemId] ?: false
+            val wasUpvoted = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value[itemId] ?: false
             if (wasUpvoted) {
                 pendingRemoveUpvoteId = itemId
             } else {
@@ -315,12 +319,12 @@ fun DocumentDetailScreen(
                                 if (recentRepo.getLastOpened()?.id == documentId) {
                                     recentRepo.clearLastOpened()
                                 }
-                                val contRepo = com.pravor.notessharing.data.ContinueLearningRepository(context)
+                                val contRepo = com.pravor.notessharing.data.repository.ContinueLearningRepository(context)
                                 if (contRepo.getLastOpened()?.id == documentId) {
                                     contRepo.clearLastOpened()
                                 }
                                 try {
-                                    val downloadManager = com.pravor.notessharing.data.download.DownloadDataStoreManager(context)
+                                    val downloadManager = com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager(context)
                                     val attachments = downloadManager.getDownloadedAttachments()
                                         .filter { it.documentId == documentId }
                                     attachments.forEach { attachment ->
@@ -337,7 +341,7 @@ fun DocumentDetailScreen(
                                 } catch (e: Exception) {
                                     // Ignore
                                 }
-                                com.pravor.notessharing.widget.WidgetUpdateManager.updateAllWidgets(context)
+                                com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
                             }
                         }
                         com.pravor.notessharing.ui.components.states.DocumentErrorState(
@@ -411,7 +415,7 @@ fun DocumentDetailScreen(
                                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                                         context.startActivity(intent)
                                         scope.launch {
-                                            com.pravor.notessharing.data.ViewTrackingRepository().incrementViewCountDirect(
+                                            com.pravor.notessharing.data.repository.ViewTrackingRepository().incrementViewCountDirect(
                                                 successState.document.id,
                                                 successState.document.collection,
                                                 successState.document.documentType
@@ -849,8 +853,8 @@ fun UpvoteButtonSection(
     onShowRemoveDialog: () -> Unit,
     enabled: Boolean = true
 ) {
-    val upvotesMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
-    val upvoteCountsMap by com.pravor.notessharing.upvotes.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
+    val upvotesMap by com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.collectAsStateWithLifecycle()
+    val upvoteCountsMap by com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.collectAsStateWithLifecycle()
 
     val isUpvoted = remember(upvotesMap, docId) {
         upvotesMap[docId] == true
