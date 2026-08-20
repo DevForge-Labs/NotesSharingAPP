@@ -1,5 +1,11 @@
 package com.pravor.notessharing.ui.theme
 
+import com.pravor.notessharing.ui.common.navigation.*
+
+import com.pravor.notessharing.ui.common.loading.*
+
+import com.pravor.notessharing.ui.common.*
+
 import android.app.Activity
 import android.os.Build
 import androidx.compose.material3.MaterialTheme

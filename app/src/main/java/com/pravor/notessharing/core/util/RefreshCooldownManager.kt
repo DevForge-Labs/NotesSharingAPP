@@ -1,6 +1,5 @@
 package com.pravor.notessharing.core.util
 
-import com.pravor.notessharing.core.util.*
 
 import com.pravor.notessharing.core.config.DeveloperConfig
 import java.util.concurrent.ConcurrentHashMap

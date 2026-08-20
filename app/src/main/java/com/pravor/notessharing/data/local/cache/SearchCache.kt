@@ -1,6 +1,6 @@
 package com.pravor.notessharing.data.local.cache
 
-import com.pravor.notessharing.ui.screens.search.SearchResultModel
+import com.pravor.notessharing.ui.features.search.SearchResultModel
 
 /**
  * A lightweight, thread-safe, session-based in-memory search cache.

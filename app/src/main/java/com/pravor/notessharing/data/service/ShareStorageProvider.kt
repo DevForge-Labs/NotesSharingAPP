@@ -2,7 +2,6 @@ package com.pravor.notessharing.data.service
 
 import com.pravor.notessharing.data.local.preferences.*
 
-import com.pravor.notessharing.data.service.*
 
 import com.pravor.notessharing.domain.model.*
 

@@ -2,13 +2,12 @@ package com.pravor.notessharing.data.service
 
 import com.pravor.notessharing.data.local.preferences.*
 
-import com.pravor.notessharing.data.service.*
 
 import com.pravor.notessharing.domain.model.*
 
 import android.content.Context
 import com.pravor.notessharing.domain.model.DocumentDetail
-import com.pravor.notessharing.viewmodel.DownloadState
+import com.pravor.notessharing.ui.features.document.DownloadState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient

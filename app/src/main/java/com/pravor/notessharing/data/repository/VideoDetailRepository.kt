@@ -6,7 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.domain.model.VideoDetail
 import com.pravor.notessharing.domain.model.toVideoDetail
 import com.pravor.notessharing.domain.util.ExploreRankingUtils
-import com.pravor.notessharing.ui.components.utils.normalizeSubject
+import com.pravor.notessharing.ui.common.utils.normalizeSubject
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

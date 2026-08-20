@@ -1,6 +1,5 @@
 package com.pravor.notessharing.core.util
 
-import com.pravor.notessharing.core.util.*
 
 import java.util.Locale
 

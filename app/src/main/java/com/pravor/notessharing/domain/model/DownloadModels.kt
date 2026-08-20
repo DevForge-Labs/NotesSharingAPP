@@ -1,6 +1,5 @@
 package com.pravor.notessharing.domain.model
 
-import com.pravor.notessharing.domain.model.*
 
 data class DownloadedDocument(
     val documentId: String,

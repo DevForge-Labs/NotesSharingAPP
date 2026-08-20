@@ -10,7 +10,7 @@ import com.pravor.notessharing.BuildConfig
 import com.pravor.notessharing.data.local.cache.TimedMemoryCache
 import com.pravor.notessharing.domain.model.DocumentDetail
 import com.pravor.notessharing.domain.model.toDocumentDetail
-import com.pravor.notessharing.ui.components.utils.normalizeSubject
+import com.pravor.notessharing.ui.common.utils.normalizeSubject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

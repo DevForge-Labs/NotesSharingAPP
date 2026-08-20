@@ -1,5 +1,11 @@
 package com.pravor.notessharing.ui.navigation
 
+import com.pravor.notessharing.ui.common.navigation.*
+
+import com.pravor.notessharing.ui.common.loading.*
+
+import com.pravor.notessharing.ui.common.*
+
 import com.pravor.notessharing.data.local.preferences.*
 
 import android.annotation.SuppressLint
@@ -32,39 +38,39 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.pravor.notessharing.ui.components.AppBottomBar
-import com.pravor.notessharing.ui.screens.explore.DiscoverRoute
-import com.pravor.notessharing.ui.screens.explore.ExploreRoute
-import com.pravor.notessharing.ui.screens.explore.RecommendedVideosRoute
-import com.pravor.notessharing.ui.screens.explore.ExamPrepRoute
-import com.pravor.notessharing.ui.screens.explore.AssignmentsRoute
-import com.pravor.notessharing.ui.screens.explore.SubjectResourcesRoute
-import com.pravor.notessharing.ui.screens.trending.TrendingNotesRoute
-import com.pravor.notessharing.ui.screens.home.HomeRoute
-import com.pravor.notessharing.ui.screens.myfiles.MyFilesRoute
-import com.pravor.notessharing.ui.screens.myfiles.MyUploadsScreen
-import com.pravor.notessharing.ui.screens.myfiles.MyBookmarksScreen
-import com.pravor.notessharing.ui.screens.profile.ProfileRoute
-import com.pravor.notessharing.ui.screens.profile.EditProfileRoute
-import com.pravor.notessharing.ui.screens.upload.UploadRoute
-import com.pravor.notessharing.ui.screens.upload.UploadSuccessRoute
-import com.pravor.notessharing.ui.screens.document.DocumentDetailRoute
-import com.pravor.notessharing.state.AppSettingsUiState
-import com.pravor.notessharing.state.ThemePreference
-import com.pravor.notessharing.ui.screens.auth.WelcomeScreen
-import com.pravor.notessharing.ui.screens.auth.LoginScreen
-import com.pravor.notessharing.ui.screens.auth.SignUpScreen
-import com.pravor.notessharing.auth.AuthViewModel
-import com.pravor.notessharing.state.SessionState
+import com.pravor.notessharing.ui.common.AppBottomBar
+import com.pravor.notessharing.ui.features.explore.DiscoverRoute
+import com.pravor.notessharing.ui.features.explore.ExploreRoute
+import com.pravor.notessharing.ui.features.explore.RecommendedVideosRoute
+import com.pravor.notessharing.ui.features.explore.ExamPrepRoute
+import com.pravor.notessharing.ui.features.explore.AssignmentsRoute
+import com.pravor.notessharing.ui.features.explore.SubjectResourcesRoute
+import com.pravor.notessharing.ui.features.trending.TrendingNotesRoute
+import com.pravor.notessharing.ui.features.home.HomeRoute
+import com.pravor.notessharing.ui.features.myfiles.MyFilesRoute
+import com.pravor.notessharing.ui.features.myfiles.MyUploadsScreen
+import com.pravor.notessharing.ui.features.myfiles.MyBookmarksScreen
+import com.pravor.notessharing.ui.features.profile.ProfileRoute
+import com.pravor.notessharing.ui.features.profile.EditProfileRoute
+import com.pravor.notessharing.ui.features.upload.UploadRoute
+import com.pravor.notessharing.ui.features.upload.UploadSuccessRoute
+import com.pravor.notessharing.ui.features.document.DocumentDetailRoute
+import com.pravor.notessharing.ui.common.AppSettingsUiState
+import com.pravor.notessharing.ui.common.ThemePreference
+import com.pravor.notessharing.ui.features.auth.WelcomeScreen
+import com.pravor.notessharing.ui.features.auth.LoginScreen
+import com.pravor.notessharing.ui.features.auth.SignUpScreen
+import com.pravor.notessharing.ui.features.auth.AuthViewModel
+import com.pravor.notessharing.ui.features.auth.SessionState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.pravor.notessharing.ui.components.loading.StartupLoadingScreen
+import com.pravor.notessharing.ui.common.loading.StartupLoadingScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Context
 import androidx.compose.foundation.layout.heightIn
-import com.pravor.notessharing.updates.UpdatesScreen
+import com.pravor.notessharing.ui.features.onboarding.UpdatesScreen
 
 
 object PdfDebugState {
@@ -420,7 +426,7 @@ fun NotesSharingApp(
                         )
                     }
                     composable("google_onboarding") {
-                        com.pravor.notessharing.ui.screens.auth.GoogleOnboardingScreen(
+                        com.pravor.notessharing.ui.features.auth.GoogleOnboardingScreen(
                             viewModel = authViewModel,
                             onNavigateToHome = {
                                 navController.navigate(AppDestination.Home.route) {
@@ -540,7 +546,7 @@ fun NotesSharingApp(
                         )
                     }
                     composable(AppDestination.Search.route) {
-                        com.pravor.notessharing.ui.screens.search.SearchRoute(
+                        com.pravor.notessharing.ui.features.search.SearchRoute(
                             onBackClick = { navController.popBackStack() },
                             onDocumentClick = { docId ->
                                 navController.navigate(
@@ -801,7 +807,7 @@ fun NotesSharingApp(
                             "URL_MATCH=${PdfDebugState.lastOriginalUrl == fileUrl}"
                         )
 
-                        com.pravor.notessharing.ui.screens.documentViewing.PdfViewingScreen(
+                        com.pravor.notessharing.ui.features.documentViewing.PdfViewingScreen(
                             documentId = documentId,
                             fileUrl = fileUrl,
                             title = title,
@@ -828,7 +834,7 @@ fun NotesSharingApp(
                         val fileUrl = android.net.Uri.decode(encodedFileUrl)
                         val title = android.net.Uri.decode(encodedTitle)
 
-                        com.pravor.notessharing.ui.screens.documentViewing.ImageViewingScreen(
+                        com.pravor.notessharing.ui.features.documentViewing.ImageViewingScreen(
                             documentId = documentId,
                             fileUrl = fileUrl,
                             title = title,
@@ -844,7 +850,7 @@ fun NotesSharingApp(
                         )
                     ) { backStackEntry ->
                         val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
-                        com.pravor.notessharing.ui.screens.video.VideoDetailRoute(
+                        com.pravor.notessharing.ui.features.video.VideoDetailRoute(
                             videoId = videoId,
                             onBackClick = { navController.popBackStack() },
                             onNavigateToVideoDetail = { vidId ->
@@ -891,12 +897,12 @@ fun NotesSharingApp(
                         )
                     }
                     composable(AppDestination.NotificationPreferences.route) {
-                        com.pravor.notessharing.ui.screens.profile.NotificationPreferencesScreen(
+                        com.pravor.notessharing.ui.features.profile.NotificationPreferencesScreen(
                             onBackClick = { navController.popBackStack() }
                         )
                     }
                     composable(AppDestination.About.route) {
-                        com.pravor.notessharing.ui.screens.AboutScreen(
+                        com.pravor.notessharing.ui.features.about.AboutScreen(
                             onBackClick = { navController.popBackStack() }
                         )
                     }

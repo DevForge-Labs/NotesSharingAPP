@@ -16,11 +16,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pravor.notessharing.ui.navigation.NotesSharingApp
 import com.pravor.notessharing.ui.theme.NotesSharingTheme
 import androidx.activity.result.contract.ActivityResultContracts
-import com.pravor.notessharing.viewmodel.AppSettingsViewModel
 import java.security.MessageDigest
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.pravor.notessharing.auth.AuthViewModel
-import com.pravor.notessharing.state.SessionState
+import com.pravor.notessharing.ui.features.about.AppSettingsViewModel
+import com.pravor.notessharing.ui.features.auth.AuthViewModel
+import com.pravor.notessharing.ui.features.auth.SessionState
+import com.pravor.notessharing.ui.common.*
 
 class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(

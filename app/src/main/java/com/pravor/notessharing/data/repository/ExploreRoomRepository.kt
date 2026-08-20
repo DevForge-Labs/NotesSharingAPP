@@ -11,7 +11,7 @@ import com.pravor.notessharing.data.mapper.toDiscoverNote
 import com.pravor.notessharing.data.mapper.toExploreEntity
 import com.pravor.notessharing.data.mapper.toFeedItem
 import com.pravor.notessharing.data.mapper.toTrendingNote
-import com.pravor.notessharing.state.ExploreContent
+import com.pravor.notessharing.ui.common.ExploreContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

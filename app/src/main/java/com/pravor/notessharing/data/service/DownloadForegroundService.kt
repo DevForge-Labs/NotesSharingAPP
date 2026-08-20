@@ -2,7 +2,6 @@ package com.pravor.notessharing.data.service
 
 import com.pravor.notessharing.data.local.preferences.*
 
-import com.pravor.notessharing.data.service.*
 
 import com.pravor.notessharing.domain.model.*
 
@@ -18,7 +17,7 @@ import androidx.core.app.NotificationCompat
 import com.pravor.notessharing.MainActivity
 import com.pravor.notessharing.R
 import com.pravor.notessharing.domain.model.DocumentDetail
-import com.pravor.notessharing.viewmodel.DownloadState
+import com.pravor.notessharing.ui.features.document.DownloadState
 import com.pravor.notessharing.firebase.FirestoreDocumentService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow

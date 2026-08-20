@@ -1,7 +1,5 @@
 package com.pravor.notessharing.domain.model
 
-import com.pravor.notessharing.domain.model.UpdatePageModel
-import com.pravor.notessharing.domain.model.*
 
 data class UpdatePageModel(
     val pageIndex: Int,

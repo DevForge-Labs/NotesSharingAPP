@@ -1,8 +1,6 @@
 package com.pravor.notessharing.data.service
 
-import com.pravor.notessharing.data.service.GoogleAuthHelper
 
-import com.pravor.notessharing.data.service.*
 
 import android.content.Context
 import android.util.Log

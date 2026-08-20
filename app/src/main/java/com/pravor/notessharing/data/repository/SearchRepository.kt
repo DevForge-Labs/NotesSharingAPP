@@ -6,7 +6,7 @@ import com.pravor.notessharing.domain.model.*
 import com.pravor.notessharing.core.util.*
 
 import com.pravor.notessharing.BuildConfig
-import com.pravor.notessharing.ui.screens.search.SearchResultModel
+import com.pravor.notessharing.ui.features.search.SearchResultModel
 import com.algolia.client.api.SearchClient
 import com.algolia.client.model.search.SearchParamsObject
 import kotlinx.coroutines.Dispatchers

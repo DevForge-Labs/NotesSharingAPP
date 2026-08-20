@@ -12,7 +12,7 @@ import com.pravor.notessharing.domain.model.SelectedUploadFile
 import com.pravor.notessharing.domain.model.UploadFileSource
 import com.pravor.notessharing.domain.model.UploadType
 import com.pravor.notessharing.domain.model.firestoreValue
-import com.pravor.notessharing.state.YoutubePreview
+import com.pravor.notessharing.ui.features.upload.YoutubePreview
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

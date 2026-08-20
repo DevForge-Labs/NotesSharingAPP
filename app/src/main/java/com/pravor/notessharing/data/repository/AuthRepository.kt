@@ -1,6 +1,5 @@
 package com.pravor.notessharing.data.repository
 
-import com.pravor.notessharing.data.repository.AuthRepository
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
@@ -11,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 
-import com.pravor.notessharing.data.repository.ProfileRepository
 
 class AuthRepository(
     private val userService: FirestoreUserService = FirestoreUserService(),

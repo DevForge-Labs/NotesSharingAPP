@@ -1,5 +1,11 @@
 package com.pravor.notessharing.ui.theme
 
+import com.pravor.notessharing.ui.common.navigation.*
+
+import com.pravor.notessharing.ui.common.loading.*
+
+import com.pravor.notessharing.ui.common.*
+
 import androidx.compose.ui.graphics.Color
 
 val Ink = Color(0xFF080A0F)

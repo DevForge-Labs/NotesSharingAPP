@@ -1,5 +1,11 @@
 package com.pravor.notessharing.ui.theme
 
+import com.pravor.notessharing.ui.common.navigation.*
+
+import com.pravor.notessharing.ui.common.loading.*
+
+import com.pravor.notessharing.ui.common.*
+
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily

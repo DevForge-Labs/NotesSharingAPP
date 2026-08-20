@@ -1,6 +1,5 @@
 package com.pravor.notessharing.data.repository
 
-import com.pravor.notessharing.data.repository.BookmarkRepository
 
 import com.pravor.notessharing.domain.util.ExploreRankingUtils
 import com.pravor.notessharing.data.local.cache.*
@@ -13,9 +12,7 @@ import com.pravor.notessharing.data.mapper.ExploreMapper
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.BuildConfig
 import com.pravor.notessharing.data.local.cache.TimedValueCache
-import com.pravor.notessharing.data.repository.ExploreRoomRepository
-import com.pravor.notessharing.domain.model.*
-import com.pravor.notessharing.state.ExploreContent
+import com.pravor.notessharing.ui.common.ExploreContent
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex

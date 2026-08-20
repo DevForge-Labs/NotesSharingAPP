@@ -1,6 +1,5 @@
 package com.pravor.notessharing.domain.util
 
-import com.pravor.notessharing.domain.util.ExploreRankingUtils
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.pravor.notessharing.domain.model.ResourceType

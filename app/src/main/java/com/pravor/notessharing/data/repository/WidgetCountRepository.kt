@@ -1,6 +1,5 @@
 package com.pravor.notessharing.data.repository
 
-import com.pravor.notessharing.data.repository.WidgetCountRepository
 
 import com.pravor.notessharing.data.local.preferences.*
 
@@ -10,7 +9,6 @@ import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
-import com.pravor.notessharing.data.repository.BookmarkRepository
 import com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager
 import kotlinx.coroutines.tasks.await
 

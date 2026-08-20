@@ -1,6 +1,5 @@
 package com.pravor.notessharing.data.repository
 
-import com.pravor.notessharing.data.repository.BookmarkRepository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.domain.model.FeedItem
