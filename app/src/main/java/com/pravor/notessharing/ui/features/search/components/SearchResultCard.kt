@@ -5,6 +5,8 @@ import com.pravor.notessharing.ui.common.navigation.*
 import com.pravor.notessharing.ui.common.loading.*
 
 import com.pravor.notessharing.ui.common.*
+import com.pravor.notessharing.ui.common.components.*
+import com.pravor.notessharing.ui.common.theme.*
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -52,7 +54,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.pravor.notessharing.ui.common.DocumentPlaceholder
-import com.pravor.notessharing.ui.common.getStudyResourceTheme
+import com.pravor.notessharing.ui.common.theme.getStudyResourceTheme
 import com.pravor.notessharing.ui.features.search.SearchResultModel
 
 @Composable

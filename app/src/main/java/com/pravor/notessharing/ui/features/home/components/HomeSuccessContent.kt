@@ -4,7 +4,8 @@ import com.pravor.notessharing.ui.common.navigation.*
 
 import com.pravor.notessharing.ui.common.loading.*
 
-import com.pravor.notessharing.ui.common.*
+import com.pravor.notessharing.ui.common.components.CompactStudyFileRow
+import com.pravor.notessharing.ui.common.components.SectionHeader
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,8 +48,8 @@ import com.pravor.notessharing.ui.common.HomeContent
 import com.pravor.notessharing.ui.common.MyFilesUiState
 import com.pravor.notessharing.ui.features.explore.components.ClimbingMascotScrollbar
 import com.pravor.notessharing.ui.features.explore.components.MonkeyMascot
-import com.pravor.notessharing.ui.common.CompactStudyFileRow
-import com.pravor.notessharing.ui.common.SectionHeader
+import com.pravor.notessharing.ui.common.components.CompactStudyFileRow
+import com.pravor.notessharing.ui.common.components.SectionHeader
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.rememberInfiniteTransition

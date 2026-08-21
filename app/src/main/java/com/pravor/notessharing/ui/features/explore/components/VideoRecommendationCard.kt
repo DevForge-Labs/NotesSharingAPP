@@ -38,8 +38,9 @@ import androidx.compose.ui.platform.LocalContext
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.pravor.notessharing.domain.model.VideoRecommendation
-import com.pravor.notessharing.ui.common.StatItem
 import com.pravor.notessharing.ui.common.VideoPlaceholder
+import com.pravor.notessharing.ui.common.components.StatItem
+import com.pravor.notessharing.ui.common.theme.getStudyResourceTheme
 import com.pravor.notessharing.ui.common.utils.SubjectBadge
 
 private val CardShape = RoundedCornerShape(24.dp)
@@ -62,7 +63,7 @@ fun VideoRecommendationCard(
     }
     val fileTypeLabel = remember(isYouTubePlaylist) { if (isYouTubePlaylist) "Playlist" else "Video" }
 
-    val theme = remember(fileTypeLabel) { com.pravor.notessharing.ui.common.getStudyResourceTheme(fileTypeLabel) }
+    val theme = remember(fileTypeLabel) { getStudyResourceTheme(fileTypeLabel) }
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 

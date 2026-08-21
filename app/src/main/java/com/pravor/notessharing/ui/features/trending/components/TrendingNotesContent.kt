@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.Color
 import com.pravor.notessharing.data.repository.DocumentDetailRepository
 import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.common.AdaptiveScrollbar
-import com.pravor.notessharing.ui.common.StatePanel
+import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.features.trending.TrendingNotesUiState
 import kotlinx.coroutines.flow.distinctUntilChanged

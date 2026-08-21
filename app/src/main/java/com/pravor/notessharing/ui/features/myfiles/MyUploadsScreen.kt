@@ -66,8 +66,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.ui.common.MyFilesUiState
 import com.pravor.notessharing.ui.common.AdaptiveScrollbar
 import com.pravor.notessharing.ui.common.NotesSearchBar
-import com.pravor.notessharing.ui.common.StatePanel
-import com.pravor.notessharing.ui.common.StudyHubShelfCard
+import com.pravor.notessharing.ui.common.components.StatePanel
+import com.pravor.notessharing.ui.common.components.StudyHubShelfCard
+import com.pravor.notessharing.ui.features.myfiles.components.PremiumEmptyState
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -366,65 +367,4 @@ private fun com.pravor.notessharing.domain.model.StudyFile.matchesFilter(filter:
     }
 }
 
-@Composable
-fun PremiumEmptyState(
-    title: String,
-    message: String?,
-    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.UploadFile,
-    accentColor: Color = Color(0xFF58D6D1),
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = accentColor.copy(alpha = 0.04f),
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.15f)),
-                modifier = Modifier.size(80.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor.copy(alpha = 0.8f),
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-            }
 
-            Spacer(Modifier.height(24.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.1.sp,
-                    fontSize = 20.sp
-                ),
-                color = Color(0xFFE2E8F0),
-                textAlign = TextAlign.Center
-            )
-
-            if (!message.isNullOrBlank()) {
-                Spacer(Modifier.height(8.dp))
-
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        lineHeight = 22.sp,
-                        letterSpacing = 0.15.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}

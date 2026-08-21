@@ -5,6 +5,7 @@ import com.pravor.notessharing.ui.common.navigation.*
 import com.pravor.notessharing.ui.common.loading.*
 
 import com.pravor.notessharing.ui.common.*
+import com.pravor.notessharing.ui.common.theme.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -37,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -172,7 +174,7 @@ fun TrendingNoteCard(
         }
     }
 
-    val docInfo = remember(note.documentType, note.type, note.title) {
+    val docInfo: Triple<String, StudyResourceTheme, ImageVector> = remember(note.documentType, note.type, note.title) {
         val documentTypeField = if (note.documentType.isNotBlank()) note.documentType else null
         val typeField = note.type
 
@@ -187,7 +189,7 @@ fun TrendingNoteCard(
             else -> getDocumentTypeFromTitle(note.title)
         }
         
-        val theme = com.pravor.notessharing.ui.common.getStudyResourceTheme(docType)
+        val theme = getStudyResourceTheme(docType)
         val previewIcon = when (docType) {
             "PYQ" -> Icons.Default.Help
             "Assignment" -> Icons.Default.Assignment

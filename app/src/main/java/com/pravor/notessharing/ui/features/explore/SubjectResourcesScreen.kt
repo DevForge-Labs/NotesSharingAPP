@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.concurrent.atomic.AtomicInteger
 import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.domain.model.VideoRecommendation
-import com.pravor.notessharing.ui.common.StatePanel
+import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.features.trending.components.TrendingNoteDiscoveryCard
 import com.pravor.notessharing.ui.common.utils.getSubjectColor
 import com.pravor.notessharing.ui.common.utils.getSubjectDisplayName

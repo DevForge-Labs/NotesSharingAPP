@@ -62,10 +62,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.ui.common.AdaptiveScrollbar
 import com.pravor.notessharing.ui.common.NotesSearchBar
-import com.pravor.notessharing.ui.common.StatePanel
-import com.pravor.notessharing.ui.common.StudyHubShelfCard
-import com.pravor.notessharing.ui.common.SectionHeader
+import com.pravor.notessharing.ui.common.components.StatePanel
+import com.pravor.notessharing.ui.common.components.StudyHubShelfCard
+import com.pravor.notessharing.ui.common.components.SectionHeader
 import com.pravor.notessharing.ui.features.explore.components.VideoRecommendationCard
+import com.pravor.notessharing.ui.features.myfiles.components.PremiumEmptyState
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.domain.model.VideoRecommendation
 import androidx.compose.runtime.rememberCoroutineScope

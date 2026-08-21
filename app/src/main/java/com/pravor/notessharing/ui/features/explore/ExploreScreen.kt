@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.concurrent.atomic.AtomicInteger
 import com.pravor.notessharing.ui.common.ExploreUiState
 import com.pravor.notessharing.ui.features.upload.CatalogSubject
-import com.pravor.notessharing.ui.common.StatePanel
+import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.common.loading.StudyLoadingIndicator
 import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.domain.model.VideoRecommendation
@@ -241,7 +241,7 @@ fun ExploreScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val repository = remember { com.pravor.notessharing.data.repository.UploadRepository(context) }
-    var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.common.UploadViewerData?>(null) }
+    var selectedUploadForViewer by remember { mutableStateOf<com.pravor.notessharing.ui.common.components.UploadViewerData?>(null) }
  
     val listState = rememberLazyListState()
 
@@ -325,7 +325,7 @@ fun ExploreScreen(
         }
 
         selectedUploadForViewer?.let { viewerData ->
-            com.pravor.notessharing.ui.common.GroupedUploadViewerDialog(
+            com.pravor.notessharing.ui.common.components.GroupedUploadViewerDialog(
                 title = viewerData.title,
                 fileUrls = viewerData.fileUrls,
                 onDismiss = { selectedUploadForViewer = null },

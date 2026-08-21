@@ -5,6 +5,8 @@ import com.pravor.notessharing.ui.common.navigation.*
 import com.pravor.notessharing.ui.common.loading.*
 
 import com.pravor.notessharing.ui.common.*
+import com.pravor.notessharing.ui.common.components.*
+import com.pravor.notessharing.ui.common.theme.*
 
 import com.pravor.notessharing.core.util.formatRelativeTime
 import com.pravor.notessharing.core.util.*
@@ -338,7 +340,7 @@ fun ContinueReadingCard(
         else -> "PDF"
     }
 
-    val theme = com.pravor.notessharing.ui.common.getStudyResourceTheme(badgeText)
+    val theme = getStudyResourceTheme(badgeText)
     val accentColor = theme.accentColor
 
     val actionText = if (isVideo) "Continue Watching" else "Continue Reading"
@@ -361,7 +363,7 @@ fun ContinueReadingCard(
     }
     
     val cardBrush = Brush.linearGradient(
-        colors = listOf(
+        colors = listOf<Color>(
             theme.gradientColors[0],
             theme.gradientColors[1],
             accentColor.copy(alpha = if (badgeText == "PDF") 0.22f else 0.18f)
