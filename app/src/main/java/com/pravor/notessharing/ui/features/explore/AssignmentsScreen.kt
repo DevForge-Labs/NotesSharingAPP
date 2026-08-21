@@ -25,7 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.common.ExploreUiState
-import com.pravor.notessharing.ui.common.StatePanel
+import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.features.trending.components.TrendingNoteDiscoveryCard
 import com.pravor.notessharing.data.repository.DocumentDetailRepository
 

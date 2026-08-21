@@ -1,21 +1,9 @@
 package com.pravor.notessharing.ui.features.auth
 
-import com.pravor.notessharing.ui.common.navigation.*
-
-import com.pravor.notessharing.ui.common.loading.*
-
-
-import com.pravor.notessharing.ui.common.*
-
-import com.pravor.notessharing.data.repository.CollegeMetadata
-import com.pravor.notessharing.data.repository.BranchMetadata
-import com.pravor.notessharing.data.repository.*
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,23 +21,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -69,9 +52,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.pravor.notessharing.domain.model.AcademicCatalog
-import com.pravor.notessharing.domain.model.Profile
-import com.pravor.notessharing.ui.features.auth.AuthUiState
+import com.pravor.notessharing.ui.features.auth.components.BranchDropdownField
+import com.pravor.notessharing.ui.features.auth.components.CollegeDropdownField
+import com.pravor.notessharing.ui.features.auth.components.SectionInputField
+import com.pravor.notessharing.ui.features.auth.components.SemesterDropdownField
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,6 +91,11 @@ fun GoogleOnboardingScreen(
     val isBranchesLoading by viewModel.isBranchesLoading.collectAsState()
     val branchesError by viewModel.branchesError.collectAsState()
 
+    val semesterOptions = listOf(
+        "Semester 1", "Semester 2", "Semester 3", "Semester 4",
+        "Semester 5", "Semester 6", "Semester 7", "Semester 8"
+    )
+
     LaunchedEffect(Unit) {
         viewModel.loadColleges()
     }
@@ -119,43 +108,19 @@ fun GoogleOnboardingScreen(
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
-            onNavigateToHome()
             viewModel.clearState()
         } else if (uiState is AuthUiState.Error) {
-            snackbarHostState.showSnackbar((uiState as AuthUiState.Error).message)
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar((uiState as AuthUiState.Error).message)
+            }
         }
     }
 
-    fun handleCompleteOnboarding() {
-        if (fullName.isBlank()) {
-            coroutineScope.launch { snackbarHostState.showSnackbar("Name cannot be blank.") }
-            return
-        }
-        if (selectedCollegeId.isBlank()) {
-            coroutineScope.launch { snackbarHostState.showSnackbar("Please select your college.") }
-            return
-        }
-        if (selectedBranchId.isBlank()) {
-            coroutineScope.launch { snackbarHostState.showSnackbar("Please select your branch.") }
-            return
-        }
-        if (semester.isBlank()) {
-            coroutineScope.launch { snackbarHostState.showSnackbar("Please select your semester.") }
-            return
-        }
-        if (section.isBlank()) {
-            coroutineScope.launch { snackbarHostState.showSnackbar("Please enter your section.") }
-            return
-        }
-
-        viewModel.completeGoogleOnboarding(
-            name = fullName.trim(),
-            college = selectedCollegeId,
-            branch = selectedBranchId,
-            semester = semester,
-            section = section
-        )
-    }
+    val isFormValid = fullName.isNotBlank() &&
+            selectedCollegeId.isNotBlank() &&
+            selectedBranchId.isNotBlank() &&
+            semester.isNotBlank() &&
+            section.isNotBlank()
 
     Box(
         modifier = modifier
@@ -168,354 +133,184 @@ fun GoogleOnboardingScreen(
                     )
                 )
             )
-            .statusBarsPadding()
-            .padding(24.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(alpha.value)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Back Button
-            IconButton(
-                onClick = onNavigateBack,
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = androidx.compose.ui.graphics.Color.Transparent
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f))
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp)
+                    .alpha(alpha.value),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Header
-            Text(
-                text = "Academic Profile",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Complete your academic details to continue.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Email (Read-Only)
-            OutlinedTextField(
-                value = email,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Email Address") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.3f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.3f)
-                ),
-                enabled = false
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Name (Prefilled, Editable)
-            OutlinedTextField(
-                value = fullName,
-                onValueChange = { fullName = it },
-                label = { Text("Full Name") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // College Dropdown
-            ExposedDropdownMenuBox(
-                expanded = collegeExpanded,
-                onExpandedChange = { collegeExpanded = !collegeExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedCollegeName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("College") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = collegeExpanded) },
+                Row(
                     modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                        .fillMaxWidth()
+                        .statusBarsPadding(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Complete Your Profile",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Select your academic details to personalize your experience",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                OutlinedTextField(
+                    value = fullName,
+                    onValueChange = { fullName = it },
+                    label = { Text("Full Name") },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Person, contentDescription = null)
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     )
                 )
-                ExposedDropdownMenu(
-                    expanded = collegeExpanded,
-                    onDismissRequest = { collegeExpanded = false }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Email Address") },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Email, contentDescription = null)
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    enabled = false
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                CollegeDropdownField(
+                    selectedCollegeName = selectedCollegeName,
+                    collegeExpanded = collegeExpanded,
+                    onExpandedChange = { collegeExpanded = it },
+                    colleges = colleges,
+                    isCollegesLoading = isCollegesLoading,
+                    collegesError = collegesError,
+                    onCollegeSelected = { item ->
+                        selectedCollegeId = item.id
+                        selectedCollegeName = item.name
+                        collegeExpanded = false
+                        selectedBranchId = ""
+                        selectedBranchName = ""
+                        viewModel.loadBranchesForCollege(item.id)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                BranchDropdownField(
+                    selectedBranchName = selectedBranchName,
+                    branchExpanded = branchExpanded,
+                    onExpandedChange = { branchExpanded = it },
+                    branches = branches,
+                    isBranchesLoading = isBranchesLoading,
+                    branchesError = branchesError,
+                    onBranchSelected = { item ->
+                        selectedBranchId = item.id
+                        selectedBranchName = item.name
+                        branchExpanded = false
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                SemesterDropdownField(
+                    semester = semester,
+                    semesterExpanded = semesterExpanded,
+                    onExpandedChange = { semesterExpanded = it },
+                    semesterOptions = semesterOptions,
+                    onSemesterSelected = { item ->
+                        semester = item
+                        semesterExpanded = false
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                SectionInputField(
+                    section = section,
+                    onSectionChange = { section = it }
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.completeGoogleOnboarding(
+                            name = fullName.trim(),
+                            college = selectedCollegeId.trim(),
+                            branch = selectedBranchId.trim(),
+                            semester = semester.trim(),
+                            section = section.trim()
+                        )
+                    },
+                    enabled = isFormValid && uiState !is AuthUiState.Loading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    if (isCollegesLoading) {
-                        DropdownMenuItem(
-                            text = { Text("Loading colleges...") },
-                            onClick = {},
-                            enabled = false
-                        )
-                    } else if (collegesError != null) {
-                        DropdownMenuItem(
-                            text = { Text(collegesError ?: "Error loading colleges") },
-                            onClick = {},
-                            enabled = false
-                        )
-                    } else if (colleges.isEmpty()) {
-                        DropdownMenuItem(
-                            text = { Text("No colleges available") },
-                            onClick = {},
-                            enabled = false
+                    if (uiState is AuthUiState.Loading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp)
                         )
                     } else {
-                        colleges.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option.name) },
-                                onClick = {
-                                    if (selectedCollegeId != option.id) {
-                                        selectedCollegeId = option.id
-                                        selectedCollegeName = option.name
-                                        // Reset selected branch on college change
-                                        selectedBranchId = ""
-                                        selectedBranchName = ""
-                                        viewModel.clearBranches()
-                                        // Reload branches for the newly selected college
-                                        viewModel.loadBranchesForCollege(option.id)
-                                    }
-                                    collegeExpanded = false
-                                },
-                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Branch Dropdown
-            ExposedDropdownMenuBox(
-                expanded = branchExpanded,
-                onExpandedChange = { branchExpanded = !branchExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedBranchName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Branch") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Class,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = branchExpanded) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-                ExposedDropdownMenu(
-                    expanded = branchExpanded,
-                    onDismissRequest = { branchExpanded = false }
-                ) {
-                    if (selectedCollegeId.isEmpty()) {
-                        DropdownMenuItem(
-                            text = { Text("Please select a college first") },
-                            onClick = {},
-                            enabled = false
-                        )
-                    } else if (isBranchesLoading) {
-                        DropdownMenuItem(
-                            text = { Text("Loading branches...") },
-                            onClick = {},
-                            enabled = false
-                        )
-                    } else if (branchesError != null) {
-                        DropdownMenuItem(
-                            text = { Text(branchesError ?: "Error loading branches") },
-                            onClick = {},
-                            enabled = false
-                        )
-                    } else if (branches.isEmpty()) {
-                        DropdownMenuItem(
-                            text = { Text("No branches available") },
-                            onClick = {},
-                            enabled = false
-                        )
-                    } else {
-                        branches.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option.name) },
-                                onClick = {
-                                    selectedBranchId = option.id
-                                    selectedBranchName = option.name
-                                    branchExpanded = false
-                                },
-                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Semester Dropdown
-            ExposedDropdownMenuBox(
-                expanded = semesterExpanded,
-                onExpandedChange = { semesterExpanded = !semesterExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = semester,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Semester") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Class,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = semesterExpanded) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-                ExposedDropdownMenu(
-                    expanded = semesterExpanded,
-                    onDismissRequest = { semesterExpanded = false }
-                ) {
-                    AcademicCatalog.semesters.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option) },
-                            onClick = {
-                                semester = option
-                                semesterExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        Text(
+                            text = "Complete Registration",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Section Free-text
-            OutlinedTextField(
-                value = section,
-                onValueChange = { section = it },
-                label = { Text("Section (e.g. CSE-52, IT 7, A1)") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Group,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Complete Profile Button
-            Button(
-                onClick = { handleCompleteOnboarding() },
-                enabled = uiState !is AuthUiState.Loading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(20.dp)),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                if (uiState is AuthUiState.Loading) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Text(
-                        text = "Complete Profile",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }

@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pravor.notessharing.domain.model.Contributor
-import com.pravor.notessharing.ui.common.Avatar
+import com.pravor.notessharing.ui.common.components.Avatar
 
 @Composable
 fun ContributorCard(contributor: Contributor) {

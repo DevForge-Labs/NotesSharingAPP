@@ -1,33 +1,37 @@
 package com.pravor.notessharing.ui.features.onboarding
 
-import com.pravor.notessharing.ui.features.onboarding.data.*
-
-import com.pravor.notessharing.ui.features.onboarding.components.*
-
-import com.pravor.notessharing.ui.common.navigation.*
-
-import com.pravor.notessharing.ui.common.loading.*
-
-
-
-import com.pravor.notessharing.ui.common.*
-
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -40,12 +44,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.pravor.notessharing.domain.model.UpdatePageModel
-import com.pravor.notessharing.ui.theme.*
+import com.pravor.notessharing.ui.features.onboarding.components.ConvergingResourcesVisual
+import com.pravor.notessharing.ui.features.onboarding.components.RippleCommunityVisual
+import com.pravor.notessharing.ui.features.onboarding.components.StaggeredCardsVisual
+import com.pravor.notessharing.ui.features.onboarding.components.WhyUseAppVisual
 
 @Composable
 fun UpdatesPage(
@@ -128,7 +134,6 @@ fun StandardOnboardingLayout(
         with(density) { (-pageOffset * 20.dp.toPx()) }
     }
 
-    // Staggered transitions
     val illustrationAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0f,
         animationSpec = tween(600, delayMillis = 0, easing = LinearOutSlowInEasing),
@@ -237,7 +242,6 @@ fun FinalWelcomeOnboardingLayout(
         with(density) { (-pageOffset * 10.dp.toPx()) }
     }
 
-    // Staggered transitions
     val headerAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0f,
         animationSpec = tween(600, delayMillis = 0, easing = LinearOutSlowInEasing),
@@ -284,7 +288,6 @@ fun FinalWelcomeOnboardingLayout(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
-            // Inspiring visual icon box
             Box(
                 modifier = Modifier
                     .offset(y = headerOffsetY)
@@ -323,7 +326,6 @@ fun FinalWelcomeOnboardingLayout(
                         alpha = bodyAlpha
                     }
             ) {
-                // Headline
                 Text(
                     text = headline,
                     style = MaterialTheme.typography.headlineMedium,
@@ -334,7 +336,6 @@ fun FinalWelcomeOnboardingLayout(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Subtitle
                 Text(
                     text = supportingText,
                     style = MaterialTheme.typography.bodyMedium,
@@ -345,7 +346,6 @@ fun FinalWelcomeOnboardingLayout(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Community Mission Card (Student-centric vision, no fake stats)
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -375,7 +375,6 @@ fun FinalWelcomeOnboardingLayout(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Category Chips Label
                 Text(
                     text = "ACADEMIC RESOURCES AVAILABLE",
                     style = MaterialTheme.typography.labelSmall,
@@ -384,7 +383,6 @@ fun FinalWelcomeOnboardingLayout(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 
-                // Chips Container
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -409,7 +407,6 @@ fun FinalWelcomeOnboardingLayout(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Action Buttons
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -426,7 +423,6 @@ fun FinalWelcomeOnboardingLayout(
             val isPressed by interactionSource.collectIsPressedAsState()
             val ctaScale by animateFloatAsState(targetValue = if (isPressed) 0.96f else 1.0f, label = "ctaScale")
 
-            // Join the Community CTA
             Button(
                 onClick = onJoinCommunityClick,
                 interactionSource = interactionSource,
@@ -450,7 +446,6 @@ fun FinalWelcomeOnboardingLayout(
                 )
             }
 
-            // Sign In Link
             Row(
                 modifier = Modifier.clickable(onClick = onSignInClick),
                 verticalAlignment = Alignment.CenterVertically
@@ -460,139 +455,9 @@ fun FinalWelcomeOnboardingLayout(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                    textDecoration = TextDecoration.Underline
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun WhyUseAppVisual(isActive: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            FeatureCard(
-                title = "Fast Discovery",
-                description = "Find notes, PYQs, assignments and videos in seconds.",
-                icon = Icons.Filled.Search,
-                color = ElectricBlue,
-                isActive = isActive,
-                delay = 100,
-                modifier = Modifier.weight(1f)
-            )
-            FeatureCard(
-                title = "Smart Recs",
-                description = "Discover resources from your branch & semester.",
-                icon = Icons.Filled.AutoAwesome,
-                color = Mint,
-                isActive = isActive,
-                delay = 250,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            FeatureCard(
-                title = "Resume Learning",
-                description = "Resume where you left off across files & videos.",
-                icon = Icons.Filled.PlayArrow,
-                color = Coral,
-                isActive = isActive,
-                delay = 400,
-                modifier = Modifier.weight(1f)
-            )
-            FeatureCard(
-                title = "Peer Support",
-                description = "Help fellow students by sharing academic resources.",
-                icon = Icons.Filled.Share,
-                color = Gold,
-                isActive = isActive,
-                delay = 550,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-fun FeatureCard(
-    title: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    isActive: Boolean,
-    delay: Int,
-    modifier: Modifier = Modifier
-) {
-    val alpha by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0f,
-        animationSpec = tween(500, delayMillis = delay, easing = LinearOutSlowInEasing),
-        label = "feature_alpha"
-    )
-    val translateY by animateDpAsState(
-        targetValue = if (isActive) 0.dp else 24.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "feature_translateY"
-    )
-
-    Surface(
-        modifier = modifier
-            .graphicsLayer {
-                this.alpha = alpha
-            }
-            .offset(y = translateY),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-        shadowElevation = 2.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 3,
-                softWrap = true
-            )
         }
     }
 }

@@ -62,7 +62,7 @@ import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.domain.model.VideoRecommendation
 import com.pravor.notessharing.domain.model.ResourceType
 import com.pravor.notessharing.ui.common.ExploreContent
-import com.pravor.notessharing.ui.common.SectionHeader
+import com.pravor.notessharing.ui.common.components.SectionHeader
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 
 @Composable

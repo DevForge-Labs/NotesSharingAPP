@@ -5,6 +5,8 @@ import com.pravor.notessharing.ui.common.navigation.*
 import com.pravor.notessharing.ui.common.loading.*
 
 import com.pravor.notessharing.ui.common.*
+import com.pravor.notessharing.ui.common.components.*
+import com.pravor.notessharing.ui.common.theme.*
 
 
 import androidx.compose.foundation.background
@@ -53,8 +55,9 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.pravor.notessharing.domain.model.DocumentDetail
 import com.pravor.notessharing.domain.model.TrendingNote
-import com.pravor.notessharing.ui.common.Avatar
 import com.pravor.notessharing.ui.common.DocumentPlaceholder
+import com.pravor.notessharing.ui.common.components.Avatar
+import com.pravor.notessharing.ui.common.theme.getStudyResourceTheme
 import com.pravor.notessharing.ui.common.utils.SubjectBadge
 
 @Composable
@@ -68,7 +71,7 @@ fun TrendingNoteDiscoveryCardContent(
     onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val theme = com.pravor.notessharing.ui.common.getStudyResourceTheme(doc.documentType)
+    val theme = getStudyResourceTheme(doc.documentType)
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 
@@ -239,7 +242,7 @@ fun TrendingNoteDiscoveryCardContentFromNote(
     onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val theme = com.pravor.notessharing.ui.common.getStudyResourceTheme(note.documentType)
+    val theme = getStudyResourceTheme(note.documentType)
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 
@@ -397,7 +400,7 @@ fun TrendingNoteDiscoveryCardContentFallback(
     onUpvoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val theme = com.pravor.notessharing.ui.common.getStudyResourceTheme(note.documentType)
+    val theme = getStudyResourceTheme(note.documentType)
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 

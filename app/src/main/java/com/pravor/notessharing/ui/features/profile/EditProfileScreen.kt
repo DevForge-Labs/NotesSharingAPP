@@ -1,24 +1,10 @@
 package com.pravor.notessharing.ui.features.profile
 
-import com.pravor.notessharing.ui.common.navigation.*
-
-import com.pravor.notessharing.ui.common.loading.*
-
-import com.pravor.notessharing.ui.common.*
-
-import com.pravor.notessharing.data.repository.CollegeMetadata
-import com.pravor.notessharing.data.repository.BranchMetadata
-import com.pravor.notessharing.data.repository.*
-
 import android.net.Uri
-import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,18 +18,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -51,10 +34,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,17 +59,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.pravor.notessharing.domain.model.Profile
 import com.pravor.notessharing.ui.common.EditProfileState
 import com.pravor.notessharing.ui.common.ProfileUiState
+import com.pravor.notessharing.ui.features.profile.components.EditProfileAvatarCard
+import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -140,7 +122,6 @@ fun EditProfileScreen(
     onNavigateToProfile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -161,7 +142,6 @@ fun EditProfileScreen(
     var semesterExpanded by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    // Validation States
     var nameError by remember { mutableStateOf<String?>(null) }
     var semesterError by remember { mutableStateOf<String?>(null) }
     var sectionError by remember { mutableStateOf<String?>(null) }
@@ -178,7 +158,6 @@ fun EditProfileScreen(
         viewModel.loadBranchesForCollege(profile.college)
     }
 
-    // Intercept back actions
     BackHandler(enabled = hasChanges) {
         showDiscardDialog = true
     }
@@ -258,142 +237,17 @@ fun EditProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Profile Picture Card
-            Card(
-                shape = RoundedCornerShape(26.dp),
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                    MaterialTheme.colorScheme.surfaceContainer,
-                                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
-                                )
-                            )
-                        )
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier.size(96.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        var isImageError by remember { mutableStateOf(false) }
-                        val currentImageUrl = profile.profileImageUrl
-
-                        if (selectedImageUri != null) {
-                            AsyncImage(
-                                model = selectedImageUri,
-                                contentDescription = "Profile Picture",
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        2.dp,
-                                        Brush.linearGradient(
-                                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                                        ),
-                                        CircleShape
-                                    ),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else if (currentImageUrl.isNotEmpty() && !isImageRemoved && !isImageError) {
-                            AsyncImage(
-                                model = currentImageUrl,
-                                contentDescription = "Profile Picture",
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        2.dp,
-                                        Brush.linearGradient(
-                                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                                        ),
-                                        CircleShape
-                                    ),
-                                contentScale = ContentScale.Crop,
-                                onError = { isImageError = true }
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                                        ),
-                                        CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = profile.initials,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { galleryLauncher.launch("image/*") },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.height(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoCamera,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text("Change", style = MaterialTheme.typography.labelLarge)
-                        }
-
-                        val hasPhoto = (profile.profileImageUrl.isNotEmpty() && !isImageRemoved) || selectedImageUri != null
-                        if (hasPhoto) {
-                            Spacer(Modifier.width(12.dp))
-                            Button(
-                                onClick = {
-                                    selectedImageUri = null
-                                    isImageRemoved = true
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                                modifier = Modifier.height(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = "Remove",
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        }
-                    }
+            EditProfileAvatarCard(
+                profile = profile,
+                selectedImageUri = selectedImageUri,
+                isImageRemoved = isImageRemoved,
+                onChangePhotoClick = { galleryLauncher.launch("image/*") },
+                onRemovePhotoClick = {
+                    selectedImageUri = null
+                    isImageRemoved = true
                 }
-            }
+            )
 
-            // Personal Information Card
             Card(
                 shape = RoundedCornerShape(26.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -410,7 +264,6 @@ fun EditProfileScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Full Name
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedTextField(
                             value = fullName,
@@ -440,10 +293,8 @@ fun EditProfileScreen(
                         }
                     }
 
-                    // College (Read-only)
                     ReadOnlyRow(label = "College", value = resolvedCollegeName, icon = Icons.Default.School)
 
-                    // Branch Selector
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         ExposedDropdownMenuBox(
                             expanded = branchExpanded,
@@ -517,7 +368,6 @@ fun EditProfileScreen(
                         }
                     }
 
-                    // Semester Selector
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         val semesterOptions = listOf(
                             "Semester 1", "Semester 2", "Semester 3", "Semester 4",
@@ -574,7 +424,6 @@ fun EditProfileScreen(
                         }
                     }
 
-                    // Section Selector (Free text)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedTextField(
                             value = section,
@@ -606,7 +455,6 @@ fun EditProfileScreen(
                 }
             }
 
-            // Account Details Card
             Card(
                 shape = RoundedCornerShape(26.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -637,7 +485,6 @@ fun EditProfileScreen(
                 }
             }
 
-            // Save changes Button
             val isSaving = editState is EditProfileState.Loading
             Button(
                 onClick = {
@@ -698,7 +545,6 @@ fun EditProfileScreen(
         }
     }
 
-    // Unsaved changes confirmation dialog
     if (showDiscardDialog) {
         AlertDialog(
             onDismissRequest = { showDiscardDialog = false },
@@ -738,7 +584,7 @@ fun EditProfileScreen(
 fun ReadOnlyRow(
     label: String,
     value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: ImageVector
 ) {
     Row(
         modifier = Modifier

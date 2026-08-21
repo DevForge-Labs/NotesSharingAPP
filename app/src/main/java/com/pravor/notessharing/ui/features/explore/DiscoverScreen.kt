@@ -18,7 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.domain.model.DiscoverFeedItem
 import com.pravor.notessharing.ui.common.ExploreUiState
-import com.pravor.notessharing.ui.common.StatePanel
+import com.pravor.notessharing.ui.common.components.StatePanel
 
 @Composable
 fun DiscoverRoute(
