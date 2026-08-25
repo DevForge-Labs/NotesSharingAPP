@@ -11,6 +11,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -137,9 +139,15 @@ class ClassroomAuthManager(private val context: Context) {
         return GoogleSignIn.getClient(context, gsoBuilder.build())
     }
 
-    fun getSignInIntent(): Intent {
+    suspend fun getSignInIntent(): Intent = withContext(Dispatchers.IO) {
         val client = getSignInClient()
-        return client.signInIntent
+        try {
+            Tasks.await(client.signOut())
+            Log.d(TAG, "GoogleSignInClient session signed out before launching sign-in intent.")
+        } catch (e: Exception) {
+            Log.w(TAG, "GoogleSignInClient.signOut() before connect encountered an error: ${e.message}", e)
+        }
+        client.signInIntent
     }
 
     fun handleSignInResult(data: Intent?) {
@@ -178,7 +186,12 @@ class ClassroomAuthManager(private val context: Context) {
             Log.d(TAG, "Google Classroom connected successfully for email: $email")
         } catch (e: ApiException) {
             Log.e(TAG, "Google Sign-In failed with status code: ${e.statusCode}", e)
-            _authState.value = ClassroomAuthState.Error("Google Sign-In was cancelled or failed (${e.statusCode}).")
+            if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED || e.statusCode == 12501) {
+                Log.d(TAG, "Google Sign-In was cancelled by user.")
+                refreshAuthState()
+            } else {
+                _authState.value = ClassroomAuthState.Error("Google Sign-In was cancelled or failed (${e.statusCode}).")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected error handling Google Sign-In result", e)
             _authState.value = ClassroomAuthState.Error(e.message ?: "Sign-in failed. Please try again.")

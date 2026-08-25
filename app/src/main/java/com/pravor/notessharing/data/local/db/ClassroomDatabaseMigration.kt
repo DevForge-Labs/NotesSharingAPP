@@ -19,9 +19,6 @@ class ClassroomDatabaseMigration : Migration(3, 4) {
                 `enrollmentCode` TEXT,
                 `alternateLink` TEXT,
                 `state` TEXT NOT NULL,
-                `teacherId` TEXT,
-                `teacherName` TEXT,
-                `teacherPhotoUrl` TEXT,
                 `lastSyncedAt` INTEGER NOT NULL
             )
         """.trimIndent())
@@ -99,16 +96,6 @@ class ClassroomDatabaseMigration : Migration(3, 4) {
                 `lastDownloadedAt` INTEGER NOT NULL
             )
         """.trimIndent())
-
-        db.execSQL("""
-            CREATE TABLE IF NOT EXISTS `classroom_hidden_courses` (
-                `id` TEXT NOT NULL PRIMARY KEY,
-                `userId` TEXT NOT NULL,
-                `classroomAccount` TEXT NOT NULL,
-                `courseId` TEXT NOT NULL,
-                `hiddenAt` INTEGER NOT NULL
-            )
-        """.trimIndent())
     }
 }
 
@@ -128,9 +115,25 @@ class ClassroomDatabaseMigration4To5 : Migration(4, 5) {
 
 class ClassroomDatabaseMigration5To6 : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherId` TEXT")
-        db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherName` TEXT")
-        db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherPhotoUrl` TEXT")
+        val existingColumns = mutableSetOf<String>()
+        db.query("PRAGMA table_info(`classroom_courses`)").use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) {
+                if (nameIndex != -1) {
+                    existingColumns.add(cursor.getString(nameIndex))
+                }
+            }
+        }
+
+        if (!existingColumns.contains("teacherId")) {
+            db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherId` TEXT")
+        }
+        if (!existingColumns.contains("teacherName")) {
+            db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherName` TEXT")
+        }
+        if (!existingColumns.contains("teacherPhotoUrl")) {
+            db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherPhotoUrl` TEXT")
+        }
     }
 }
 

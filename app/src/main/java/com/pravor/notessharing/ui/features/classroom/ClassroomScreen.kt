@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.ui.features.classroom
+package com.pravor.notessharing.ui.features.classroom
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -82,7 +82,9 @@ fun ClassroomRoute(
     ClassroomScreen(
         uiState = uiState,
         onConnectClick = {
-            authLauncher.launch(viewModel.getAuthIntent())
+            viewModel.launchClassroomAuth { intent ->
+                authLauncher.launch(intent)
+            }
         },
         onDisconnectConfirmed = viewModel::disconnectClassroom,
         onCourseClick = onCourseClick,

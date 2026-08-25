@@ -136,8 +136,16 @@ class ClassroomViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun getAuthIntent(): Intent {
-        return authManager.getSignInIntent()
+    fun launchClassroomAuth(launcher: (Intent) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val intent = authManager.getSignInIntent()
+                launcher(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to prepare Google Classroom authentication intent", e)
+                _coursesError.value = "Unable to start Google Classroom sign-in. Please try again."
+            }
+        }
     }
 
     fun handleAuthResult(intent: Intent?) {
