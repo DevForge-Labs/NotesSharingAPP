@@ -1,8 +1,10 @@
-﻿package com.pravor.notessharing.ui.features.classroom
+package com.pravor.notessharing.ui.features.classroom
 
 import android.app.Application
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,6 +43,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -55,10 +61,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pravor.notessharing.domain.model.classroom.ClassroomAttachment
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourse
+import com.pravor.notessharing.domain.model.classroom.ClassroomCourseWork
+import com.pravor.notessharing.domain.model.classroom.ClassroomStudentSubmission
 import com.pravor.notessharing.ui.common.components.SectionHeader
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomAnnouncementCard
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomCourseWorkCard
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomMaterialCard
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomSubmissionBottomSheet
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.theme.ElectricBlue
 
@@ -87,6 +96,8 @@ fun ClassroomCourseRoute(
         onBackClick = onBackClick,
         onRefresh = { viewModel.syncCourseContent(isPullToRefresh = true) },
         onRetry = { viewModel.syncCourseContent(isPullToRefresh = false) },
+        onFilterSelected = viewModel::selectFilter,
+        onSubmissionSuccess = viewModel::onSubmissionCompleted,
         onAttachmentClick = { attachment ->
             viewModel.handleAttachmentClick(context, attachment)
         }
@@ -100,11 +111,14 @@ fun ClassroomCourseScreen(
     onBackClick: () -> Unit,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
+    onFilterSelected: (ClassroomContentFilter) -> Unit,
+    onSubmissionSuccess: (ClassroomStudentSubmission) -> Unit,
     onAttachmentClick: (ClassroomAttachment) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     val courseName = uiState.course?.name ?: "Course Details"
+    var selectedCourseWorkForSubmission by remember { mutableStateOf<ClassroomCourseWork?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -189,6 +203,14 @@ fun ClassroomCourseScreen(
                     CourseHeaderBanner(course = uiState.course)
                 }
 
+                // 2. Filter Bar (Single Selection Pill Chips)
+                item(key = "content-filter-bar") {
+                    ClassroomContentFilterRow(
+                        selectedFilter = uiState.selectedFilter,
+                        onFilterSelected = onFilterSelected
+                    )
+                }
+
                 // Error Banner if present
                 if (uiState.errorMessage != null) {
                     item(key = "error-banner") {
@@ -227,68 +249,129 @@ fun ClassroomCourseScreen(
                     }
                 }
 
-                // 2. Announcements Section
-                item(key = "announcements-header") {
-                    SectionHeader("Announcements")
-                }
-
-                if (uiState.announcements.isEmpty()) {
-                    item(key = "announcements-empty") {
-                        EmptySectionCard(
-                            title = "No announcements yet",
-                            message = "Important updates posted by instructors will appear here."
-                        )
+                // 3. Announcements Section (Shown when Filter is ALL or ANNOUNCEMENTS)
+                if (uiState.selectedFilter == ClassroomContentFilter.ALL ||
+                    uiState.selectedFilter == ClassroomContentFilter.ANNOUNCEMENTS
+                ) {
+                    item(key = "announcements-header") {
+                        SectionHeader("Announcements")
                     }
-                } else {
-                    items(uiState.announcements, key = { "announcement_${it.id}" }) { announcement ->
-                        ClassroomAnnouncementCard(
-                            announcement = announcement,
-                            onAttachmentClick = onAttachmentClick
-                        )
-                    }
-                }
 
-                // 3. Materials Section
-                item(key = "materials-header") {
-                    SectionHeader("Materials & Notes")
-                }
-
-                if (uiState.materials.isEmpty()) {
-                    item(key = "materials-empty") {
-                        EmptySectionCard(
-                            title = "No materials shared yet",
-                            message = "Lecture notes, PDFs, and learning resources will appear here."
-                        )
-                    }
-                } else {
-                    items(uiState.materials, key = { "material_${it.id}" }) { material ->
-                        ClassroomMaterialCard(
-                            material = material,
-                            onAttachmentClick = onAttachmentClick
-                        )
+                    if (uiState.announcements.isEmpty()) {
+                        item(key = "announcements-empty") {
+                            EmptySectionCard(
+                                title = "No announcements yet",
+                                message = "Important updates posted by instructors will appear here."
+                            )
+                        }
+                    } else {
+                        items(uiState.announcements, key = { "announcement_${it.id}" }) { announcement ->
+                            ClassroomAnnouncementCard(
+                                announcement = announcement,
+                                onAttachmentClick = onAttachmentClick
+                            )
+                        }
                     }
                 }
 
-                // 4. Classwork Section
-                item(key = "classwork-header") {
-                    SectionHeader("Classwork & Assignments")
+                // 4. Materials Section (Shown when Filter is ALL or MATERIALS)
+                if (uiState.selectedFilter == ClassroomContentFilter.ALL ||
+                    uiState.selectedFilter == ClassroomContentFilter.MATERIALS
+                ) {
+                    item(key = "materials-header") {
+                        SectionHeader("Materials & Notes")
+                    }
+
+                    if (uiState.materials.isEmpty()) {
+                        item(key = "materials-empty") {
+                            EmptySectionCard(
+                                title = "No materials shared yet",
+                                message = "Lecture notes, PDFs, and learning resources will appear here."
+                            )
+                        }
+                    } else {
+                        items(uiState.materials, key = { "material_${it.id}" }) { material ->
+                            ClassroomMaterialCard(
+                                material = material,
+                                onAttachmentClick = onAttachmentClick
+                            )
+                        }
+                    }
                 }
 
-                if (uiState.coursework.isEmpty()) {
-                    item(key = "classwork-empty") {
-                        EmptySectionCard(
-                            title = "No classwork posted yet",
-                            message = "Assignments and coursework will appear here."
-                        )
+                // 5. Classwork Section (Shown when Filter is ALL or ASSIGNMENTS)
+                if (uiState.selectedFilter == ClassroomContentFilter.ALL ||
+                    uiState.selectedFilter == ClassroomContentFilter.ASSIGNMENTS
+                ) {
+                    item(key = "classwork-header") {
+                        SectionHeader("Classwork & Assignments")
                     }
-                } else {
-                    items(uiState.coursework, key = { "coursework_${it.id}" }) { item ->
-                        ClassroomCourseWorkCard(
-                            courseWork = item,
-                            onAttachmentClick = onAttachmentClick
-                        )
+
+                    if (uiState.coursework.isEmpty()) {
+                        item(key = "classwork-empty") {
+                            EmptySectionCard(
+                                title = "No classwork posted yet",
+                                message = "Assignments and coursework will appear here."
+                            )
+                        }
+                    } else {
+                        items(uiState.coursework, key = { "coursework_${it.id}" }) { item ->
+                            val currentSubState = uiState.submissions[item.id]?.state
+                            ClassroomCourseWorkCard(
+                                courseWork = item,
+                                onAttachmentClick = onAttachmentClick,
+                                submissionState = currentSubState,
+                                onSubmitClick = { selectedCourseWorkForSubmission = item }
+                            )
+                        }
                     }
                 }
+            }
+        }
+
+        // Submission Bottom Sheet
+        val currentCourse = uiState.course
+        val activeCourseWork = selectedCourseWorkForSubmission
+        if (currentCourse != null && activeCourseWork != null) {
+            ClassroomSubmissionBottomSheet(
+                courseId = currentCourse.id,
+                courseWork = activeCourseWork,
+                onDismiss = { selectedCourseWorkForSubmission = null },
+                onAttachmentClick = onAttachmentClick,
+                onSubmissionSuccess = onSubmissionSuccess
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClassroomContentFilterRow(
+    selectedFilter: ClassroomContentFilter,
+    onFilterSelected: (ClassroomContentFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ClassroomContentFilter.values().forEach { filter ->
+            val isSelected = filter == selectedFilter
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) ElectricBlue else MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                modifier = Modifier.clickable { onFilterSelected(filter) }
+            ) {
+                Text(
+                    text = filter.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) Color(0xFF07121E) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                )
             }
         }
     }

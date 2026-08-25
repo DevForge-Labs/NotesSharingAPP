@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.ui.features.classroom
+package com.pravor.notessharing.ui.features.classroom
 
 import android.app.Application
 import android.content.Context
@@ -12,15 +12,19 @@ import com.pravor.notessharing.data.classroom.ClassroomAuthException
 import com.pravor.notessharing.data.classroom.ClassroomForbiddenException
 import com.pravor.notessharing.data.classroom.ClassroomNetworkException
 import com.pravor.notessharing.data.classroom.ClassroomRepository
+import com.pravor.notessharing.data.classroom.ClassroomSubmissionRepository
 import com.pravor.notessharing.domain.model.classroom.AttachmentType
 import com.pravor.notessharing.domain.model.classroom.ClassroomAttachment
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourse
+import com.pravor.notessharing.domain.model.classroom.ClassroomStudentSubmission
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ClassroomCourseViewModel(
@@ -33,11 +37,14 @@ class ClassroomCourseViewModel(
     }
 
     private val repository = ClassroomRepository.getInstance(application)
+    private val submissionRepository = ClassroomSubmissionRepository.getInstance(application)
 
     private val _course = MutableStateFlow<ClassroomCourse?>(null)
     private val _isLoading = MutableStateFlow(false)
     private val _isRefreshing = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
+    private val _selectedFilter = MutableStateFlow(ClassroomContentFilter.ALL)
+    private val _submissions = MutableStateFlow<Map<String, ClassroomStudentSubmission>>(emptyMap())
 
     private val resourcesFlow = combine(
         repository.observeMaterials(courseId),
@@ -50,16 +57,22 @@ class ClassroomCourseViewModel(
     val uiState: StateFlow<ClassroomCourseUiState> = combine(
         _course,
         resourcesFlow,
-        _isLoading,
-        _isRefreshing,
-        _errorMessage
-    ) { course, resources, isLoading, isRefreshing, error ->
+        _submissions,
+        _selectedFilter,
+        combine(_isLoading, _isRefreshing, _errorMessage) { loading, refreshing, error ->
+            Triple(loading, refreshing, error)
+        }
+    ) { course, resources, submissions, filter, status ->
         val (materials, announcements, coursework) = resources
+        val (isLoading, isRefreshing, error) = status
+
         ClassroomCourseUiState(
             course = course,
             materials = materials,
             announcements = announcements,
             coursework = coursework,
+            submissions = submissions,
+            selectedFilter = filter,
             isLoading = isLoading && materials.isEmpty() && announcements.isEmpty() && coursework.isEmpty() && course == null,
             isRefreshing = isRefreshing,
             errorMessage = error
@@ -78,6 +91,16 @@ class ClassroomCourseViewModel(
         viewModelScope.launch {
             _course.value = repository.getCourse(courseId)
             syncCourseContent(isPullToRefresh = false)
+        }
+    }
+
+    fun selectFilter(filter: ClassroomContentFilter) {
+        _selectedFilter.value = filter
+    }
+
+    fun onSubmissionCompleted(submission: ClassroomStudentSubmission) {
+        _submissions.update { current ->
+            current + (submission.courseWorkId to submission)
         }
     }
 
@@ -103,6 +126,25 @@ class ClassroomCourseViewModel(
 
                 if (course != null) {
                     _course.value = course
+                }
+
+                // Concurrently load student submission states for coursework
+                val courseworkList = cwResult.getOrNull().orEmpty()
+                if (courseworkList.isNotEmpty()) {
+                    try {
+                        val subMap = courseworkList.map { cw ->
+                            async {
+                                val sub = submissionRepository.getSubmission(courseId, cw.id).getOrNull()
+                                if (sub != null) cw.id to sub else null
+                            }
+                        }.awaitAll().filterNotNull().toMap()
+
+                        if (subMap.isNotEmpty()) {
+                            _submissions.update { current -> current + subMap }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed loading initial submission states: ${e.message}")
+                    }
                 }
 
                 val error = matResult.exceptionOrNull()
