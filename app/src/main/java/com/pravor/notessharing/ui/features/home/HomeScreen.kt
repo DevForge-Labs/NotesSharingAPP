@@ -87,6 +87,7 @@ import java.util.concurrent.atomic.AtomicInteger
 fun HomeRoute(
     onViewAllLibraryClick: () -> Unit = {},
     onMyUploadsClick: () -> Unit = {},
+    onUploadClick: () -> Unit = {},
     onMyBookmarksClick: () -> Unit = {},
     onMyDownloadsClick: () -> Unit = {},
     onSeeMoreClick: () -> Unit = {},
@@ -159,6 +160,7 @@ fun HomeRoute(
         onUpvoteClick = viewModel::toggleUpvote,
         onBookmarkClick = viewModel::toggleSaved,
         onMyUploadsClick = onMyUploadsClick,
+        onUploadClick = onUploadClick,
         onMyBookmarksClick = onMyBookmarksClick,
         onMyDownloadsClick = onMyDownloadsClick,
         onViewAllLibraryClick = {},
@@ -189,6 +191,7 @@ fun HomeScreen(
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
+    onUploadClick: () -> Unit = {},
     onMyBookmarksClick: () -> Unit,
     onMyDownloadsClick: () -> Unit,
     onViewAllLibraryClick: () -> Unit,
@@ -323,6 +326,7 @@ fun HomeScreen(
                             }
                         },
                         onMyUploadsClick = onMyUploadsClick,
+                        onUploadClick = onUploadClick,
                         onMyBookmarksClick = onMyBookmarksClick,
                         onMyDownloadsClick = onMyDownloadsClick,
                         onViewAllLibraryClick = onViewAllLibraryClick,

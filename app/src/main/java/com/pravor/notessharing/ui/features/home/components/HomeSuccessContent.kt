@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.Card
@@ -85,6 +86,7 @@ fun HomeSuccessContent(
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
     onMyUploadsClick: () -> Unit,
+    onUploadClick: () -> Unit = {},
     onMyBookmarksClick: () -> Unit,
     onMyDownloadsClick: () -> Unit,
     onViewAllLibraryClick: () -> Unit,
@@ -283,7 +285,25 @@ fun HomeSuccessContent(
                     lottieAsset = "App_animations/uploading_screen_logo.json",
                     accentColor = Color(0xFF58D6D1), // Premium soft teal/blue
                     cardBrush = Brush.verticalGradient(listOf(Color(0xFF13201F), Color(0xFF0C1312))),
-                    onClick = onMyUploadsClick
+                    onClick = onMyUploadsClick,
+                    actionContent = {
+                        Surface(
+                            onClick = onUploadClick,
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF58D6D1),
+                            contentColor = Color(0xFF0C1312),
+                            modifier = Modifier.size(36.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "New Upload",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
                 )
             }
 

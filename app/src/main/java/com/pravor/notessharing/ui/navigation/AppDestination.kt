@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,6 +27,10 @@ sealed class AppDestination(
 ) {
     data object Home : AppDestination("home", "Home", Icons.Filled.Home)
     data object Explore : AppDestination("explore", "Explore", Icons.Filled.Explore)
+    data object Classroom : AppDestination("classroom", "Classroom", Icons.Filled.School)
+    data object ClassroomCourse : AppDestination("classroom/course/{courseId}", "Course Detail", Icons.Filled.School) {
+        fun createRoute(courseId: String) = "classroom/course/${android.net.Uri.encode(courseId)}"
+    }
     data object TrendingNotes : AppDestination("explore/trending_notes", "Trending Notes", Icons.Filled.Explore)
     data object RecommendedVideos : AppDestination("explore/recommended_videos", "Recommended Videos", Icons.Filled.Explore)
     data object Discover : AppDestination("explore/discover", "Discover", Icons.Filled.Explore)
@@ -78,6 +83,6 @@ sealed class AppDestination(
 val bottomDestinations = listOf(
     AppDestination.Home,
     AppDestination.Explore,
-    AppDestination.Upload,
+    AppDestination.Classroom,
     AppDestination.Profile
 )
