@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.data.classroom
+package com.pravor.notessharing.data.classroom
 
 import android.accounts.Account
 import android.content.Context
@@ -20,6 +20,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
+sealed class ClassroomTokenResult {
+    data class Success(val token: String) : ClassroomTokenResult()
+    data class ConsentRequired(val recoveryIntent: Intent) : ClassroomTokenResult()
+    data class Error(val message: String, val cause: Throwable? = null) : ClassroomTokenResult()
+}
+
 data class ClassroomSession(
     val firebaseUid: String?,
     val classroomAccount: String?,
@@ -37,6 +43,13 @@ class ClassroomAuthManager(private val context: Context) {
             "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
             "https://www.googleapis.com/auth/classroom.announcements.readonly"
         )
+
+        val SUBMISSION_SCOPES = listOf(
+            "https://www.googleapis.com/auth/classroom.coursework.me",
+            "https://www.googleapis.com/auth/drive.file"
+        )
+
+        val ALL_SCOPES = (SCOPES + SUBMISSION_SCOPES).distinct()
 
         private const val PREF_KEY_EMAIL = "connected_email"
         private const val PREF_KEY_NAME = "connected_display_name"
@@ -185,6 +198,34 @@ class ClassroomAuthManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to retrieve OAuth token for Classroom: ${e.message}", e)
             null
+        }
+    }
+
+    suspend fun getSubmissionAccessToken(): ClassroomTokenResult = withContext(Dispatchers.IO) {
+        val prefs = getPrefs() ?: return@withContext ClassroomTokenResult.Error("Please log in to Campus Pages.")
+        val email = prefs.getString(PREF_KEY_EMAIL, null) ?: return@withContext ClassroomTokenResult.Error("No connected Google Classroom account.")
+
+        val scopeString = "oauth2:" + ALL_SCOPES.joinToString(" ")
+
+        try {
+            val account = Account(email, "com.google")
+            val token = GoogleAuthUtil.getToken(context, account, scopeString)
+            if (token.isNullOrBlank()) {
+                ClassroomTokenResult.Error("Received empty OAuth token.")
+            } else {
+                ClassroomTokenResult.Success(token)
+            }
+        } catch (e: com.google.android.gms.auth.UserRecoverableAuthException) {
+            Log.d(TAG, "Incremental authorization consent required for submission scopes", e)
+            val recoveryIntent = e.intent
+            if (recoveryIntent != null) {
+                ClassroomTokenResult.ConsentRequired(recoveryIntent)
+            } else {
+                ClassroomTokenResult.Error("Consent required but no recovery intent provided.", e)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to retrieve submission OAuth token: ${e.message}", e)
+            ClassroomTokenResult.Error(e.message ?: "Failed to retrieve authorization token.", e)
         }
     }
 
