@@ -197,14 +197,6 @@ fun UploadScreen(
                     }
                 }
             }
-            if (uiState.selectedType != UploadType.Youtube && uiState.selectedType != null) {
-                item(key = "live-stats", contentType = "stats") {
-                    LiveUploadStats(
-                        fileCount = uiState.selectedFiles.size,
-                        totalSizeBytes = uiState.totalSizeBytes
-                    )
-                }
-            }
             item(key = "summary", contentType = "summary") {
                 UploadSummaryCard(uiState)
             }

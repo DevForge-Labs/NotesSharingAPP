@@ -23,6 +23,8 @@ import com.pravor.notessharing.ui.features.auth.LoginScreen
 import com.pravor.notessharing.ui.features.auth.SessionState
 import com.pravor.notessharing.ui.features.auth.SignUpScreen
 import com.pravor.notessharing.ui.features.auth.WelcomeScreen
+import com.pravor.notessharing.ui.features.classroom.ClassroomCourseRoute
+import com.pravor.notessharing.ui.features.classroom.ClassroomRoute
 import com.pravor.notessharing.ui.features.document.DocumentDetailRoute
 import com.pravor.notessharing.ui.features.explore.AssignmentsRoute
 import com.pravor.notessharing.ui.features.explore.DiscoverRoute
@@ -175,6 +177,11 @@ fun NavGraph(
             HomeRoute(
                 onMyUploadsClick = {
                     navController.navigate(AppDestination.MyUploads.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onUploadClick = {
+                    navController.navigate(AppDestination.Upload.route) {
                         launchSingleTop = true
                     }
                 },
@@ -353,6 +360,24 @@ fun NavGraph(
                     navController.navigate(
                         AppDestination.DocumentDetail.createRoute(docId)
                     )
+                }
+            )
+        }
+        composable(AppDestination.Classroom.route) {
+            ClassroomRoute(
+                onCourseClick = { courseId ->
+                    navController.navigate(AppDestination.ClassroomCourse.createRoute(courseId)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        composable(AppDestination.ClassroomCourse.route) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId").orEmpty()
+            ClassroomCourseRoute(
+                courseId = courseId,
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

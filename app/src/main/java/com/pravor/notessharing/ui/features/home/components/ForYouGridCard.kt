@@ -429,7 +429,8 @@ fun StudyHubCard(
     modifier: Modifier = Modifier,
     secondaryMetadata: String? = null,
     lottieAsset: String? = null,
-    lottieScale: Float = 1.35f
+    lottieScale: Float = 1.35f,
+    actionContent: @Composable (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -552,12 +553,16 @@ fun StudyHubCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(20.dp)
-            )
+            if (actionContent != null) {
+                actionContent()
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

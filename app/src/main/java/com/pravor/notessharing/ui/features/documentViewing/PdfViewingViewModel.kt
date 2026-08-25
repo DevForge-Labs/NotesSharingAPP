@@ -63,7 +63,16 @@ class PdfViewingViewModel(
                     }
                 }
 
-                // 2. Fall back to cache or download
+                // 1.5. Check if fileUrl is a direct local absolute path
+                if (fileUrl.startsWith("/") || fileUrl.startsWith("file:") || fileUrl.contains(":\\") || fileUrl.contains(":/")) {
+                    val cleanPath = fileUrl.removePrefix("file://").removePrefix("file:")
+                    val localDirect = File(cleanPath)
+                    if (localDirect.exists() && localDirect.length() > 0) {
+                        _uiState.value = PdfViewingUiState.Success(localDirect)
+                        incrementViewsCount(documentId)
+                        return@launch
+                    }
+                }
                 val pdfFile = getCachedPdfFile(context, documentId)
                 android.util.Log.d("PDF_DEBUG", "Checking cache")
                 android.util.Log.d("PDF_DEBUG", "CachePath=${pdfFile.absolutePath}")

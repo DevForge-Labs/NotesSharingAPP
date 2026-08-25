@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -40,6 +41,8 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.pravor.notessharing.domain.model.SelectedUploadFile
+import com.pravor.notessharing.domain.model.UploadType
+import com.pravor.notessharing.ui.common.components.SectionHeader
 import com.pravor.notessharing.ui.features.upload.YoutubePreview
 
 @Composable
@@ -249,33 +252,110 @@ fun LiveUploadStats(
 
 @Composable
 fun UploadSummaryCard(uiState: com.pravor.notessharing.ui.features.upload.UploadUiState) {
-    if (!uiState.metadataComplete) return
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Summary",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            SectionHeader("Upload Preview")
+
+            PreviewRow(
+                label = "Branch",
+                value = uiState.selectedBranch.ifBlank { "Required" }
             )
-            Text(
-                text = "${uiState.selectedBranch} • ${uiState.selectedSemester}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+            PreviewRow(
+                label = "Semester",
+                value = uiState.selectedSemester.ifBlank { "Required" }
             )
-            Text(
-                text = "Section ${uiState.section} • ${uiState.subject}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+            val isFirstYear = uiState.selectedSemester == "Semester 1" || uiState.selectedSemester == "Semester 2"
+            if (isFirstYear && uiState.selectedGroup.isNotBlank()) {
+                PreviewRow(
+                    label = "Group",
+                    value = uiState.selectedGroup
+                )
+            }
+
+            PreviewRow(
+                label = "Subject",
+                value = uiState.subject.ifBlank { "Required" }
+            )
+
+            PreviewRow(
+                label = "Document Type",
+                value = uiState.selectedType?.label ?: "Not selected"
+            )
+
+            if (uiState.selectedType == UploadType.Pyq) {
+                if (uiState.selectedExamYear.isNotBlank()) {
+                    PreviewRow(label = "Exam Year", value = uiState.selectedExamYear)
+                }
+                if (uiState.selectedExamType.isNotBlank()) {
+                    PreviewRow(label = "Exam Type", value = uiState.selectedExamType)
+                }
+            } else if (uiState.selectedType == UploadType.Assignment) {
+                if (uiState.section.isNotBlank()) {
+                    PreviewRow(label = "Section", value = uiState.section)
+                }
+                if (uiState.title.isNotBlank()) {
+                    PreviewRow(label = "Title", value = uiState.title)
+                }
+            } else if (uiState.selectedType == UploadType.Notes || uiState.selectedType == UploadType.CheatSheet) {
+                if (uiState.title.isNotBlank()) {
+                    PreviewRow(label = "Title", value = uiState.title)
+                }
+            }
+
+            val fileCountText = if (uiState.selectedType == UploadType.Youtube) {
+                if (uiState.youtubeUrl.isNotBlank()) "1 Link" else "0"
+            } else {
+                uiState.selectedFiles.size.toString()
+            }
+            PreviewRow(
+                label = "Files",
+                value = fileCountText
+            )
+
+            val totalSizeText = if (uiState.selectedType == UploadType.Youtube) {
+                "—"
+            } else {
+                formatBytes(uiState.totalSizeBytes)
+            }
+            PreviewRow(
+                label = "Total Size",
+                value = totalSizeText
             )
         }
+    }
+}
+
+@Composable
+private fun PreviewRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -316,7 +396,17 @@ fun UploadButton(
             val progressInt = (progress * 100).toInt()
             Text(if (progressInt > 0) "Uploading... $progressInt%" else "Processing...")
         } else {
-            Text("Upload Now", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Icon(
+                imageVector = Icons.Default.FileUpload,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Upload Document",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
