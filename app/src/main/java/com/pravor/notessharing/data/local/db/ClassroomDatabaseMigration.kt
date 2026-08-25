@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.data.local.db
+package com.pravor.notessharing.data.local.db
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -131,5 +131,24 @@ class ClassroomDatabaseMigration5To6 : Migration(5, 6) {
         db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherId` TEXT")
         db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherName` TEXT")
         db.execSQL("ALTER TABLE `classroom_courses` ADD COLUMN `teacherPhotoUrl` TEXT")
+    }
+}
+
+class ClassroomDatabaseMigration6To7 : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `classroom_submissions` (
+                `id` TEXT NOT NULL PRIMARY KEY,
+                `submissionId` TEXT NOT NULL,
+                `courseId` TEXT NOT NULL,
+                `courseWorkId` TEXT NOT NULL,
+                `userId` TEXT NOT NULL,
+                `state` TEXT NOT NULL,
+                `late` INTEGER NOT NULL DEFAULT 0,
+                `assignedGrade` REAL,
+                `alternateLink` TEXT,
+                `lastSyncedAt` INTEGER NOT NULL
+            )
+        """.trimIndent())
     }
 }

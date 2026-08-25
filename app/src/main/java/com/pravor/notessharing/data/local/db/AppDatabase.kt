@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.data.local.db
+package com.pravor.notessharing.data.local.db
 
 import android.content.Context
 import androidx.room.Database
@@ -15,6 +15,7 @@ import com.pravor.notessharing.data.local.entity.ClassroomCourseWorkEntity
 import com.pravor.notessharing.data.local.entity.ClassroomFileEntity
 import com.pravor.notessharing.data.local.entity.ClassroomHiddenCourseEntity
 import com.pravor.notessharing.data.local.entity.ClassroomMaterialEntity
+import com.pravor.notessharing.data.local.entity.ClassroomSubmissionEntity
 import com.pravor.notessharing.data.local.entity.ExploreItemEntity
 import com.pravor.notessharing.data.local.entity.HomeFeedItemEntity
 import com.pravor.notessharing.data.local.entity.UserProfileEntity
@@ -30,9 +31,10 @@ import com.pravor.notessharing.data.local.entity.UserProfileEntity
         ClassroomCourseWorkEntity::class,
         ClassroomAttachmentEntity::class,
         ClassroomFileEntity::class,
-        ClassroomHiddenCourseEntity::class
+        ClassroomHiddenCourseEntity::class,
+        ClassroomSubmissionEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,7 +57,8 @@ abstract class AppDatabase : RoomDatabase() {
                 .addMigrations(
                     ClassroomDatabaseMigration(),
                     ClassroomDatabaseMigration4To5(),
-                    ClassroomDatabaseMigration5To6()
+                    ClassroomDatabaseMigration5To6(),
+                    ClassroomDatabaseMigration6To7()
                 )
                 .fallbackToDestructiveMigration()
                 .build()

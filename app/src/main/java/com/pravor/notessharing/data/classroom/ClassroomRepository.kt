@@ -10,14 +10,17 @@ import com.pravor.notessharing.data.local.entity.ClassroomCourseEntity
 import com.pravor.notessharing.data.local.entity.ClassroomCourseWorkEntity
 import com.pravor.notessharing.data.local.entity.ClassroomHiddenCourseEntity
 import com.pravor.notessharing.data.local.entity.ClassroomMaterialEntity
+import com.pravor.notessharing.data.local.entity.ClassroomSubmissionEntity
 import com.pravor.notessharing.domain.model.classroom.AttachmentType
 import com.pravor.notessharing.domain.model.classroom.ClassroomAnnouncement
 import com.pravor.notessharing.domain.model.classroom.ClassroomAttachment
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourse
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourseWork
 import com.pravor.notessharing.domain.model.classroom.ClassroomMaterial
+import com.pravor.notessharing.domain.model.classroom.ClassroomStudentSubmission
 import com.pravor.notessharing.domain.model.classroom.ClassroomTeacher
 import com.pravor.notessharing.domain.model.classroom.CourseState
+import com.pravor.notessharing.domain.model.classroom.SubmissionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -689,6 +692,64 @@ class ClassroomRepository(
             }
         }
         return false
+    }
+
+    // --- 5. Student Submissions ---
+    fun observeSubmissions(courseId: String): Flow<Map<String, ClassroomStudentSubmission>> {
+        val userId = getUserId()
+        return classroomDao.observeSubmissions(courseId, userId).map { entities ->
+            entities.associate { entity ->
+                entity.courseWorkId to ClassroomStudentSubmission(
+                    id = entity.submissionId,
+                    courseId = entity.courseId,
+                    courseWorkId = entity.courseWorkId,
+                    userId = entity.userId,
+                    state = try { SubmissionState.valueOf(entity.state) } catch (e: Exception) { SubmissionState.UNKNOWN },
+                    late = entity.late,
+                    assignedGrade = entity.assignedGrade,
+                    alternateLink = entity.alternateLink
+                )
+            }
+        }
+    }
+
+    suspend fun saveSubmission(submission: ClassroomStudentSubmission) = withContext(Dispatchers.IO) {
+        val userId = getUserId()
+        classroomDao.upsertSubmission(
+            ClassroomSubmissionEntity(
+                id = "${userId}_${submission.courseId}_${submission.courseWorkId}",
+                submissionId = submission.id,
+                courseId = submission.courseId,
+                courseWorkId = submission.courseWorkId,
+                userId = userId,
+                state = submission.state.name,
+                late = submission.late,
+                assignedGrade = submission.assignedGrade,
+                alternateLink = submission.alternateLink,
+                lastSyncedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun saveSubmissions(courseId: String, submissions: List<ClassroomStudentSubmission>) = withContext(Dispatchers.IO) {
+        val userId = getUserId()
+        val entities = submissions.map { sub ->
+            ClassroomSubmissionEntity(
+                id = "${userId}_${sub.courseId}_${sub.courseWorkId}",
+                submissionId = sub.id,
+                courseId = sub.courseId,
+                courseWorkId = sub.courseWorkId,
+                userId = userId,
+                state = sub.state.name,
+                late = sub.late,
+                assignedGrade = sub.assignedGrade,
+                alternateLink = sub.alternateLink,
+                lastSyncedAt = System.currentTimeMillis()
+            )
+        }
+        if (entities.isNotEmpty()) {
+            classroomDao.upsertSubmissions(entities)
+        }
     }
 
     private fun extractDriveFileId(url: String): String? {

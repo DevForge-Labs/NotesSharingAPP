@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.data.local.entity
+package com.pravor.notessharing.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -99,4 +99,18 @@ data class ClassroomHiddenCourseEntity(
     val classroomAccount: String,
     val courseId: String,
     val hiddenAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "classroom_submissions")
+data class ClassroomSubmissionEntity(
+    @PrimaryKey val id: String,
+    val submissionId: String,
+    val courseId: String,
+    val courseWorkId: String,
+    val userId: String,
+    val state: String,
+    val late: Boolean = false,
+    val assignedGrade: Double? = null,
+    val alternateLink: String? = null,
+    val lastSyncedAt: Long = System.currentTimeMillis()
 )

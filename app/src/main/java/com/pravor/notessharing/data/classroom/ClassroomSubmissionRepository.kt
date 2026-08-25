@@ -16,7 +16,9 @@ sealed class SubmitAssignmentResult {
 }
 
 class ClassroomSubmissionRepository(
+    private val context: Context,
     private val authManager: ClassroomAuthManager,
+    private val classroomRepository: ClassroomRepository = ClassroomRepository.getInstance(context),
     private val driveUploadService: GoogleDriveUploadService = GoogleDriveUploadService(),
     private val submissionService: ClassroomSubmissionService = ClassroomSubmissionService()
 ) {
@@ -29,6 +31,7 @@ class ClassroomSubmissionRepository(
         fun getInstance(context: Context): ClassroomSubmissionRepository {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: ClassroomSubmissionRepository(
+                    context.applicationContext,
                     ClassroomAuthManager.getInstance(context.applicationContext)
                 ).also { INSTANCE = it }
             }
@@ -39,7 +42,7 @@ class ClassroomSubmissionRepository(
         courseId: String,
         courseWorkId: String
     ): Result<ClassroomStudentSubmission?> = withContext(Dispatchers.IO) {
-        when (val tokenResult = authManager.getSubmissionAccessToken()) {
+        val result = when (val tokenResult = authManager.getSubmissionAccessToken()) {
             is ClassroomTokenResult.Success -> {
                 submissionService.getStudentSubmission(courseId, courseWorkId, tokenResult.token)
             }
@@ -56,6 +59,17 @@ class ClassroomSubmissionRepository(
                 Result.failure(Exception(tokenResult.message, tokenResult.cause))
             }
         }
+
+        val sub = result.getOrNull()
+        if (sub != null) {
+            try {
+                classroomRepository.saveSubmission(sub)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed caching submission to Room: ${e.message}")
+            }
+        }
+
+        result
     }
 
     suspend fun submitAssignment(
@@ -138,8 +152,15 @@ class ClassroomSubmissionRepository(
         }
 
         onProgress(SubmissionProgress.Success("Assignment submitted successfully!"))
-        // Fetch updated submission state to return
+        // Fetch updated submission state to return and cache in Room
         val updatedSub = submissionService.getStudentSubmission(courseId, courseWorkId, token).getOrNull()
+        if (updatedSub != null) {
+            try {
+                classroomRepository.saveSubmission(updatedSub)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed caching updated submission to Room: ${e.message}")
+            }
+        }
         SubmitAssignmentResult.Success(updatedSub)
     }
 }

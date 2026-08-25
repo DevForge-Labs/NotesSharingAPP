@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.data.local.dao
+package com.pravor.notessharing.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -11,6 +11,7 @@ import com.pravor.notessharing.data.local.entity.ClassroomCourseWorkEntity
 import com.pravor.notessharing.data.local.entity.ClassroomFileEntity
 import com.pravor.notessharing.data.local.entity.ClassroomHiddenCourseEntity
 import com.pravor.notessharing.data.local.entity.ClassroomMaterialEntity
+import com.pravor.notessharing.data.local.entity.ClassroomSubmissionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -106,4 +107,20 @@ interface ClassroomDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertCachedFile(file: ClassroomFileEntity): Long
+
+    // --- Submissions ---
+    @Query("SELECT * FROM classroom_submissions WHERE courseId = :courseId AND userId = :userId")
+    fun observeSubmissions(courseId: String, userId: String): Flow<List<ClassroomSubmissionEntity>>
+
+    @Query("SELECT * FROM classroom_submissions WHERE courseId = :courseId AND courseWorkId = :courseWorkId AND userId = :userId LIMIT 1")
+    suspend fun getSubmission(courseId: String, courseWorkId: String, userId: String): ClassroomSubmissionEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSubmissions(submissions: List<ClassroomSubmissionEntity>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSubmission(submission: ClassroomSubmissionEntity): Long
+
+    @Query("DELETE FROM classroom_submissions WHERE courseId = :courseId AND userId = :userId AND courseWorkId NOT IN (:keepCourseWorkIds)")
+    suspend fun deleteStaleSubmissions(courseId: String, userId: String, keepCourseWorkIds: List<String>): Int
 }
