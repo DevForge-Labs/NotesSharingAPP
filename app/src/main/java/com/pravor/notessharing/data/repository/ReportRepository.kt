@@ -60,7 +60,7 @@ class ReportRepository {
                         if (error != null) return@addSnapshotListener
                         if (snapshot != null) {
                             val hasActiveReport = snapshot.exists() && snapshot.getString("status") == "pending"
-                            _reportedFlow.update { it + (resourceId to hasActiveReport) }
+                            _reportedFlow.update { if (it[resourceId] == hasActiveReport) it else it + (resourceId to hasActiveReport) }
                         }
                     }
                 activeListeners[resourceId] = listener

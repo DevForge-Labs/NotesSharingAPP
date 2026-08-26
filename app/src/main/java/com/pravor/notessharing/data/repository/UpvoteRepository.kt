@@ -75,7 +75,7 @@ class UpvoteRepository {
                                     val count = snapshot.getLong("upvotes")?.toInt()
                                     if (count != null) {
                                         _upvoteCountsFlow.update { current ->
-                                            current + (docId to count)
+                                            if (current[docId] == count) current else current + (docId to count)
                                         }
                                     }
                                     val downloadCount = if (collection == "notes") {
@@ -87,7 +87,7 @@ class UpvoteRepository {
                                     }
                                     if (downloadCount != null) {
                                         _downloadCountsFlow.update { current ->
-                                            current + (docId to downloadCount)
+                                            if (current[docId] == downloadCount) current else current + (docId to downloadCount)
                                         }
                                     }
                                 }
@@ -122,7 +122,9 @@ class UpvoteRepository {
                                 val docId = doc.getString("documentId") ?: ""
                                 docId to true
                             }
-                            _upvotesFlow.value = map
+                            if (_upvotesFlow.value != map) {
+                                _upvotesFlow.value = map
+                            }
                             hasLoadedInitial = true
                         }
                     }

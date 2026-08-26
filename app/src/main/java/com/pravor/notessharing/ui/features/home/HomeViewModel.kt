@@ -27,6 +27,10 @@ import com.pravor.notessharing.ui.common.HomeUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -97,6 +101,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return changes
     }
 
+    private var activeLoadJob: kotlinx.coroutines.Job? = null
+    private var activeLoadKey: String? = null
+
     private val authListener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
         val uid = firebaseAuth.currentUser?.uid
         
@@ -133,10 +140,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val bookmarkedIds = bookmarks.map { it.id }.toSet()
                 _uiState.update { current ->
                     if (current is HomeUiState.Success) {
+                        var hasChanges = false
                         val updatedFeed = current.content.feedItems.map { item ->
-                            item.copy(isSaved = bookmarkedIds.contains(item.id))
+                            val isSaved = bookmarkedIds.contains(item.id)
+                            if (item.isSaved != isSaved) {
+                                hasChanges = true
+                                item.copy(isSaved = isSaved)
+                            } else {
+                                item
+                            }
                         }
-                        current.copy(content = current.content.copy(feedItems = updatedFeed))
+                        if (!hasChanges) {
+                            current
+                        } else {
+                            current.copy(content = current.content.copy(feedItems = updatedFeed))
+                        }
                     } else {
                         current
                     }
@@ -153,20 +171,35 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }.collect { (upvotesMap, upvoteCountsMap) ->
                 _uiState.update { current ->
                     if (current is HomeUiState.Success) {
+                        var hasChanges = false
                         val updatedFeed = current.content.feedItems.map { item ->
-                            val isUpvoted = upvotesMap[item.id] ?: false
+                            val isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
                             val count = upvoteCountsMap[item.id] ?: item.upvotes
-                            item.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (item.isUpvoted != isUpvoted || item.upvotes != count) {
+                                hasChanges = true
+                                item.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                item
+                            }
                         }
                         val updatedRecentlyOpened = current.content.recentlyOpened?.let { item ->
-                            val isUpvoted = upvotesMap[item.id] ?: false
+                            val isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
                             val count = upvoteCountsMap[item.id] ?: item.upvotes
-                            item.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (item.isUpvoted != isUpvoted || item.upvotes != count) {
+                                hasChanges = true
+                                item.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                item
+                            }
                         }
-                        current.copy(content = current.content.copy(
-                            feedItems = updatedFeed,
-                            recentlyOpened = updatedRecentlyOpened
-                        ))
+                        if (!hasChanges) {
+                            current
+                        } else {
+                            current.copy(content = current.content.copy(
+                                feedItems = updatedFeed,
+                                recentlyOpened = updatedRecentlyOpened
+                            ))
+                        }
                     } else {
                         current
                     }
@@ -178,18 +211,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
                 _uiState.update { current ->
                     if (current is HomeUiState.Success) {
+                        var hasChanges = false
                         val updatedFeed = current.content.feedItems.map { item ->
                             val count = downloadCountsMap[item.id] ?: item.downloadsCount
-                            item.copy(downloadsCount = count)
+                            if (item.downloadsCount != count) {
+                                hasChanges = true
+                                item.copy(downloadsCount = count)
+                            } else {
+                                item
+                            }
                         }
                         val updatedRecentlyOpened = current.content.recentlyOpened?.let { item ->
                             val count = downloadCountsMap[item.id] ?: item.downloadsCount
-                            item.copy(downloadsCount = count)
+                            if (item.downloadsCount != count) {
+                                hasChanges = true
+                                item.copy(downloadsCount = count)
+                            } else {
+                                item
+                            }
                         }
-                        current.copy(content = current.content.copy(
-                            feedItems = updatedFeed,
-                            recentlyOpened = updatedRecentlyOpened
-                        ))
+                        if (!hasChanges) {
+                            current
+                        } else {
+                            current.copy(content = current.content.copy(
+                                feedItems = updatedFeed,
+                                recentlyOpened = updatedRecentlyOpened
+                            ))
+                        }
                     } else {
                         current
                     }
@@ -198,33 +246,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            _uiState.collect { state ->
-                if (state is HomeUiState.Success) {
-                    val feedItems = state.content.feedItems
-                    val recentlyOpened = state.content.recentlyOpened
-                    val paths = mutableListOf<Pair<String, String>>()
-                    for (item in feedItems) {
-                        val col = upvoteRepository.getCollectionForDocType(item.documentType ?: item.fileType.label)
-                        paths.add(item.id to col)
+            _uiState
+                .mapNotNull { (it as? HomeUiState.Success)?.content }
+                .map { content ->
+                    val list = mutableListOf<Pair<String, String>>()
+                    for (item in content.feedItems) {
+                        list.add(item.id to (item.documentType ?: item.fileType.label))
                     }
-                    if (recentlyOpened != null) {
-                        val col = upvoteRepository.getCollectionForDocType(recentlyOpened.documentType ?: recentlyOpened.fileType.label)
-                        paths.add(recentlyOpened.id to col)
+                    content.recentlyOpened?.let { ro ->
+                        list.add(ro.id to (ro.documentType ?: ro.fileType.label))
+                    }
+                    list.toList()
+                }
+                .distinctUntilChanged()
+                .collect { items ->
+                    val paths = items.map { (id, docType) ->
+                        id to upvoteRepository.getCollectionForDocType(docType)
                     }
                     upvoteRepository.observeVisibleDocuments("Home", paths)
                 }
-            }
         }
     }
 
     private fun observeUserProfileState() {
-        viewModelScope.launch {
-            val currentUid = auth.currentUser?.uid
-            if (currentUid != null) {
-                startObservingProfile(currentUid)
-            }
-            auth.addAuthStateListener(authListener)
-        }
+        auth.addAuthStateListener(authListener)
     }
 
     private fun startObservingProfile(uid: String) {
@@ -236,17 +281,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         profileJob = viewModelScope.launch {
             profileRepository.observeProfile(uid).collect { profile ->
                 android.util.Log.d("PERF", "[PERF] Profile update received")
-                val changedFields = getChangedFields(previousProfile, profile)
-                android.util.Log.d("PERF", "[PERF] Changed fields=$changedFields")
+                val isFirstProfileEmission = previousProfile == null
+                val collegeChanged = previousProfile?.college != profile?.college
+                val semesterChanged = previousProfile?.semester != profile?.semester
                 previousProfile = profile
                 _uploadsCount.value = profile?.totalUploads ?: 0
 
                 val college = profile?.college?.takeIf { it.isNotBlank() } ?: "kiit"
-                observeRoomFeed(college)
+                if (isFirstProfileEmission || collegeChanged) {
+                    observeRoomFeed(college)
+                }
 
                 val semester = profile?.semester
-                lastReloadCause = "ProfileUpdate"
-                loadRealDocuments(semester)
+                if (isFirstProfileEmission || collegeChanged || semesterChanged) {
+                    lastReloadCause = "ProfileUpdate"
+                    loadRealDocuments(semester)
+                }
             }
         }
     }
@@ -254,7 +304,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun observeRoomFeed(collegeId: String) {
         feedObservationJob?.cancel()
         feedObservationJob = viewModelScope.launch {
-            homeFeedRepository.observeHomeFeed(collegeId).collect { cachedItems ->
+            homeFeedRepository.observeHomeFeed(collegeId)
+                .distinctUntilChanged()
+                .collect { cachedItems ->
                 if (cachedItems.isNotEmpty()) {
                     val upvotesMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
                     val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
@@ -359,9 +411,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         if (isPullToRefresh) {
             android.util.Log.d("PullToRefresh", "HomeViewModel refresh started")
+            activeLoadJob?.cancel()
         }
 
-        viewModelScope.launch {
+        val targetScopeKey = "load_${forcedSemester ?: previousProfile?.semester ?: "default"}"
+        if (!isPullToRefresh && activeLoadJob?.isActive == true && activeLoadKey == targetScopeKey) {
+            android.util.Log.d("PERF", "[PERF] Home feed load coalesced for key=$targetScopeKey")
+            return
+        }
+
+        activeLoadKey = targetScopeKey
+        activeLoadJob = viewModelScope.launch {
             if (isPullToRefresh) {
                 _isRefreshing.value = true
             }
@@ -633,6 +693,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 if (isPullToRefresh) {
                     _isRefreshing.value = false
+                }
+                if (activeLoadKey == targetScopeKey) {
+                    activeLoadKey = null
                 }
             }
         }

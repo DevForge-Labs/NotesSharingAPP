@@ -263,9 +263,6 @@ fun HomeScreen(
     }
 
     val pullToRefreshState = rememberPullToRefreshState()
-    val pullProgress = if (isRefreshing) 1f else pullToRefreshState.distanceFraction.coerceIn(0f, 1f)
-    val blurRadius = (pullProgress * 2).dp
-    val dimAlpha = pullProgress * 0.08f
 
     Box(modifier = modifier.fillMaxSize()) {
         PullToRefreshBox(
@@ -287,9 +284,10 @@ fun HomeScreen(
                 label = "home-state",
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(blurRadius)
                     .drawWithContent {
                         drawContent()
+                        val pullProgress = if (isRefreshing) 1f else pullToRefreshState.distanceFraction.coerceIn(0f, 1f)
+                        val dimAlpha = pullProgress * 0.08f
                         if (dimAlpha > 0f) {
                             drawRect(Color.Black.copy(alpha = dimAlpha))
                         }

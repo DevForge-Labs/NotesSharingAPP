@@ -26,6 +26,10 @@ import com.pravor.notessharing.data.repository.ExploreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -190,14 +194,33 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val bookmarkedIds = bookmarks.map { it.id }.toSet()
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
+                        var hasChanges = false
                         val updatedNotes = current.content.notes.map { note ->
-                            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                            val isBookmarked = bookmarkedIds.contains(note.id)
+                            if (note.isBookmarked != isBookmarked) {
+                                hasChanges = true
+                                note.copy(isBookmarked = isBookmarked)
+                            } else {
+                                note
+                            }
                         }
                         val updatedExamPrep = current.content.examPrep.map { note ->
-                            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                            val isBookmarked = bookmarkedIds.contains(note.id)
+                            if (note.isBookmarked != isBookmarked) {
+                                hasChanges = true
+                                note.copy(isBookmarked = isBookmarked)
+                            } else {
+                                note
+                            }
                         }
                         val updatedAssignments = current.content.assignments.map { note ->
-                            note.copy(isBookmarked = bookmarkedIds.contains(note.id))
+                            val isBookmarked = bookmarkedIds.contains(note.id)
+                            if (note.isBookmarked != isBookmarked) {
+                                hasChanges = true
+                                note.copy(isBookmarked = isBookmarked)
+                            } else {
+                                note
+                            }
                         }
                         val updatedVideos = current.content.videos.map { video ->
                             val isBookmarkedNow = bookmarkedIds.contains(video.id)
@@ -209,14 +232,23 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                             } else {
                                 video.bookmarks
                             }
-                            video.copy(isBookmarked = isBookmarkedNow, bookmarks = bookmarksCount)
+                            if (video.isBookmarked != isBookmarkedNow || video.bookmarks != bookmarksCount) {
+                                hasChanges = true
+                                video.copy(isBookmarked = isBookmarkedNow, bookmarks = bookmarksCount)
+                            } else {
+                                video
+                            }
                         }
-                        ExploreUiState.Success(current.content.copy(
-                            notes = updatedNotes,
-                            examPrep = updatedExamPrep,
-                            assignments = updatedAssignments,
-                            videos = updatedVideos
-                        ))
+                        if (!hasChanges) {
+                            current
+                        } else {
+                            ExploreUiState.Success(current.content.copy(
+                                notes = updatedNotes,
+                                examPrep = updatedExamPrep,
+                                assignments = updatedAssignments,
+                                videos = updatedVideos
+                            ))
+                        }
                     } else {
                         current
                     }
@@ -233,38 +265,68 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             }.collect { (upvotesMap, upvoteCountsMap) ->
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
+                        var hasChanges = false
                         val updatedPopular = current.content.popularUploads.map { item ->
-                            val isUpvoted = upvotesMap[item.id] ?: false
+                            val isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
                             val count = upvoteCountsMap[item.id] ?: item.upvotes
-                            item.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (item.isUpvoted != isUpvoted || item.upvotes != count) {
+                                hasChanges = true
+                                item.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                item
+                            }
                         }
                         val updatedNotes = current.content.notes.map { note ->
-                            val isUpvoted = upvotesMap[note.id] ?: false
+                            val isUpvoted = upvotesMap[note.id] ?: note.isUpvoted
                             val count = upvoteCountsMap[note.id] ?: note.upvotes
-                            note.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (note.isUpvoted != isUpvoted || note.upvotes != count) {
+                                hasChanges = true
+                                note.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                note
+                            }
                         }
                         val updatedExamPrep = current.content.examPrep.map { note ->
-                            val isUpvoted = upvotesMap[note.id] ?: false
+                            val isUpvoted = upvotesMap[note.id] ?: note.isUpvoted
                             val count = upvoteCountsMap[note.id] ?: note.upvotes
-                            note.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (note.isUpvoted != isUpvoted || note.upvotes != count) {
+                                hasChanges = true
+                                note.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                note
+                            }
                         }
                         val updatedAssignments = current.content.assignments.map { note ->
-                            val isUpvoted = upvotesMap[note.id] ?: false
+                            val isUpvoted = upvotesMap[note.id] ?: note.isUpvoted
                             val count = upvoteCountsMap[note.id] ?: note.upvotes
-                            note.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (note.isUpvoted != isUpvoted || note.upvotes != count) {
+                                hasChanges = true
+                                note.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                note
+                            }
                         }
                         val updatedVideos = current.content.videos.map { video ->
-                            val isUpvoted = upvotesMap[video.id] ?: false
+                            val isUpvoted = upvotesMap[video.id] ?: video.isUpvoted
                             val count = upvoteCountsMap[video.id] ?: video.upvotes
-                            video.copy(isUpvoted = isUpvoted, upvotes = count)
+                            if (video.isUpvoted != isUpvoted || video.upvotes != count) {
+                                hasChanges = true
+                                video.copy(isUpvoted = isUpvoted, upvotes = count)
+                            } else {
+                                video
+                            }
                         }
-                        ExploreUiState.Success(current.content.copy(
-                            popularUploads = updatedPopular,
-                            notes = updatedNotes,
-                            examPrep = updatedExamPrep,
-                            assignments = updatedAssignments,
-                            videos = updatedVideos
-                        ))
+                        if (!hasChanges) {
+                            current
+                        } else {
+                            ExploreUiState.Success(current.content.copy(
+                                popularUploads = updatedPopular,
+                                notes = updatedNotes,
+                                examPrep = updatedExamPrep,
+                                assignments = updatedAssignments,
+                                videos = updatedVideos
+                            ))
+                        }
                     } else {
                         current
                     }
@@ -276,42 +338,77 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.collect { downloadCountsMap ->
                 _uiState.update { current ->
                     if (current is ExploreUiState.Success) {
+                        var hasChanges = false
                         val updatedPopular = current.content.popularUploads.map { item ->
                             val count = downloadCountsMap[item.id] ?: item.downloadsCount
-                            item.copy(downloadsCount = count)
-                        }
-                        val updatedNotes = current.content.notes.map { note ->
-                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
-                            note.copy(downloadsCount = count)
-                        }
-                        val updatedExamPrep = current.content.examPrep.map { note ->
-                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
-                            note.copy(downloadsCount = count)
-                        }
-                        val updatedAssignments = current.content.assignments.map { note ->
-                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
-                            note.copy(downloadsCount = count)
-                        }
-                        val updatedVideos = current.content.videos.map { video ->
-                            val count = downloadCountsMap[video.id] ?: video.downloadsCount
-                            video.copy(downloadsCount = count)
-                        }
-                        val updatedDiscover = current.content.discoverItems.map { item ->
-                            if (item is com.pravor.notessharing.domain.model.DiscoverFeedItem.Note) {
-                                val count = downloadCountsMap[item.id] ?: item.downloadsCount
+                            if (item.downloadsCount != count) {
+                                hasChanges = true
                                 item.copy(downloadsCount = count)
                             } else {
                                 item
                             }
                         }
-                        ExploreUiState.Success(current.content.copy(
-                            popularUploads = updatedPopular,
-                            notes = updatedNotes,
-                            examPrep = updatedExamPrep,
-                            assignments = updatedAssignments,
-                            videos = updatedVideos,
-                            discoverItems = updatedDiscover
-                        ))
+                        val updatedNotes = current.content.notes.map { note ->
+                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+                            if (note.downloadsCount != count) {
+                                hasChanges = true
+                                note.copy(downloadsCount = count)
+                            } else {
+                                note
+                            }
+                        }
+                        val updatedExamPrep = current.content.examPrep.map { note ->
+                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+                            if (note.downloadsCount != count) {
+                                hasChanges = true
+                                note.copy(downloadsCount = count)
+                            } else {
+                                note
+                            }
+                        }
+                        val updatedAssignments = current.content.assignments.map { note ->
+                            val count = downloadCountsMap[note.id] ?: note.downloadsCount
+                            if (note.downloadsCount != count) {
+                                hasChanges = true
+                                note.copy(downloadsCount = count)
+                            } else {
+                                note
+                            }
+                        }
+                        val updatedVideos = current.content.videos.map { video ->
+                            val count = downloadCountsMap[video.id] ?: video.downloadsCount
+                            if (video.downloadsCount != count) {
+                                hasChanges = true
+                                video.copy(downloadsCount = count)
+                            } else {
+                                video
+                            }
+                        }
+                        val updatedDiscover = current.content.discoverItems.map { item ->
+                            if (item is com.pravor.notessharing.domain.model.DiscoverFeedItem.Note) {
+                                val count = downloadCountsMap[item.id] ?: item.downloadsCount
+                                if (item.downloadsCount != count) {
+                                    hasChanges = true
+                                    item.copy(downloadsCount = count)
+                                } else {
+                                    item
+                                }
+                            } else {
+                                item
+                            }
+                        }
+                        if (!hasChanges) {
+                            current
+                        } else {
+                            ExploreUiState.Success(current.content.copy(
+                                popularUploads = updatedPopular,
+                                notes = updatedNotes,
+                                examPrep = updatedExamPrep,
+                                assignments = updatedAssignments,
+                                videos = updatedVideos,
+                                discoverItems = updatedDiscover
+                            ))
+                        }
                     } else {
                         current
                     }
@@ -320,35 +417,34 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
 
         viewModelScope.launch {
-            _uiState.collect { state ->
-                if (state is ExploreUiState.Success) {
-                    val content = state.content
-                    val paths = mutableListOf<Pair<String, String>>()
-                    
+            _uiState
+                .mapNotNull { (it as? ExploreUiState.Success)?.content }
+                .map { content ->
+                    val list = mutableListOf<Pair<String, String>>()
                     for (note in content.notes) {
-                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
-                        paths.add(note.id to col)
+                        list.add(note.id to note.documentType)
                     }
                     for (note in content.examPrep) {
-                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
-                        paths.add(note.id to col)
+                        list.add(note.id to note.documentType)
                     }
                     for (note in content.assignments) {
-                        val col = upvoteRepository.getCollectionForDocType(note.documentType)
-                        paths.add(note.id to col)
+                        list.add(note.id to note.documentType)
                     }
                     for (video in content.videos) {
-                        val col = upvoteRepository.getCollectionForDocType(video.documentType ?: "video")
-                        paths.add(video.id to col)
+                        list.add(video.id to (video.documentType ?: "video"))
                     }
                     for (item in content.popularUploads) {
-                        val col = upvoteRepository.getCollectionForDocType(item.documentType ?: item.fileType.label)
-                        paths.add(item.id to col)
+                        list.add(item.id to (item.documentType ?: item.fileType.label))
                     }
-                    
+                    list.toList()
+                }
+                .distinctUntilChanged()
+                .collect { items ->
+                    val paths = items.map { (id, docType) ->
+                        id to upvoteRepository.getCollectionForDocType(docType)
+                    }
                     upvoteRepository.observeVisibleDocuments("Explore", paths)
                 }
-            }
         }
     }
 

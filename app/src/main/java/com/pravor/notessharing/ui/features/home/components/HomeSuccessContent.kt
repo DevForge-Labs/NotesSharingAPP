@@ -95,16 +95,6 @@ fun HomeSuccessContent(
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
-    val infiniteTransition = rememberInfiniteTransition(label = "feed-shimmer")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "feed-shimmer-alpha"
-    )
     val libraryFiles = when (myFilesUiState) {
         is MyFilesUiState.Success -> (myFilesUiState.content.savedFiles + myFilesUiState.content.uploadedFiles).take(5)
         else -> emptyList()
@@ -150,8 +140,8 @@ fun HomeSuccessContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            ForYouGridCardSkeleton(alpha = alpha, modifier = Modifier.weight(1f))
-                            ForYouGridCardSkeleton(alpha = alpha, modifier = Modifier.weight(1f))
+                            ForYouGridCardSkeleton(modifier = Modifier.weight(1f))
+                            ForYouGridCardSkeleton(modifier = Modifier.weight(1f))
                         }
                     }
                 }

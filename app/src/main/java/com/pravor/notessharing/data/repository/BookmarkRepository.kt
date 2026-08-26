@@ -73,7 +73,9 @@ class BookmarkRepository {
                                     documentType = docTypeStr
                                 )
                             }
-                            _bookmarksFlow.value = list
+                            if (_bookmarksFlow.value != list) {
+                                _bookmarksFlow.value = list
+                            }
                             hasLoadedInitial = true
                         }
                     }
