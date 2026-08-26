@@ -61,6 +61,7 @@ data class ClassroomCourseWorkEntity(
     val dueFormatted: String?,
     val creationTime: String?,
     val alternateLink: String?,
+    val associatedWithDeveloper: Boolean = false,
     val lastSyncedAt: Long = System.currentTimeMillis()
 )
 
@@ -113,4 +114,15 @@ data class ClassroomSubmissionEntity(
     val assignedGrade: Double? = null,
     val alternateLink: String? = null,
     val lastSyncedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "classroom_manual_completions")
+data class ClassroomManualCompletionEntity(
+    @PrimaryKey val id: String,
+    val userId: String,
+    val courseId: String,
+    val courseWorkId: String,
+    val completed: Boolean = true,
+    val completedAt: Long = System.currentTimeMillis(),
+    val completionSource: String = "MANUAL_EXTERNAL"
 )

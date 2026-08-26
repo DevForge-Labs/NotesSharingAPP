@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+
 class ClassroomViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
@@ -34,20 +37,25 @@ class ClassroomViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var lastConnectedEmail: String? = null
 
+    private val upcomingCountFlow = repository.observeUpcomingAssignments()
+        .map { it.size }
+        .distinctUntilChanged()
+
     private val coursesAndHiddenFlow = combine(
         repository.observeCourses(),
-        repository.observeHiddenCourseIds()
-    ) { courses, hiddenIds ->
-        Pair(courses, hiddenIds)
+        repository.observeHiddenCourseIds(),
+        upcomingCountFlow
+    ) { courses, hiddenIds, upcomingCount ->
+        Triple(courses, hiddenIds, upcomingCount)
     }
 
     val uiState: StateFlow<ClassroomUiState> = combine(
         authManager.authState,
         coursesAndHiddenFlow,
-        _isCoursesLoading,
-        _isRefreshing,
-        _coursesError
-    ) { authState, (cachedCourses, hiddenIds), isLoading, isRefreshing, error ->
+        combine(_isCoursesLoading, _isRefreshing, _coursesError) { loading, refreshing, error ->
+            Triple(loading, refreshing, error)
+        }
+    ) { authState, (cachedCourses, hiddenIds, upcomingCount), (isLoading, isRefreshing, error) ->
         when (authState) {
             is ClassroomAuthState.Disconnected -> {
                 lastConnectedEmail = null
@@ -79,6 +87,7 @@ class ClassroomViewModel(application: Application) : AndroidViewModel(applicatio
                     visibleCourses = visible,
                     hiddenCourseIds = hiddenIds,
                     syncStatus = syncStatus,
+                    upcomingCount = upcomingCount,
                     isCoursesLoading = isLoading,
                     isRefreshing = isRefreshing,
                     coursesError = error

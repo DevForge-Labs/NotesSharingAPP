@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.ui.features.classroom
+package com.pravor.notessharing.ui.features.classroom
 
 import androidx.compose.runtime.Immutable
 import com.pravor.notessharing.data.classroom.ClassroomAccount
@@ -19,6 +19,7 @@ sealed interface ClassroomUiState {
         val visibleCourses: List<ClassroomCourse> = emptyList(),
         val hiddenCourseIds: Set<String> = emptySet(),
         val syncStatus: ClassroomSyncStatus = ClassroomSyncStatus.SYNCED,
+        val upcomingCount: Int = 0,
         val isCoursesLoading: Boolean = false,
         val isRefreshing: Boolean = false,
         val coursesError: String? = null

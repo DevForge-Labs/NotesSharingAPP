@@ -274,6 +274,7 @@ class GoogleClassroomService(
             val description = item.optString("description").takeIf { it.isNotBlank() }
             val creationTime = item.optString("creationTime").takeIf { it.isNotBlank() }
             val alternateLink = item.optString("alternateLink").takeIf { it.isNotBlank() }
+            val associatedWithDeveloper = item.optBoolean("associatedWithDeveloper", false)
             val attachments = parseAttachments(item.optJSONArray("materials"))
 
             var dueFormatted: String? = null
@@ -299,6 +300,7 @@ class GoogleClassroomService(
                     dueFormatted = dueFormatted,
                     creationTime = creationTime,
                     alternateLink = alternateLink,
+                    associatedWithDeveloper = associatedWithDeveloper,
                     attachments = attachments
                 )
             )
@@ -354,15 +356,19 @@ class GoogleClassroomService(
             // 3. Link
             val linkObj = matObj.optJSONObject("link")
             if (linkObj != null) {
-                val title = linkObj.optString("title", "Web Link")
                 val url = linkObj.optString("url", "")
+                val isFormUrl = url.contains("docs.google.com/forms", ignoreCase = true) ||
+                        url.contains("forms.gle", ignoreCase = true) ||
+                        url.contains("forms.google.com", ignoreCase = true)
+                val defaultTitle = if (isFormUrl) "Google Form" else "Web Link"
+                val title = linkObj.optString("title", defaultTitle)
                 val thumbnailUrl = linkObj.optString("thumbnailUrl").takeIf { it.isNotBlank() }
                 if (url.isNotBlank()) {
                     attachments.add(
                         ClassroomAttachment(
-                            title = title.ifBlank { url },
+                            title = title.ifBlank { defaultTitle },
                             linkUrl = url,
-                            type = AttachmentType.LINK,
+                            type = if (isFormUrl) AttachmentType.FORM else AttachmentType.LINK,
                             thumbnailUrl = thumbnailUrl
                         )
                     )

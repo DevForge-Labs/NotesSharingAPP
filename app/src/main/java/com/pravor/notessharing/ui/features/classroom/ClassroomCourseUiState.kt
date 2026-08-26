@@ -21,6 +21,8 @@ data class ClassroomCourseUiState(
     val announcements: List<ClassroomAnnouncement> = emptyList(),
     val coursework: List<ClassroomCourseWork> = emptyList(),
     val submissions: Map<String, ClassroomStudentSubmission> = emptyMap(),
+    val manualCompletions: Set<String> = emptySet(),
+    val markingDoneIds: Set<String> = emptySet(),
     val selectedFilter: ClassroomContentFilter = ClassroomContentFilter.ALL,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,

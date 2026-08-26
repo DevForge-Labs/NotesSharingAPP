@@ -35,6 +35,10 @@ sealed class SubmissionProgress {
     data class AttachingToClassroom(val fileName: String) : SubmissionProgress()
     object TurningIn : SubmissionProgress()
     data class Success(val message: String = "Assignment successfully submitted!") : SubmissionProgress()
+    data class ProjectPermissionDenied(
+        val message: String = "Google Classroom requires this assignment to be submitted through the official Classroom app.",
+        val alternateLink: String? = null
+    ) : SubmissionProgress()
     data class Error(val errorMessage: String) : SubmissionProgress()
 }
 

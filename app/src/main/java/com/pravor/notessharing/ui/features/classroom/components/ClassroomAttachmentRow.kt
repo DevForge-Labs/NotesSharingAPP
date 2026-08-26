@@ -165,6 +165,9 @@ private fun resolveAttachmentMeta(attachment: ClassroomAttachment): AttachmentMe
     val urlLower = attachment.linkUrl.lowercase()
 
     return when {
+        attachment.type == AttachmentType.FORM || urlLower.contains("docs.google.com/forms") || urlLower.contains("forms.gle") || urlLower.contains("forms.google.com") -> {
+            AttachmentMeta("Google Form", Icons.Default.Description, Color(0xFF9C51B6))
+        }
         attachment.type == AttachmentType.YOUTUBE || urlLower.contains("youtube.com") || urlLower.contains("youtu.be") -> {
             AttachmentMeta("YouTube Video", Icons.Default.PlayCircleOutline, Color(0xFFFF5252))
         }

@@ -15,6 +15,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+class ClassroomProjectPermissionException(
+    message: String,
+    val rawResponse: String? = null
+) : Exception(message)
+
 class ClassroomSubmissionService(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -106,6 +111,14 @@ class ClassroomSubmissionService(
                 Log.d(TAG, "modifyAttachments HTTP ${response.code}: $bodyString")
 
                 if (!response.isSuccessful) {
+                    if (response.code == 403 && bodyString.contains("@ProjectPermissionDenied")) {
+                        return@withContext Result.failure(
+                            ClassroomProjectPermissionException(
+                                "Google Classroom requires this assignment to be submitted through the official Classroom app.",
+                                bodyString
+                            )
+                        )
+                    }
                     return@withContext Result.failure(
                         Exception("Failed to attach Drive file to submission (${response.code}): $bodyString")
                     )
@@ -145,6 +158,14 @@ class ClassroomSubmissionService(
                 Log.d(TAG, "turnIn HTTP ${response.code}: $bodyString")
 
                 if (!response.isSuccessful) {
+                    if (response.code == 403 && bodyString.contains("@ProjectPermissionDenied")) {
+                        return@withContext Result.failure(
+                            ClassroomProjectPermissionException(
+                                "Google Classroom requires this assignment to be submitted through the official Classroom app.",
+                                bodyString
+                            )
+                        )
+                    }
                     return@withContext Result.failure(
                         Exception("Failed to turn in submission (${response.code}): $bodyString")
                     )

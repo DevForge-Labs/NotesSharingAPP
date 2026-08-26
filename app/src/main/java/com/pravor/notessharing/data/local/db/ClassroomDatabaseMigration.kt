@@ -155,3 +155,37 @@ class ClassroomDatabaseMigration6To7 : Migration(6, 7) {
         """.trimIndent())
     }
 }
+
+class ClassroomDatabaseMigration7To8 : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val existingColumns = mutableSetOf<String>()
+        db.query("PRAGMA table_info(`classroom_coursework`)").use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) {
+                if (nameIndex != -1) {
+                    existingColumns.add(cursor.getString(nameIndex))
+                }
+            }
+        }
+
+        if (!existingColumns.contains("associatedWithDeveloper")) {
+            db.execSQL("ALTER TABLE `classroom_coursework` ADD COLUMN `associatedWithDeveloper` INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+}
+
+class ClassroomDatabaseMigration8To9 : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `classroom_manual_completions` (
+                `id` TEXT NOT NULL PRIMARY KEY,
+                `userId` TEXT NOT NULL,
+                `courseId` TEXT NOT NULL,
+                `courseWorkId` TEXT NOT NULL,
+                `completed` INTEGER NOT NULL DEFAULT 1,
+                `completedAt` INTEGER NOT NULL,
+                `completionSource` TEXT NOT NULL
+            )
+        """.trimIndent())
+    }
+}

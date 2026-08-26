@@ -25,6 +25,7 @@ import com.pravor.notessharing.ui.features.auth.SignUpScreen
 import com.pravor.notessharing.ui.features.auth.WelcomeScreen
 import com.pravor.notessharing.ui.features.classroom.ClassroomCourseRoute
 import com.pravor.notessharing.ui.features.classroom.ClassroomRoute
+import com.pravor.notessharing.ui.features.classroom.ClassroomUpcomingRoute
 import com.pravor.notessharing.ui.features.document.DocumentDetailRoute
 import com.pravor.notessharing.ui.features.explore.AssignmentsRoute
 import com.pravor.notessharing.ui.features.explore.DiscoverRoute
@@ -369,6 +370,18 @@ fun NavGraph(
                     navController.navigate(AppDestination.ClassroomCourse.createRoute(courseId)) {
                         launchSingleTop = true
                     }
+                },
+                onUpcomingClick = {
+                    navController.navigate(AppDestination.ClassroomUpcoming.route) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        composable(AppDestination.ClassroomUpcoming.route) {
+            ClassroomUpcomingRoute(
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

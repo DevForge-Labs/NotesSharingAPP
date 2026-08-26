@@ -148,6 +148,29 @@ fun ClassroomSubmissionBottomSheet(
         isLoadingSubmission = false
     }
 
+    // Refresh submission state when user returns to the app from Google Classroom
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, courseWork.id) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                scope.launch {
+                    val result = submissionRepo.getSubmission(courseId, courseWork.id)
+                    result.getOrNull()?.let { sub ->
+                        submission = sub
+                        if (sub.state == SubmissionState.TURNED_IN || sub.state == SubmissionState.RETURNED) {
+                            progressState = SubmissionProgress.Success("Submitted on Google Classroom")
+                            onSubmissionSuccess?.invoke(sub)
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -180,7 +203,7 @@ fun ClassroomSubmissionBottomSheet(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Assignment,
+                                imageVector = Icons.Default.Event,
                                 contentDescription = null,
                                 tint = Color(0xFFFFB45C),
                                 modifier = Modifier.size(22.dp)
@@ -205,13 +228,13 @@ fun ClassroomSubmissionBottomSheet(
                                     imageVector = Icons.Default.Event,
                                     contentDescription = null,
                                     tint = Mint,
-                                    modifier = Modifier.size(12.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
                                 Text(
                                     text = "Due ${courseWork.dueFormatted}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Mint,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Mint
                                 )
                             }
                         }
@@ -227,26 +250,66 @@ fun ClassroomSubmissionBottomSheet(
                 }
             }
 
-            // 2. Submission Status
+            // Description / Instructions (if available)
+            if (!courseWork.description.isNullOrBlank()) {
+                Text(
+                    text = courseWork.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+            }
+
+            // Teacher Attachments (if available)
+            if (courseWork.attachments.isNotEmpty()) {
+                Text(
+                    text = "Reference Materials",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    courseWork.attachments.forEach { att ->
+                        ClassroomAttachmentRow(
+                            attachment = att,
+                            onClick = { onAttachmentClick(att) }
+                        )
+                    }
+                }
+            }
+
+            // Divider
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            ) {}
+
+            // 2. Submission Content Area
             if (isLoadingSubmission) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp),
+                        .height(140.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = ElectricBlue, modifier = Modifier.size(28.dp))
+                    CircularProgressIndicator(
+                        color = ElectricBlue,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             } else {
                 val isTurnedIn = submission?.state == SubmissionState.TURNED_IN ||
                         submission?.state == SubmissionState.RETURNED
 
                 if (isTurnedIn) {
-                    // --- Already Turned In View ---
+                    // --- Already Turned In Card ---
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = Mint.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, Mint.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, Mint.copy(alpha = 0.35f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -377,8 +440,13 @@ fun ClassroomSubmissionBottomSheet(
                                     }
                                 }
 
-                                if (progressState is SubmissionProgress.Idle || progressState is SubmissionProgress.Error) {
-                                    IconButton(onClick = { selectedFile = null }) {
+                                if (progressState is SubmissionProgress.Idle ||
+                                    progressState is SubmissionProgress.Error ||
+                                    progressState is SubmissionProgress.ProjectPermissionDenied) {
+                                    IconButton(onClick = {
+                                        selectedFile = null
+                                        progressState = SubmissionProgress.Idle
+                                    }) {
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "Remove File",
@@ -426,6 +494,91 @@ fun ClassroomSubmissionBottomSheet(
                                     tint = Mint
                                 )
                             }
+                            is SubmissionProgress.ProjectPermissionDenied -> {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color(0xFF1E2638),
+                                    border = BorderStroke(1.dp, Color(0xFF384B70)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = Color(0xFF5390D9).copy(alpha = 0.2f),
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Description,
+                                                        contentDescription = null,
+                                                        tint = ElectricBlue,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = "Unable to Submit Directly",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        }
+
+                                        Text(
+                                            text = state.message,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            lineHeight = 18.sp
+                                        )
+
+                                        val classroomUrl = state.alternateLink
+                                            ?: courseWork.alternateLink
+                                            ?: submission?.alternateLink
+                                            ?: "https://classroom.google.com"
+
+                                        Button(
+                                            onClick = {
+                                                try {
+                                                    val intent = android.content.Intent(
+                                                        android.content.Intent.ACTION_VIEW,
+                                                        android.net.Uri.parse(classroomUrl)
+                                                    )
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    Toast.makeText(context, "Unable to open Google Classroom link", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = ElectricBlue,
+                                                contentColor = Color(0xFF07121E)
+                                            ),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(44.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.Assignment,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = "Open in Google Classroom",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                             is SubmissionProgress.Error -> {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
@@ -457,62 +610,64 @@ fun ClassroomSubmissionBottomSheet(
                         }
                     }
 
-                    // Submit Action Button
-                    val isSubmitting = progressState is SubmissionProgress.UploadingToDrive ||
-                            progressState is SubmissionProgress.AttachingToClassroom ||
-                            progressState is SubmissionProgress.TurningIn
+                    // Submit Action Button (Hidden when ProjectPermissionDenied fallback card is already providing the action)
+                    if (progressState !is SubmissionProgress.ProjectPermissionDenied) {
+                        val isSubmitting = progressState is SubmissionProgress.UploadingToDrive ||
+                                progressState is SubmissionProgress.AttachingToClassroom ||
+                                progressState is SubmissionProgress.TurningIn
 
-                    Button(
-                        onClick = {
-                            val file = selectedFile ?: return@Button
-                            scope.launch {
-                                executeSubmission(
-                                    context = context,
-                                    submissionRepo = submissionRepo,
-                                    courseId = courseId,
-                                    courseWork = courseWork,
-                                    file = file,
-                                    onProgress = { progressState = it },
-                                    onSuccess = { updated ->
-                                        submission = updated
-                                        progressState = SubmissionProgress.Success()
-                                        if (updated != null) {
-                                            onSubmissionSuccess?.invoke(updated)
+                        Button(
+                            onClick = {
+                                val file = selectedFile ?: return@Button
+                                scope.launch {
+                                    executeSubmission(
+                                        context = context,
+                                        submissionRepo = submissionRepo,
+                                        courseId = courseId,
+                                        courseWork = courseWork,
+                                        file = file,
+                                        onProgress = { progressState = it },
+                                        onSuccess = { updated ->
+                                            submission = updated
+                                            progressState = SubmissionProgress.Success()
+                                            if (updated != null) {
+                                                onSubmissionSuccess?.invoke(updated)
+                                            }
+                                        },
+                                        onConsentRequired = { recoveryIntent ->
+                                            consentLauncher.launch(recoveryIntent)
                                         }
-                                    },
-                                    onConsentRequired = { recoveryIntent ->
-                                        consentLauncher.launch(recoveryIntent)
-                                    }
+                                    )
+                                }
+                            },
+                            enabled = selectedFile != null && !isSubmitting,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ElectricBlue,
+                                disabledContainerColor = ElectricBlue.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            if (isSubmitting) {
+                                CircularProgressIndicator(
+                                    color = Color(0xFF07121E),
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = "Submitting...",
+                                    color = Color(0xFF07121E),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Text(
+                                    text = "Turn In Assignment",
+                                    color = Color(0xFF07121E),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
                                 )
                             }
-                        },
-                        enabled = selectedFile != null && !isSubmitting,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ElectricBlue,
-                            disabledContainerColor = ElectricBlue.copy(alpha = 0.3f)
-                        ),
-                        modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) {
-                        if (isSubmitting) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF07121E),
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = "Submitting...",
-                                color = Color(0xFF07121E),
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Text(
-                                text = "Turn In Assignment",
-                                color = Color(0xFF07121E),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
                         }
                     }
                 }
@@ -590,6 +745,23 @@ private suspend fun executeSubmission(
         }
         is SubmitAssignmentResult.ConsentRequired -> {
             onConsentRequired(result.recoveryIntent)
+        }
+        is SubmitAssignmentResult.ProjectPermissionDenied -> {
+            onProgress(
+                SubmissionProgress.ProjectPermissionDenied(
+                    message = result.message,
+                    alternateLink = result.alternateLink ?: courseWork.alternateLink
+                )
+            )
+        }
+        is SubmitAssignmentResult.AuthenticationError -> {
+            onProgress(SubmissionProgress.Error("Your Google Classroom session needs to be refreshed."))
+        }
+        is SubmitAssignmentResult.NetworkError -> {
+            onProgress(SubmissionProgress.Error("Couldn't connect to Google Classroom. Check your internet connection and try again."))
+        }
+        is SubmitAssignmentResult.UploadError -> {
+            onProgress(SubmissionProgress.Error(result.message))
         }
         is SubmitAssignmentResult.Error -> {
             onProgress(SubmissionProgress.Error(result.message))

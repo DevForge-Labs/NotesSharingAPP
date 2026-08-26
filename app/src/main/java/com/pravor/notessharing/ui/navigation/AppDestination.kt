@@ -28,6 +28,7 @@ sealed class AppDestination(
     data object Home : AppDestination("home", "Home", Icons.Filled.Home)
     data object Explore : AppDestination("explore", "Explore", Icons.Filled.Explore)
     data object Classroom : AppDestination("classroom", "Classroom", Icons.Filled.School)
+    data object ClassroomUpcoming : AppDestination("classroom/upcoming", "Upcoming Assignments", Icons.Filled.School)
     data object ClassroomCourse : AppDestination("classroom/course/{courseId}", "Course Detail", Icons.Filled.School) {
         fun createRoute(courseId: String) = "classroom/course/${android.net.Uri.encode(courseId)}"
     }

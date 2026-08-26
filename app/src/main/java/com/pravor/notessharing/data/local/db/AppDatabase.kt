@@ -16,6 +16,7 @@ import com.pravor.notessharing.data.local.entity.ClassroomFileEntity
 import com.pravor.notessharing.data.local.entity.ClassroomHiddenCourseEntity
 import com.pravor.notessharing.data.local.entity.ClassroomMaterialEntity
 import com.pravor.notessharing.data.local.entity.ClassroomSubmissionEntity
+import com.pravor.notessharing.data.local.entity.ClassroomManualCompletionEntity
 import com.pravor.notessharing.data.local.entity.ExploreItemEntity
 import com.pravor.notessharing.data.local.entity.HomeFeedItemEntity
 import com.pravor.notessharing.data.local.entity.UserProfileEntity
@@ -32,9 +33,10 @@ import com.pravor.notessharing.data.local.entity.UserProfileEntity
         ClassroomAttachmentEntity::class,
         ClassroomFileEntity::class,
         ClassroomHiddenCourseEntity::class,
-        ClassroomSubmissionEntity::class
+        ClassroomSubmissionEntity::class,
+        ClassroomManualCompletionEntity::class
     ],
-    version = 7,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -58,7 +60,9 @@ abstract class AppDatabase : RoomDatabase() {
                     ClassroomDatabaseMigration(),
                     ClassroomDatabaseMigration4To5(),
                     ClassroomDatabaseMigration5To6(),
-                    ClassroomDatabaseMigration6To7()
+                    ClassroomDatabaseMigration6To7(),
+                    ClassroomDatabaseMigration7To8(),
+                    ClassroomDatabaseMigration8To9()
                 )
                 .fallbackToDestructiveMigration()
                 .build()

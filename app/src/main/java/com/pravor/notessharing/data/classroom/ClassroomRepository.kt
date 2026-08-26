@@ -579,6 +579,7 @@ class ClassroomRepository(
                     dueFormatted = cw.dueFormatted,
                     creationTime = cw.creationTime,
                     alternateLink = cw.alternateLink,
+                    associatedWithDeveloper = cw.associatedWithDeveloper,
                     attachments = atts
                 )
             }
@@ -591,7 +592,7 @@ class ClassroomRepository(
         val syncKey = "${userId}_${account}_coursework_${courseId}"
 
         if (!force && ClassroomSyncManager.isFresh(syncKey)) {
-            Log.d(TAG, "CourseWork for course $courseId is fresh (< 3m). Skipping network fetch.")
+            Log.d(TAG, "CourseWork for course $courseId are fresh (< 3m). Skipping network fetch.")
             return@withContext Result.success(emptyList())
         }
 
@@ -618,6 +619,7 @@ class ClassroomRepository(
                             local.description != cw.description ||
                             local.dueFormatted != cw.dueFormatted ||
                             local.alternateLink != cw.alternateLink ||
+                            local.associatedWithDeveloper != cw.associatedWithDeveloper ||
                             areAttachmentsChanged(existingAtts, cw.attachments)
 
                     if (isContentChanged) {
@@ -632,6 +634,7 @@ class ClassroomRepository(
                                 dueFormatted = cw.dueFormatted,
                                 creationTime = cw.creationTime,
                                 alternateLink = cw.alternateLink,
+                                associatedWithDeveloper = cw.associatedWithDeveloper,
                                 lastSyncedAt = System.currentTimeMillis()
                             )
                         )
@@ -751,6 +754,160 @@ class ClassroomRepository(
             classroomDao.upsertSubmissions(entities)
         }
     }
+
+    // --- 6. Manual External Completions ---
+
+    fun observeManualCompletions(courseId: String): Flow<Set<String>> {
+        val userId = getUserId()
+        return classroomDao.observeManualCompletions(courseId, userId).map { it.toSet() }
+    }
+
+    suspend fun saveManualCompletion(courseId: String, courseWorkId: String, completed: Boolean = true) = withContext(Dispatchers.IO) {
+        val userId = getUserId()
+        if (completed) {
+            val entity = com.pravor.notessharing.data.local.entity.ClassroomManualCompletionEntity(
+                id = "${userId}_${courseWorkId}",
+                userId = userId,
+                courseId = courseId,
+                courseWorkId = courseWorkId,
+                completed = true,
+                completedAt = System.currentTimeMillis(),
+                completionSource = "MANUAL_EXTERNAL"
+            )
+            classroomDao.upsertManualCompletion(entity)
+            Log.d(TAG, "Persisted manual completion for courseWork $courseWorkId")
+        } else {
+            classroomDao.deleteManualCompletion(courseWorkId, userId)
+            Log.d(TAG, "Removed manual completion for courseWork $courseWorkId")
+        }
+    }
+
+    suspend fun deleteManualCompletion(courseWorkId: String) = withContext(Dispatchers.IO) {
+        val userId = getUserId()
+        classroomDao.deleteManualCompletion(courseWorkId, userId)
+    }
+
+    // --- 7. Upcoming Assignments Aggregation ---
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observeUpcomingAssignments(): Flow<List<com.pravor.notessharing.domain.model.classroom.ClassroomUpcomingAssignment>> {
+        return authManager.currentSessionFlow.flatMapLatest { session ->
+            val uid = session.firebaseUid
+            val account = session.classroomAccount
+            if (uid.isNullOrBlank() || account.isNullOrBlank()) {
+                flowOf(emptyList())
+            } else {
+                val coursesFlow = classroomDao.observeCourses(uid, account)
+                val hiddenFlow = classroomDao.observeHiddenCourseIds(uid, account)
+                val cwFlow = classroomDao.observeAllCourseWork(uid)
+                val attFlow = classroomDao.observeAllAttachments(uid)
+                val subFlow = classroomDao.observeAllSubmissions(uid)
+                val manualFlow = classroomDao.observeAllManualCompletions(uid)
+
+                val classConfigFlow = combine(coursesFlow, hiddenFlow) { courses, hidden ->
+                    Pair(courses, hidden.toSet())
+                }
+
+                val resourcesFlow = combine(cwFlow, attFlow, subFlow, manualFlow) { cw, att, sub, man ->
+                    CourseWorkResourceBundle(cw, att, sub, man.toSet())
+                }
+
+                combine(classConfigFlow, resourcesFlow) { (courses, hiddenSet), bundle ->
+                    val visibleCoursesMap = courses
+                        .filter { it.courseId !in hiddenSet }
+                        .associate { it.courseId to it.name }
+
+                    if (visibleCoursesMap.isEmpty() || bundle.courseWork.isEmpty()) {
+                        return@combine emptyList()
+                    }
+
+                    val attachmentsByParent = bundle.attachments.groupBy { it.parentId }
+                    val submissionsByCwId = bundle.submissions.associateBy { it.courseWorkId }
+                    val now = System.currentTimeMillis()
+
+                    bundle.courseWork.mapNotNull { cwEntity ->
+                        val courseName = visibleCoursesMap[cwEntity.courseId] ?: return@mapNotNull null
+                        val dueMillis = com.pravor.notessharing.domain.model.classroom.ClassroomDateUtils.parseDueDateTimeToEpochMillis(cwEntity.dueFormatted)
+                            ?: return@mapNotNull null
+
+                        // 1. Must be a future due date
+                        if (dueMillis <= now) return@mapNotNull null
+
+                        // 2. Must not be locally marked Done in Campus Pages
+                        if (cwEntity.courseWorkId in bundle.manualCompletions) return@mapNotNull null
+
+                        // 3. Must not be submitted or returned in Google Classroom
+                        val subEntity = submissionsByCwId[cwEntity.courseWorkId]
+                        val subState = subEntity?.let {
+                            try {
+                                SubmissionState.valueOf(it.state)
+                            } catch (e: Exception) {
+                                SubmissionState.UNKNOWN
+                            }
+                        }
+                        if (subState == SubmissionState.TURNED_IN || subState == SubmissionState.RETURNED) {
+                            return@mapNotNull null
+                        }
+
+                        val domainAttachments = attachmentsByParent[cwEntity.courseWorkId].orEmpty().map { att ->
+                            ClassroomAttachment(
+                                title = att.title,
+                                linkUrl = att.linkUrl,
+                                type = try {
+                                    AttachmentType.valueOf(att.type)
+                                } catch (e: Exception) {
+                                    AttachmentType.LINK
+                                },
+                                thumbnailUrl = att.thumbnailUrl
+                            )
+                        }
+
+                        val domainCw = ClassroomCourseWork(
+                            id = cwEntity.courseWorkId,
+                            title = cwEntity.title,
+                            description = cwEntity.description,
+                            dueFormatted = cwEntity.dueFormatted,
+                            creationTime = cwEntity.creationTime,
+                            alternateLink = cwEntity.alternateLink,
+                            associatedWithDeveloper = cwEntity.associatedWithDeveloper,
+                            attachments = domainAttachments
+                        )
+
+                        val domainSub = subEntity?.let {
+                            ClassroomStudentSubmission(
+                                id = it.submissionId,
+                                courseId = it.courseId,
+                                courseWorkId = it.courseWorkId,
+                                userId = it.userId,
+                                state = subState ?: SubmissionState.NEW,
+                                late = it.late,
+                                assignedGrade = it.assignedGrade,
+                                alternateLink = it.alternateLink
+                            )
+                        }
+
+                        com.pravor.notessharing.domain.model.classroom.ClassroomUpcomingAssignment(
+                            courseWork = domainCw,
+                            courseId = cwEntity.courseId,
+                            courseName = courseName,
+                            dueEpochMillis = dueMillis,
+                            submission = domainSub,
+                            isLocallyDone = false
+                        )
+                    }
+                    .distinctBy { "${it.courseId}_${it.courseWork.id}" }
+                    .sortedBy { it.dueEpochMillis }
+                }
+            }
+        }
+    }
+
+    private data class CourseWorkResourceBundle(
+        val courseWork: List<ClassroomCourseWorkEntity>,
+        val attachments: List<ClassroomAttachmentEntity>,
+        val submissions: List<ClassroomSubmissionEntity>,
+        val manualCompletions: Set<String>
+    )
 
     private fun extractDriveFileId(url: String): String? {
         val patterns = listOf(

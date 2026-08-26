@@ -16,12 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,9 +41,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pravor.notessharing.domain.model.classroom.AttachmentType
 import com.pravor.notessharing.domain.model.classroom.ClassroomAttachment
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourseWork
 import com.pravor.notessharing.domain.model.classroom.SubmissionState
+import com.pravor.notessharing.domain.model.classroom.hasActionableExternalTask
+import com.pravor.notessharing.domain.model.classroom.ClassroomDateUtils
+import com.pravor.notessharing.domain.model.classroom.primaryExternalLinkAttachment
+import com.pravor.notessharing.domain.model.classroom.primaryFormAttachment
 import com.pravor.notessharing.ui.theme.ElectricBlue
 import com.pravor.notessharing.ui.theme.Mint
 
@@ -46,13 +57,24 @@ fun ClassroomCourseWorkCard(
     courseWork: ClassroomCourseWork,
     onAttachmentClick: (ClassroomAttachment) -> Unit,
     submissionState: SubmissionState? = null,
+    isLocallyDone: Boolean = false,
+    isMarkingDone: Boolean = false,
+    courseName: String? = null,
     onSubmitClick: ((ClassroomCourseWork) -> Unit)? = null,
+    onOpenExternalTaskClick: ((ClassroomCourseWork, String) -> Unit)? = null,
+    onMarkAsDoneClick: ((ClassroomCourseWork) -> Unit)? = null,
+    onDoneStatusClick: ((ClassroomCourseWork) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val isSubmitted = submissionState == SubmissionState.TURNED_IN ||
+    val isRealSubmitted = submissionState == SubmissionState.TURNED_IN ||
             submissionState == SubmissionState.RETURNED
 
-    val formattedDueDate = formatDueDateTime(courseWork.dueFormatted)
+    val formattedDueDate = ClassroomDateUtils.formatDueDateTime(courseWork.dueFormatted)
+
+    val formAttachment = courseWork.primaryFormAttachment
+    val externalLinkAttachment = courseWork.primaryExternalLinkAttachment
+    val isExternalTask = formAttachment != null || (externalLinkAttachment != null && courseWork.attachments.none { it.type == AttachmentType.DRIVE_FILE })
+    val externalUrl = formAttachment?.linkUrl ?: externalLinkAttachment?.linkUrl
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -107,6 +129,17 @@ fun ClassroomCourseWorkCard(
                         lineHeight = 22.sp
                     )
 
+                    // Secondary Subordinate: Course Name if provided
+                    if (!courseName.isNullOrBlank()) {
+                        Text(
+                            text = courseName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ElectricBlue,
+                            fontSize = 12.sp
+                        )
+                    }
+
                     // Secondary Subordinate: Due date directly below title
                     if (!formattedDueDate.isNullOrBlank()) {
                         Row(
@@ -117,13 +150,13 @@ fun ClassroomCourseWorkCard(
                             Icon(
                                 imageVector = Icons.Default.Event,
                                 contentDescription = null,
-                                tint = if (isSubmitted) MaterialTheme.colorScheme.onSurfaceVariant else Mint,
+                                tint = if (isRealSubmitted || isLocallyDone) MaterialTheme.colorScheme.onSurfaceVariant else Mint,
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
                                 text = formattedDueDate,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (isSubmitted) MaterialTheme.colorScheme.onSurfaceVariant else Mint,
+                                color = if (isRealSubmitted || isLocallyDone) MaterialTheme.colorScheme.onSurfaceVariant else Mint,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -153,115 +186,184 @@ fun ClassroomCourseWorkCard(
                 }
             }
 
-            // 4. Action Area: Real Submission Status
-            if (onSubmitClick != null) {
-                Spacer(Modifier.height(2.dp))
-                if (isSubmitted) {
-                    // --- Already Submitted State: Subtle Green-Tinted Action Container ---
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Mint.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, Mint.copy(alpha = 0.35f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .clickable { onSubmitClick(courseWork) }
+            // 4. Action Area: Real Submission Status vs External Task vs Upload
+            Spacer(Modifier.height(2.dp))
+            if (isRealSubmitted) {
+                // --- Real Google Classroom Submitted State ---
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Mint.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, Mint.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clickable { onSubmitClick?.invoke(courseWork) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Mint,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Mint,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "View Submission",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Mint
+                        )
+                    }
+                }
+            } else if (isLocallyDone) {
+                // --- Campus Pages Local Done State (Tappable clean status) ---
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Mint.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, Mint.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDoneStatusClick?.invoke(courseWork) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Mint,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
                             Text(
-                                text = "View Submission",
+                                text = "Done",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = Mint
                             )
+                            Text(
+                                text = "Completed in Campus Pages",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Mint.copy(alpha = 0.85f),
+                                fontSize = 11.sp
+                            )
                         }
                     }
-                } else {
-                    // --- Not Submitted State: Clear Primary "Submit Work" Action ---
-                    OutlinedButton(
-                        onClick = { onSubmitClick(courseWork) },
+                }
+            } else if (isExternalTask && externalUrl != null) {
+                // --- Google Form / External Link Task Action ---
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val taskButtonLabel = if (formAttachment != null) "Open Google Form" else "Open Link"
+                    val taskButtonIcon = if (formAttachment != null) Icons.Default.Description else Icons.Default.Link
+
+                    Button(
+                        onClick = { onOpenExternalTaskClick?.invoke(courseWork, externalUrl) },
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.5f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = ElectricBlue
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ElectricBlue,
+                            contentColor = Color(0xFF07121E)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(46.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.UploadFile,
+                            imageVector = taskButtonIcon,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Submit Work",
+                            text = taskButtonLabel,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold
                         )
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { onMarkAsDoneClick?.invoke(courseWork) },
+                        enabled = !isMarkingDone,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        if (isMarkingDone) {
+                            CircularProgressIndicator(
+                                color = ElectricBlue,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Marking as done...",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Mint,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Mark as Done",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
-            }
-        }
-    }
-}
-
-/**
- * Formats a raw due date string into "Due MMM d, yyyy · h:mm a" cleanly.
- */
-private fun formatDueDateTime(rawDue: String?): String? {
-    if (rawDue.isNullOrBlank()) return null
-    return try {
-        val clean = rawDue.removePrefix("Due ").trim()
-        val parts = clean.split(",")
-        val datePart = parts[0].trim()
-        val timePart = if (parts.size > 1) parts[1].trim() else null
-
-        val dmy = datePart.split("/")
-        if (dmy.size == 3) {
-            val day = dmy[0].toIntOrNull()
-            val month = dmy[1].toIntOrNull()
-            val year = dmy[2].toIntOrNull()
-            if (day != null && month != null && year != null) {
-                val months = arrayOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-                val monthStr = if (month in 1..12) months[month] else month.toString()
-                val formattedDate = "$monthStr $day, $year"
-
-                val formattedTime = if (timePart != null) {
-                    val hm = timePart.split(":")
-                    if (hm.size >= 2) {
-                        val hours = hm[0].toIntOrNull() ?: 0
-                        val mins = hm[1].toIntOrNull() ?: 0
-                        val amPm = if (hours >= 12) "PM" else "AM"
-                        val h12 = if (hours % 12 == 0) 12 else if (hours > 12) hours - 12 else hours
-                        String.format("%d:%02d %s", h12, mins, amPm)
-                    } else timePart
-                } else null
-
-                if (formattedTime != null) {
-                    "Due $formattedDate · $formattedTime"
-                } else {
-                    "Due $formattedDate"
+            } else if (onSubmitClick != null) {
+                // --- Normal File Submission: "Submit Work" Action ---
+                OutlinedButton(
+                    onClick = { onSubmitClick(courseWork) },
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = ElectricBlue
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.UploadFile,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Submit Work",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            } else {
-                if (clean.startsWith("Due", ignoreCase = true)) clean else "Due $clean"
             }
-        } else {
-            if (clean.startsWith("Due", ignoreCase = true)) clean else "Due $clean"
         }
-    } catch (e: Exception) {
-        if (rawDue.startsWith("Due", ignoreCase = true)) rawDue else "Due $rawDue"
     }
 }

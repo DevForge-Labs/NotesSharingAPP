@@ -63,12 +63,14 @@ import com.pravor.notessharing.ui.features.classroom.components.ClassroomConnect
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomCourseCard
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomDisconnectDialog
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomDisconnectRow
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomUpcomingCard
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.theme.ElectricBlue
 
 @Composable
 fun ClassroomRoute(
     onCourseClick: (String) -> Unit = {},
+    onUpcomingClick: () -> Unit = {},
     viewModel: ClassroomViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,6 +90,7 @@ fun ClassroomRoute(
         },
         onDisconnectConfirmed = viewModel::disconnectClassroom,
         onCourseClick = onCourseClick,
+        onUpcomingClick = onUpcomingClick,
         onRefresh = viewModel::refreshAuth,
         onRetryCourses = { viewModel.syncCourses(isPullToRefresh = false) },
         onSaveHiddenCourses = viewModel::saveHiddenCourses
@@ -101,6 +104,7 @@ fun ClassroomScreen(
     onConnectClick: () -> Unit,
     onDisconnectConfirmed: () -> Unit,
     onCourseClick: (String) -> Unit,
+    onUpcomingClick: () -> Unit = {},
     onRefresh: () -> Unit,
     onRetryCourses: () -> Unit,
     onSaveHiddenCourses: (Set<String>) -> Unit,
@@ -241,7 +245,16 @@ fun ClassroomScreen(
                             )
                         }
 
-                        // 2. "My Classes" Section Header with Class Visibility Filter Action
+                        // 2. Upcoming Assignments Summary Card (Placed directly below sync card and above My Classes)
+                        item(key = "upcoming-card") {
+                            ClassroomUpcomingCard(
+                                upcomingCount = uiState.upcomingCount,
+                                isLoading = uiState.isCoursesLoading && uiState.allCourses.isEmpty(),
+                                onClick = onUpcomingClick
+                            )
+                        }
+
+                        // 3. "My Classes" Section Header with Class Visibility Filter Action
                         item(key = "classes-header") {
                             val hasHidden = uiState.hiddenCourseIds.isNotEmpty()
                             Row(

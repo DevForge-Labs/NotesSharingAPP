@@ -27,13 +27,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private data class CourseResources(
     val materials: List<ClassroomMaterial>,
     val announcements: List<ClassroomAnnouncement>,
     val coursework: List<ClassroomCourseWork>,
-    val submissions: Map<String, ClassroomStudentSubmission>
+    val submissions: Map<String, ClassroomStudentSubmission>,
+    val manualCompletions: Set<String>
 )
 
 class ClassroomCourseViewModel(
@@ -53,25 +55,28 @@ class ClassroomCourseViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
     private val _selectedFilter = MutableStateFlow(ClassroomContentFilter.ALL)
+    private val _markingDoneIds = MutableStateFlow<Set<String>>(emptySet())
 
     private val resourcesFlow = combine(
         repository.observeMaterials(courseId),
         repository.observeAnnouncements(courseId),
         repository.observeCourseWork(courseId),
-        repository.observeSubmissions(courseId)
-    ) { materials, announcements, coursework, submissions ->
-        CourseResources(materials, announcements, coursework, submissions)
+        repository.observeSubmissions(courseId),
+        repository.observeManualCompletions(courseId)
+    ) { materials, announcements, coursework, submissions, manualCompletions ->
+        CourseResources(materials, announcements, coursework, submissions, manualCompletions)
     }
 
     val uiState: StateFlow<ClassroomCourseUiState> = combine(
         _course,
         resourcesFlow,
-        _selectedFilter,
+        combine(_markingDoneIds, _selectedFilter) { markingIds, filter -> Pair(markingIds, filter) },
         combine(_isLoading, _isRefreshing, _errorMessage) { loading, refreshing, error ->
             Triple(loading, refreshing, error)
         }
-    ) { course, resources, filter, status ->
-        val (materials, announcements, coursework, submissions) = resources
+    ) { course, resources, controlState, status ->
+        val (materials, announcements, coursework, submissions, manualCompletions) = resources
+        val (markingDoneIds, filter) = controlState
         val (isLoading, isRefreshing, error) = status
 
         ClassroomCourseUiState(
@@ -80,6 +85,8 @@ class ClassroomCourseViewModel(
             announcements = announcements,
             coursework = coursework,
             submissions = submissions,
+            manualCompletions = manualCompletions,
+            markingDoneIds = markingDoneIds,
             selectedFilter = filter,
             isLoading = isLoading && materials.isEmpty() && announcements.isEmpty() && coursework.isEmpty() && course == null,
             isRefreshing = isRefreshing,
@@ -109,6 +116,40 @@ class ClassroomCourseViewModel(
     fun onSubmissionCompleted(submission: ClassroomStudentSubmission) {
         viewModelScope.launch {
             repository.saveSubmission(submission)
+        }
+    }
+
+    fun markExternalAssignmentDone(
+        courseWork: ClassroomCourseWork,
+        onConsentRequired: ((android.content.Intent) -> Unit)? = null,
+        onResult: ((com.pravor.notessharing.data.classroom.MarkExternalAssignmentResult) -> Unit)? = null
+    ) {
+        if (_markingDoneIds.value.contains(courseWork.id)) return
+        viewModelScope.launch {
+            _markingDoneIds.update { it + courseWork.id }
+            val result = submissionRepository.turnInExternalAssignment(courseId, courseWork.id)
+            _markingDoneIds.update { it - courseWork.id }
+
+            when (result) {
+                is com.pravor.notessharing.data.classroom.MarkExternalAssignmentResult.ConsentRequired -> {
+                    onConsentRequired?.invoke(result.recoveryIntent)
+                }
+                else -> {
+                    onResult?.invoke(result)
+                }
+            }
+        }
+    }
+
+    fun confirmLocalDone(courseWork: ClassroomCourseWork) {
+        viewModelScope.launch {
+            repository.saveManualCompletion(courseId, courseWork.id, completed = true)
+        }
+    }
+
+    fun undoExternalAssignmentDone(courseWork: ClassroomCourseWork) {
+        viewModelScope.launch {
+            repository.saveManualCompletion(courseId, courseWork.id, completed = false)
         }
     }
 

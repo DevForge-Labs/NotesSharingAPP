@@ -1,6 +1,11 @@
 package com.pravor.notessharing.ui.features.classroom
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -36,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,6 +66,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pravor.notessharing.data.classroom.MarkExternalAssignmentResult
 import com.pravor.notessharing.domain.model.classroom.ClassroomAttachment
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourse
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourseWork
@@ -70,6 +78,14 @@ import com.pravor.notessharing.ui.features.classroom.components.ClassroomMateria
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomSubmissionBottomSheet
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import com.pravor.notessharing.ui.theme.ElectricBlue
+
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.unit.sp
+import com.pravor.notessharing.ui.theme.Mint
 
 @Composable
 fun ClassroomCourseRoute(
@@ -91,6 +107,24 @@ fun ClassroomCourseRoute(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var pendingCourseWorkForConsent by remember { mutableStateOf<ClassroomCourseWork?>(null) }
+    val consentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val pending = pendingCourseWorkForConsent
+            if (pending != null) {
+                viewModel.markExternalAssignmentDone(pending)
+            }
+        } else {
+            Toast.makeText(context, "Permission consent was not completed.", Toast.LENGTH_SHORT).show()
+        }
+        pendingCourseWorkForConsent = null
+    }
+
+    var explainingCourseWork by remember { mutableStateOf<ClassroomCourseWork?>(null) }
+    var undoingCourseWork by remember { mutableStateOf<ClassroomCourseWork?>(null) }
+
     ClassroomCourseScreen(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -100,8 +134,276 @@ fun ClassroomCourseRoute(
         onSubmissionSuccess = viewModel::onSubmissionCompleted,
         onAttachmentClick = { attachment ->
             viewModel.handleAttachmentClick(context, attachment)
+        },
+        onOpenExternalTaskClick = { _, url ->
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Could not open link", Toast.LENGTH_SHORT).show()
+            }
+        },
+        onMarkAsDoneClick = { courseWork ->
+            viewModel.markExternalAssignmentDone(
+                courseWork = courseWork,
+                onConsentRequired = { recoveryIntent ->
+                    pendingCourseWorkForConsent = courseWork
+                    consentLauncher.launch(recoveryIntent)
+                },
+                onResult = { result ->
+                    when (result) {
+                        is MarkExternalAssignmentResult.TurnedIn -> {
+                            Toast.makeText(context, "Turned in on Google Classroom!", Toast.LENGTH_SHORT).show()
+                        }
+                        is MarkExternalAssignmentResult.ProjectPermissionDenied -> {
+                            // Show explanation dialog every time user taps Mark as Done when API restricts turnIn
+                            explainingCourseWork = courseWork
+                        }
+                        is MarkExternalAssignmentResult.AuthenticationError -> {
+                            Toast.makeText(context, "Authentication required. Please reconnect Classroom.", Toast.LENGTH_LONG).show()
+                        }
+                        is MarkExternalAssignmentResult.NetworkError -> {
+                            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                        }
+                        is MarkExternalAssignmentResult.Error -> {
+                            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {}
+                    }
+                }
+            )
+        },
+        onDoneStatusClick = { courseWork ->
+            undoingCourseWork = courseWork
         }
     )
+
+    // 1. Mark as Done Explanation Dialog (Google Developer-Project Limitation)
+    if (explainingCourseWork != null) {
+        val targetCourseWork = explainingCourseWork!!
+        val classroomUrl = targetCourseWork.alternateLink
+            ?: uiState.submissions[targetCourseWork.id]?.alternateLink
+            ?: "https://classroom.google.com"
+
+        AlertDialog(
+            onDismissRequest = { explainingCourseWork = null },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color(0xFF141920),
+            tonalElevation = 6.dp,
+            icon = {
+                Surface(
+                    shape = CircleShape,
+                    color = ElectricBlue.copy(alpha = 0.15f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = ElectricBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            },
+            title = {
+                Text(
+                    text = "Mark as Done",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Google Classroom isn't allowing Campus Pages to mark this assignment as officially turned in.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp
+                    )
+                    Text(
+                        text = "You can mark it as Done in Campus Pages to keep track of your progress, or open Google Classroom to complete the official submission there.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            explainingCourseWork = null
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(classroomUrl))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Could not open Google Classroom", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ElectricBlue,
+                            contentColor = Color(0xFF07121E)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Assignment,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Open Google Classroom",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val cw = targetCourseWork
+                            explainingCourseWork = null
+                            viewModel.confirmLocalDone(cw)
+                            Toast.makeText(context, "Marked as Done in Campus Pages", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Mint,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Mark as Done Here",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    TextButton(
+                        onClick = { explainingCourseWork = null },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            },
+            dismissButton = null
+        )
+    }
+
+    // 2. Undo Confirmation Dialog (When user taps an already-done status card)
+    if (undoingCourseWork != null) {
+        val targetCourseWork = undoingCourseWork!!
+        AlertDialog(
+            onDismissRequest = { undoingCourseWork = null },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color(0xFF141920),
+            tonalElevation = 6.dp,
+            icon = {
+                Surface(
+                    shape = CircleShape,
+                    color = Mint.copy(alpha = 0.15f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Mint,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            },
+            title = {
+                Text(
+                    text = "Assignment marked as done",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "This assignment is marked as Done only in Campus Pages. Google Classroom's official submission status is separate.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val cw = targetCourseWork
+                            undoingCourseWork = null
+                            viewModel.undoExternalAssignmentDone(cw)
+                            Toast.makeText(context, "Marked as Not Done", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        Text(
+                            text = "Mark as Not Done",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    TextButton(
+                        onClick = { undoingCourseWork = null },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            },
+            dismissButton = null
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,6 +416,9 @@ fun ClassroomCourseScreen(
     onFilterSelected: (ClassroomContentFilter) -> Unit,
     onSubmissionSuccess: (ClassroomStudentSubmission) -> Unit,
     onAttachmentClick: (ClassroomAttachment) -> Unit,
+    onOpenExternalTaskClick: ((ClassroomCourseWork, String) -> Unit)? = null,
+    onMarkAsDoneClick: ((ClassroomCourseWork) -> Unit)? = null,
+    onDoneStatusClick: ((ClassroomCourseWork) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val bottomPadding = LocalBottomBarPadding.current
@@ -317,11 +622,18 @@ fun ClassroomCourseScreen(
                     } else {
                         items(uiState.coursework, key = { "coursework_${it.id}" }) { item ->
                             val currentSubState = uiState.submissions[item.id]?.state
+                            val isLocallyDone = uiState.manualCompletions.contains(item.id)
+                            val isMarkingDone = uiState.markingDoneIds.contains(item.id)
                             ClassroomCourseWorkCard(
                                 courseWork = item,
                                 onAttachmentClick = onAttachmentClick,
                                 submissionState = currentSubState,
-                                onSubmitClick = { selectedCourseWorkForSubmission = item }
+                                isLocallyDone = isLocallyDone,
+                                isMarkingDone = isMarkingDone,
+                                onSubmitClick = { selectedCourseWorkForSubmission = item },
+                                onOpenExternalTaskClick = onOpenExternalTaskClick,
+                                onMarkAsDoneClick = onMarkAsDoneClick,
+                                onDoneStatusClick = onDoneStatusClick
                             )
                         }
                     }

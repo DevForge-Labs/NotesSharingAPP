@@ -12,6 +12,7 @@ import com.pravor.notessharing.data.local.entity.ClassroomFileEntity
 import com.pravor.notessharing.data.local.entity.ClassroomHiddenCourseEntity
 import com.pravor.notessharing.data.local.entity.ClassroomMaterialEntity
 import com.pravor.notessharing.data.local.entity.ClassroomSubmissionEntity
+import com.pravor.notessharing.data.local.entity.ClassroomManualCompletionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -123,4 +124,30 @@ interface ClassroomDao {
 
     @Query("DELETE FROM classroom_submissions WHERE courseId = :courseId AND userId = :userId AND courseWorkId NOT IN (:keepCourseWorkIds)")
     suspend fun deleteStaleSubmissions(courseId: String, userId: String, keepCourseWorkIds: List<String>): Int
+
+    // --- Manual External Completions ---
+    @Query("SELECT courseWorkId FROM classroom_manual_completions WHERE courseId = :courseId AND userId = :userId AND completed = 1")
+    fun observeManualCompletions(courseId: String, userId: String): Flow<List<String>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertManualCompletion(entity: ClassroomManualCompletionEntity): Long
+
+    @Query("DELETE FROM classroom_manual_completions WHERE courseWorkId = :courseWorkId AND userId = :userId")
+    suspend fun deleteManualCompletion(courseWorkId: String, userId: String): Int
+
+    @Query("DELETE FROM classroom_manual_completions WHERE userId = :userId")
+    suspend fun clearManualCompletionsForUser(userId: String): Int
+
+    // --- Aggregated Queries for Upcoming Assignments ---
+    @Query("SELECT * FROM classroom_coursework WHERE userId = :userId")
+    fun observeAllCourseWork(userId: String): Flow<List<ClassroomCourseWorkEntity>>
+
+    @Query("SELECT * FROM classroom_attachments WHERE userId = :userId")
+    fun observeAllAttachments(userId: String): Flow<List<ClassroomAttachmentEntity>>
+
+    @Query("SELECT * FROM classroom_submissions WHERE userId = :userId")
+    fun observeAllSubmissions(userId: String): Flow<List<ClassroomSubmissionEntity>>
+
+    @Query("SELECT courseWorkId FROM classroom_manual_completions WHERE userId = :userId AND completed = 1")
+    fun observeAllManualCompletions(userId: String): Flow<List<String>>
 }
