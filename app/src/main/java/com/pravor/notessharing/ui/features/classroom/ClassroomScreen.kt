@@ -236,7 +236,8 @@ fun ClassroomScreen(
                         item(key = "account-card") {
                             ClassroomAccountCard(
                                 account = uiState.account,
-                                syncStatus = uiState.syncStatus
+                                syncStatus = uiState.syncStatus,
+                                onRefreshClick = onRefresh
                             )
                         }
 
