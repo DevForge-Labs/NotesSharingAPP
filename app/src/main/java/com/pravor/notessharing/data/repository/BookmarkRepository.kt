@@ -61,6 +61,11 @@ class BookmarkRepository {
                                 val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
                                 val dateStr = "Saved " + sdf.format(java.util.Date(bookmarkedAt))
                                 
+                                val college = data["college"] as? String
+                                val branch = data["branch"] as? String
+                                val semester = data["semester"] as? String
+                                val subjectId = data["subjectId"] as? String
+                                
                                 StudyFile(
                                     id = docId,
                                     title = title,
@@ -70,7 +75,11 @@ class BookmarkRepository {
                                     upvotes = 0,
                                     thumbnailUrl = thumbnailUrl,
                                     subject = subject,
-                                    documentType = docTypeStr
+                                    documentType = docTypeStr,
+                                    college = college,
+                                    branch = branch,
+                                    semester = semester,
+                                    subjectId = subjectId
                                 )
                             }
                             if (_bookmarksFlow.value != list) {
@@ -106,7 +115,11 @@ class BookmarkRepository {
             upvotes = feedItem.upvotes,
             thumbnailUrl = feedItem.thumbnailUrl,
             subject = feedItem.subject ?: feedItem.tags.firstOrNull() ?: "General",
-            documentType = docType
+            documentType = docType,
+            examYear = feedItem.examYear,
+            examType = feedItem.examType,
+            sectionDisplay = feedItem.sectionDisplay,
+            branch = feedItem.tags.firstOrNull()
         )
         
         // Optimistic UI Update: immediately emit in-memory
@@ -116,7 +129,7 @@ class BookmarkRepository {
 
         try {
             val bookmarkId = "${userId}_${docId}"
-            val data = mapOf(
+            val data = mutableMapOf<String, Any?>(
                 "userId" to userId,
                 "documentId" to docId,
                 "bookmarkedAt" to System.currentTimeMillis(),
@@ -126,7 +139,11 @@ class BookmarkRepository {
                 "thumbnailUrl" to feedItem.thumbnailUrl,
                 "uploaderName" to feedItem.uploaderName
             )
-            bookmarksCollection.document(bookmarkId).set(data).await()
+            if (!feedItem.examYear.isNullOrBlank()) data["examYear"] = feedItem.examYear
+            if (!feedItem.examType.isNullOrBlank()) data["examType"] = feedItem.examType
+            if (!feedItem.sectionDisplay.isNullOrBlank()) data["sectionDisplay"] = feedItem.sectionDisplay
+            
+            bookmarksCollection.document(bookmarkId).set(data.filterValues { it != null }).await()
             try {
                 com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(
                     com.google.firebase.FirebaseApp.getInstance().applicationContext
@@ -154,7 +171,7 @@ class BookmarkRepository {
             } else {
                 rawDocType
             }
-            val data = mapOf(
+            val data = mutableMapOf<String, Any?>(
                 "userId" to userId,
                 "documentId" to docId,
                 "bookmarkedAt" to System.currentTimeMillis(),
@@ -164,7 +181,15 @@ class BookmarkRepository {
                 "thumbnailUrl" to studyFile.thumbnailUrl,
                 "uploaderName" to "Contributor"
             )
-            bookmarksCollection.document(bookmarkId).set(data).await()
+            if (!studyFile.college.isNullOrBlank()) data["college"] = studyFile.college
+            if (!studyFile.branch.isNullOrBlank()) data["branch"] = studyFile.branch
+            if (!studyFile.semester.isNullOrBlank()) data["semester"] = studyFile.semester
+            if (!studyFile.subjectId.isNullOrBlank()) data["subjectId"] = studyFile.subjectId
+            if (!studyFile.examYear.isNullOrBlank()) data["examYear"] = studyFile.examYear
+            if (!studyFile.examType.isNullOrBlank()) data["examType"] = studyFile.examType
+            if (!studyFile.sectionDisplay.isNullOrBlank()) data["sectionDisplay"] = studyFile.sectionDisplay
+
+            bookmarksCollection.document(bookmarkId).set(data.filterValues { it != null }).await()
             try {
                 com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(
                     com.google.firebase.FirebaseApp.getInstance().applicationContext

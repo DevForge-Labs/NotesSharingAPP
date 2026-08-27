@@ -91,11 +91,12 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
     )
 
     private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
+    private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
 
-    private suspend fun getUserCollegeId(): String? {
-        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return null
+    private suspend fun getAcademicScope(): com.pravor.notessharing.core.util.AcademicScope {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return com.pravor.notessharing.core.util.AcademicScope(collegeId = "")
         val profile = profileRepository.getProfile(currentUid)
-        return profile?.college?.takeIf { it.isNotBlank() }
+        return com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(profile, metadataRepository)
     }
 
     init {
@@ -117,34 +118,31 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
                 }
             }
         }
-        // Background refresh on start (Stale-While-Revalidate)
+        // Background refresh and Profile Change Observer (Stale-While-Revalidate)
         viewModelScope.launch {
-            val collegeId = getUserCollegeId()
-            if (!collegeId.isNullOrBlank()) {
-                repository.refresh(collegeId)
+            if (currentUid != null) {
+                profileRepository.observeProfile(currentUid).collect { profile ->
+                    val scope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(profile, metadataRepository)
+                    repository.refresh(scope)
+                }
             } else {
-                repository.refresh("")
+                val scope = getAcademicScope()
+                repository.refresh(scope)
             }
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            val collegeId = getUserCollegeId()
-            if (!collegeId.isNullOrBlank()) {
-                repository.refresh(collegeId)
-            } else {
-                repository.refresh("")
-            }
+            val scope = getAcademicScope()
+            repository.refresh(scope)
         }
     }
 
     fun loadMore() {
         viewModelScope.launch {
-            val collegeId = getUserCollegeId()
-            if (!collegeId.isNullOrBlank()) {
-                repository.loadMore(collegeId)
-            }
+            val scope = getAcademicScope()
+            repository.loadMore(scope)
         }
     }
 

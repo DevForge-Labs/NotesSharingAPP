@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pravor.notessharing.ui.navigation.AppDestination
 
 private data class ResponsiveNavTokens(
@@ -37,7 +38,8 @@ private data class ResponsiveNavTokens(
     val boxPadding: Dp,
     val itemHorizontalPadding: Dp,
     val iconLabelSpacer: Dp,
-    val textStyle: TextStyle
+    val textStyle: TextStyle,
+    val useShortClassroomLabel: Boolean
 )
 
 @Composable
@@ -49,7 +51,7 @@ fun BottomNavBar(
 ) {
     val mandatoryGestureInset = WindowInsets.mandatorySystemGestures.asPaddingValues().calculateBottomPadding()
     val isGestureMode = mandatoryGestureInset > 0.dp
-    val bottomPadding = if (isGestureMode) 0.dp else 20.dp
+    val bottomPadding = if (isGestureMode) 0.dp else 16.dp
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -70,36 +72,37 @@ fun BottomNavBar(
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val availableWidth = maxWidth
 
-        // Derive responsive layout tokens dynamically based on available width constraints.
-        // Recalculated ONLY when container dimensions change (e.g. device width, rotation, split screen),
-        // never during animation frames.
+        // Compute responsive sizing tokens based on device width without moving items
         val tokens = remember(availableWidth, labelMediumStyle, labelSmallStyle) {
             when {
                 availableWidth >= 400.dp -> {
                     ResponsiveNavTokens(
-                        outerHorizontalPadding = 18.dp,
-                        boxPadding = 6.dp,
+                        outerHorizontalPadding = 16.dp,
+                        boxPadding = 5.dp,
                         itemHorizontalPadding = 6.dp,
-                        iconLabelSpacer = 6.dp,
-                        textStyle = labelMediumStyle
+                        iconLabelSpacer = 5.dp,
+                        textStyle = labelMediumStyle,
+                        useShortClassroomLabel = false
                     )
                 }
-                availableWidth >= 350.dp -> {
+                availableWidth >= 365.dp -> {
                     ResponsiveNavTokens(
-                        outerHorizontalPadding = 14.dp,
+                        outerHorizontalPadding = 12.dp,
                         boxPadding = 4.dp,
                         itemHorizontalPadding = 4.dp,
                         iconLabelSpacer = 4.dp,
-                        textStyle = labelMediumStyle
+                        textStyle = labelSmallStyle.copy(fontSize = 11.5.sp),
+                        useShortClassroomLabel = false
                     )
                 }
                 else -> {
                     ResponsiveNavTokens(
                         outerHorizontalPadding = 10.dp,
-                        boxPadding = 2.dp,
+                        boxPadding = 3.dp,
                         itemHorizontalPadding = 3.dp,
                         iconLabelSpacer = 3.dp,
-                        textStyle = labelSmallStyle
+                        textStyle = labelSmallStyle.copy(fontSize = 11.sp),
+                        useShortClassroomLabel = true
                     )
                 }
             }
@@ -149,6 +152,12 @@ fun BottomNavBar(
                             label = "bottom-nav-border"
                         )
 
+                        val labelText = if (tokens.useShortClassroomLabel && destination == AppDestination.Classroom) {
+                            "Class"
+                        } else {
+                            destination.label
+                        }
+
                         Surface(
                             onClick = { onDestinationClick(destination) },
                             modifier = Modifier
@@ -181,13 +190,13 @@ fun BottomNavBar(
                                     ) {
                                         Spacer(modifier = Modifier.width(tokens.iconLabelSpacer))
                                         Text(
-                                            text = destination.label,
+                                            text = labelText,
                                             style = tokens.textStyle,
                                             color = itemColor,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
                                             softWrap = false,
-                                            overflow = TextOverflow.Visible
+                                            overflow = TextOverflow.Clip
                                         )
                                     }
                                 }

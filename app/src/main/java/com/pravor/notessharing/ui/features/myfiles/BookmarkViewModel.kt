@@ -26,21 +26,51 @@ sealed interface BookmarkUiState {
 }
 
 class BookmarkViewModel(
-    private val repository: BookmarkRepository = BookmarkRepository()
+    private val repository: BookmarkRepository = BookmarkRepository(),
+    private val profileRepository: com.pravor.notessharing.data.repository.ProfileRepository = com.pravor.notessharing.data.repository.ProfileRepository(),
+    private val metadataRepository: com.pravor.notessharing.data.repository.MetadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<BookmarkUiState>(BookmarkUiState.Loading)
     val uiState: StateFlow<BookmarkUiState> = _uiState.asStateFlow()
+    private var currentScope: com.pravor.notessharing.core.util.AcademicScope? = null
 
     init {
-        // Reactively observe bookmarksFlow from repository
+        // Reactively observe user profile and bookmarksFlow from repository
         viewModelScope.launch {
-            BookmarkRepository.bookmarksFlow.collect { list ->
-                _uiState.update {
-                    if (list.isEmpty()) BookmarkUiState.Empty else BookmarkUiState.Success(list)
+            val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+            if (currentUid != null) {
+                profileRepository.observeProfile(currentUid).collect { profile ->
+                    currentScope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(profile, metadataRepository)
+                    applyFilteredBookmarks(BookmarkRepository.bookmarksFlow.value)
                 }
             }
         }
+
+        viewModelScope.launch {
+            BookmarkRepository.bookmarksFlow.collect { list ->
+                applyFilteredBookmarks(list)
+            }
+        }
         loadBookmarksForCurrentUser()
+    }
+
+    private fun applyFilteredBookmarks(list: List<StudyFile>) {
+        val scope = currentScope
+        val filtered = if (scope != null && scope.isCollegeValid) {
+            list.filter { item ->
+                scope.isDocumentPermitted(
+                    docCollege = item.college,
+                    docBranch = item.branch,
+                    docSemester = item.semester,
+                    docSubjectId = item.subjectId
+                )
+            }
+        } else {
+            list
+        }
+        _uiState.update {
+            if (filtered.isEmpty()) BookmarkUiState.Empty else BookmarkUiState.Success(filtered)
+        }
     }
 
     fun loadBookmarksForCurrentUser() {

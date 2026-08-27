@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -81,10 +82,10 @@ fun NotificationPreferencesScreen(
             }
         }
     ) { innerPadding ->
-        val statusSubtitle = if (uiState.enabledCount == 7) {
+        val statusSubtitle = if (uiState.enabledCount == 8) {
             "All notification categories enabled"
         } else {
-            "${uiState.enabledCount} of 7 notification categories enabled"
+            "${uiState.enabledCount} of 8 notification categories enabled"
         }
 
         LazyColumn(
@@ -125,6 +126,17 @@ fun NotificationPreferencesScreen(
                     icon = Icons.Default.Person,
                     checked = uiState.personal,
                     onCheckedChange = { viewModel.toggleCategory("pref_notifications_personal", it) },
+                    enabled = uiState.masterEnabled
+                )
+            }
+
+            item(key = "category-classroom") {
+                PreferenceCategoryCard(
+                    title = "Classroom Notifications",
+                    description = "Reminders for pending assignments, upcoming tests, quizzes, and other important Google Classroom deadlines.",
+                    icon = Icons.Default.School,
+                    checked = uiState.classroom,
+                    onCheckedChange = { viewModel.toggleCategory("pref_notifications_classroom", it) },
                     enabled = uiState.masterEnabled
                 )
             }

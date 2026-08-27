@@ -21,31 +21,31 @@ class ExploreRoomRepository(
     context: Context = NotesSharingApplication.appContext,
     private val exploreDao: ExploreDao = AppDatabase.getDatabase(context).exploreDao()
 ) {
-    fun observeExploreContent(collegeId: String): Flow<ExploreContent?> {
-        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        return exploreDao.observeExploreItems(canonicalCollegeId).map { entities ->
+    fun observeExploreContent(scopeKey: String): Flow<ExploreContent?> {
+        if (scopeKey.isBlank()) return kotlinx.coroutines.flow.flowOf(null)
+        return exploreDao.observeExploreItems(scopeKey).map { entities ->
             if (entities.isEmpty()) return@map null
             assembleExploreContent(entities)
         }
     }
 
-    suspend fun getCachedContent(collegeId: String): ExploreContent? = withContext(Dispatchers.IO) {
-        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        val entities = exploreDao.getCachedExploreItems(canonicalCollegeId)
+    suspend fun getCachedContent(scopeKey: String): ExploreContent? = withContext(Dispatchers.IO) {
+        if (scopeKey.isBlank()) return@withContext null
+        val entities = exploreDao.getCachedExploreItems(scopeKey)
         if (entities.isEmpty()) return@withContext null
         assembleExploreContent(entities)
     }
 
-    suspend fun saveExploreContent(collegeId: String, content: ExploreContent) = withContext(Dispatchers.IO) {
-        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
+    suspend fun saveExploreContent(scopeKey: String, content: ExploreContent) = withContext(Dispatchers.IO) {
+        if (scopeKey.isBlank()) return@withContext
         val entities = mutableListOf<ExploreItemEntity>()
 
-        content.popularUploads.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "POPULAR")) }
-        content.notes.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "NOTES")) }
-        content.examPrep.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "EXAM_PREP")) }
-        content.assignments.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "ASSIGNMENTS")) }
-        content.videos.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "VIDEOS")) }
-        content.discoverItems.forEach { entities.add(it.toExploreEntity(canonicalCollegeId, "DISCOVER")) }
+        content.popularUploads.forEach { entities.add(it.toExploreEntity(scopeKey, "POPULAR")) }
+        content.notes.forEach { entities.add(it.toExploreEntity(scopeKey, "NOTES")) }
+        content.examPrep.forEach { entities.add(it.toExploreEntity(scopeKey, "EXAM_PREP")) }
+        content.assignments.forEach { entities.add(it.toExploreEntity(scopeKey, "ASSIGNMENTS")) }
+        content.videos.forEach { entities.add(it.toExploreEntity(scopeKey, "VIDEOS")) }
+        content.discoverItems.forEach { entities.add(it.toExploreEntity(scopeKey, "DISCOVER")) }
 
         exploreDao.upsertExploreItems(entities)
     }

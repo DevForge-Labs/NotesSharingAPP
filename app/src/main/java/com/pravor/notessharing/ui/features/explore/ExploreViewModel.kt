@@ -51,6 +51,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private val upvoteRepository = com.pravor.notessharing.data.repository.UpvoteRepository()
 
     private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
+    private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
     private val _allowedSubjects = MutableStateFlow<List<CatalogSubject>>(emptyList())
     val allowedSubjects: StateFlow<List<CatalogSubject>> = _allowedSubjects.asStateFlow()
 
@@ -156,29 +157,40 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var exploreObservationJob: kotlinx.coroutines.Job? = null
+    private var lastObservedScopeKey: String? = null
+
     init {
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
             android.util.Log.d("PERF", "[PERF] Explore startup START thread=${Thread.currentThread().name}")
         }
         viewModelScope.launch {
             val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-            val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
-            val userCollege = userProfile?.college?.takeIf { it.isNotBlank() } ?: "kiit"
-
-            launch {
-                exploreRepository.observeExploreContent(userCollege).collect { roomContent ->
-                    if (roomContent != null) {
-                        _uiState.update { ExploreUiState.Success(mergeWithLatestStats(roomContent)) }
+            if (currentUid != null) {
+                profileRepository.observeProfile(currentUid).collect { profile ->
+                    val scope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(profile, metadataRepository)
+                    if (scope.scopeKey != lastObservedScopeKey) {
+                        lastObservedScopeKey = scope.scopeKey
+                        exploreObservationJob?.cancel()
+                        exploreObservationJob = launch {
+                            exploreRepository.observeExploreContent(scope.scopeKey).collect { roomContent ->
+                                if (roomContent != null) {
+                                    _uiState.update { ExploreUiState.Success(mergeWithLatestStats(roomContent)) }
+                                }
+                            }
+                        }
+                        val cached = exploreRepository.getCachedContent(scope.scopeKey)
+                        if (cached != null) {
+                            _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cached)) }
+                        }
+                        loadRealDocuments(silent = cached != null)
+                        loadCatalogSubjects()
                     }
                 }
+            } else {
+                loadRealDocuments()
+                loadCatalogSubjects()
             }
-
-            val cached = exploreRepository.getCachedContent(userCollege)
-            if (cached != null) {
-                _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cached)) }
-            }
-            loadRealDocuments(silent = cached != null)
-            loadCatalogSubjects()
         }
 
         viewModelScope.launch {
@@ -460,14 +472,15 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             if (com.pravor.notessharing.BuildConfig.DEBUG) {
                 android.util.Log.d("PERF", "[PERF] Explore load START thread=${Thread.currentThread().name}")
             }
-            var userCollege: String? = null
+            var activeScope: AcademicScope? = null
             try {
                 val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
                 val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
-                userCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+                val scope = AcademicScopeResolver.resolve(userProfile, metadataRepository)
+                activeScope = scope
 
-                if (userCollege.isNullOrBlank()) {
-                    android.util.Log.d("ExploreViewModel", "No college in user profile. Skipping explore content fetch.")
+                if (!scope.isCollegeValid) {
+                    android.util.Log.d("ExploreViewModel", "No valid college in user profile. Skipping explore content fetch.")
                     val emptyContent = ExploreContent(
                         topics = emptyList(),
                         popularUploads = emptyList(),
@@ -486,10 +499,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (!isPullToRefresh) {
-                    val cachedContent = exploreRepository.getCachedContent(userCollege)
+                    val cachedContent = exploreRepository.getCachedContent(scope.scopeKey)
                     if (cachedContent != null) {
                         _uiState.update { ExploreUiState.Success(mergeWithLatestStats(cachedContent)) }
-                        if (!exploreRepository.isCacheExpired(userCollege)) {
+                        if (!exploreRepository.isCacheExpired(scope.scopeKey)) {
                             return@launch
                         }
                     } else {
@@ -499,7 +512,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                val freshContent = exploreRepository.fetchExploreContent(userCollege)
+                val freshContent = exploreRepository.fetchExploreContent(scope)
                 _uiState.update { ExploreUiState.Success(mergeWithLatestStats(freshContent)) }
 
                 if (com.pravor.notessharing.BuildConfig.DEBUG) {
@@ -514,8 +527,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
             } catch (e: Exception) {
-                val activeCollege = userCollege
-                val isCachedAvailable = activeCollege != null && exploreRepository.getCachedContent(activeCollege) != null
+                val cachedKey = activeScope?.scopeKey
+                val isCachedAvailable = cachedKey != null && exploreRepository.getCachedContent(cachedKey) != null
                 if (!isCachedAvailable) {
                     _uiState.update {
                         ExploreUiState.Error(e.localizedMessage ?: "Failed to load explore content")

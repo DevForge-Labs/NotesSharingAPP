@@ -101,7 +101,10 @@ fun VideoDetailRoute(
                 thumbnailGenerated = null,
                 thumbnailType = null,
                 documentType = "YouTube Resource",
-                youtubeThumbnailUrl = video.youtubeThumbnailUrl
+                youtubeThumbnailUrl = video.youtubeThumbnailUrl,
+                college = video.college,
+                branch = video.branch,
+                semester = video.semester
             )
             ContinueLearningRepository(context).saveLastOpened(
                 id = video.id,
@@ -114,7 +117,10 @@ fun VideoDetailRoute(
                 thumbnailGenerated = null,
                 thumbnailType = null,
                 documentType = "YouTube Resource",
-                youtubeThumbnailUrl = video.youtubeThumbnailUrl
+                youtubeThumbnailUrl = video.youtubeThumbnailUrl,
+                college = video.college,
+                branch = video.branch,
+                semester = video.semester
             )
             com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
         }

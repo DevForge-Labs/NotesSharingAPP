@@ -289,33 +289,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 previousProfile = profile
                 _uploadsCount.value = profile?.totalUploads ?: 0
 
-                val college = profile?.college?.takeIf { it.isNotBlank() } ?: "kiit"
-                if (isFirstProfileEmission || collegeChanged) {
-                    observeRoomFeed(college)
-                }
-
-                val semester = profile?.semester
+                val scope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(profile, metadataRepository)
                 if (isFirstProfileEmission || collegeChanged || semesterChanged || branchChanged) {
+                    observeRoomFeed(scope.scopeKey)
                     lastReloadCause = "ProfileUpdate"
-                    loadRealDocuments(semester)
+                    loadRealDocuments(profile?.semester)
                 }
             }
         }
     }
 
-    private fun observeRoomFeed(collegeId: String) {
+    private fun observeRoomFeed(scopeKey: String) {
         feedObservationJob?.cancel()
         feedObservationJob = viewModelScope.launch {
-            homeFeedRepository.observeHomeFeed(collegeId)
+            homeFeedRepository.observeHomeFeed(scopeKey)
                 .distinctUntilChanged()
                 .collect { cachedItems ->
-                if (cachedItems.isNotEmpty()) {
+                val nonVideoCached = cachedItems.filter { isEligibleHomeFeedItem(it) }
+                if (nonVideoCached.isNotEmpty()) {
                     val upvotesMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value
                     val upvoteCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.upvoteCountsFlow.value
                     val downloadCountsMap = com.pravor.notessharing.data.repository.UpvoteRepository.downloadCountsFlow.value
                     val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
 
-                    val updatedCached = cachedItems.map { item ->
+                    val updatedCached = nonVideoCached.map { item ->
                         val isUpvoted = upvotesMap[item.id] ?: item.isUpvoted
                         val upvotesCount = upvoteCountsMap[item.id] ?: item.upvotes
                         val downloadsCount = downloadCountsMap[item.id] ?: item.downloadsCount
@@ -539,7 +536,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         emptyList()
                     }
 
-                    val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
+                    val collections = listOf("notes", "pyqs", "assignments", "cheatsheets")
                     val allDocs = coroutineScope {
                         val deferreds = collections.map { col ->
                             async {
@@ -597,7 +594,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         val id = data["documentId"] as? String ?: ""
                         val title = data["title"] as? String ?: ""
                         if (id.isBlank() || title.isBlank()) return@mapNotNull null
+                        
+                        // Completely exclude video and playlist resources for Home Feed
+                        if (isVideoOrPlaylistResource(data)) return@mapNotNull null
+
+                        val matchesScope = com.pravor.notessharing.core.util.AcademicScope(
+                            collegeId = canonicalCollegeId,
+                            branchId = rawBranch,
+                            semester = semester,
+                            subjectIds = subjectIds
+                        ).isDocumentPermitted(
+                            docCollege = data["college"] as? String ?: canonicalCollegeId,
+                            docBranch = data["branch"] as? String,
+                            docSemester = data["semester"] as? String,
+                            docSubjectId = data["subjectId"] as? String
+                        )
+                        if (!matchesScope) return@mapNotNull null
+
                         val item = documentToFeedItem(data)
+                        if (!isEligibleHomeFeedItem(item)) return@mapNotNull null
+
                         val timestamp = data["uploadedAt"] as? Long ?: 0L
                         item to timestamp
                     }.sortedWith(
@@ -613,12 +629,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val feedAssemblyDuration = System.currentTimeMillis() - feedAssemblyStartTime
                     android.util.Log.d("PERF", "[PERF] MainThreadWork END operation=Feed assembly duration=${feedAssemblyDuration}ms thread=${Thread.currentThread().name}")
                     
-                    if (canonicalCollegeId.isNotBlank() && finalFeedItems.isNotEmpty()) {
-                        homeFeedRepository.saveHomeFeed(canonicalCollegeId, finalFeedItems)
+                    val currentAcademicScope = com.pravor.notessharing.core.util.AcademicScope(
+                        collegeId = canonicalCollegeId,
+                        branchId = rawBranch,
+                        semester = semester,
+                        subjectIds = subjectIds
+                    )
+
+                    if (currentAcademicScope.isCollegeValid && finalFeedItems.isNotEmpty()) {
+                        homeFeedRepository.saveHomeFeed(currentAcademicScope.scopeKey, finalFeedItems)
                     }
 
                     _uiState.update { current ->
-                        val lastOpened = recentlyOpenedRepository.getLastOpened()
+                        val lastOpened = recentlyOpenedRepository.getLastOpened(currentAcademicScope)
                         if (current is HomeUiState.Success) {
                             current.copy(content = current.content.copy(
                                 feedItems = finalFeedItems,
@@ -671,7 +694,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         emptyList()
                     }
                     val fallbackItems = if (cachedFallback.isNotEmpty()) {
-                        cachedFallback.map { item -> item.copy(isSaved = bookmarkedIds.contains(item.id)) }
+                        cachedFallback.filter { isEligibleHomeFeedItem(it) }.map { item -> item.copy(isSaved = bookmarkedIds.contains(item.id)) }
                     } else {
                         emptyList()
                     }
@@ -805,6 +828,48 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             sectionDisplay = sectionDisplayField,
             youtubeThumbnailUrl = youtubeThumbnailUrl
         )
+    }
+
+    private fun isVideoOrPlaylistResource(data: Map<String, Any>): Boolean {
+        val docType = (data["documentType"] as? String ?: data["type"] as? String ?: "").trim()
+        val contentType = (data["contentType"] as? String ?: "").trim()
+        val hasYoutubeLink = (data["hasYoutubeLink"] as? Boolean) == true || (data["hasYoutubeLink"] as? String)?.lowercase(java.util.Locale.ROOT) == "true"
+        val sourceType = (data["sourceType"] as? String ?: "").trim()
+        val youtubeUrl = (data["youtubeUrl"] as? String ?: "").trim()
+        val youtubeVideoId = (data["youtubeVideoId"] as? String ?: data["youtubeId"] as? String ?: "").trim()
+        val resourceType = (data["resourceType"] as? String ?: "").trim()
+        val source = (data["source"] as? String ?: "").trim()
+
+        return docType.equals("VIDEO", ignoreCase = true) ||
+                docType.equals("YouTube Resource", ignoreCase = true) ||
+                docType.equals("Videos", ignoreCase = true) ||
+                docType.equals("Video", ignoreCase = true) ||
+                contentType.equals("VIDEO", ignoreCase = true) ||
+                hasYoutubeLink ||
+                sourceType.equals("youtube", ignoreCase = true) ||
+                sourceType.equals("video", ignoreCase = true) ||
+                youtubeUrl.isNotBlank() ||
+                youtubeVideoId.isNotBlank() ||
+                resourceType.equals("VIDEO", ignoreCase = true) ||
+                resourceType.equals("PLAYLIST", ignoreCase = true) ||
+                source.equals("YOUTUBE", ignoreCase = true)
+    }
+
+    private fun isEligibleHomeFeedItem(item: FeedItem): Boolean {
+        val isVideoType = item.fileType == FileType.Video
+        val hasYoutubeId = !item.youtubeVideoId.isNullOrBlank()
+        val hasYoutubeUrl = !item.youtubeUrl.isNullOrBlank()
+        val hasYoutubeThumbnail = !item.youtubeThumbnailUrl.isNullOrBlank()
+        val docTypeVideo = item.documentType.equals("VIDEO", ignoreCase = true) ||
+                item.documentType.equals("YouTube Resource", ignoreCase = true) ||
+                item.documentType.equals("Videos", ignoreCase = true) ||
+                item.documentType.equals("Video", ignoreCase = true)
+        val typeVideo = item.type.equals("VIDEO", ignoreCase = true) ||
+                item.type.equals("YouTube Resource", ignoreCase = true) ||
+                item.type.equals("Videos", ignoreCase = true) ||
+                item.type.equals("Video", ignoreCase = true)
+
+        return !isVideoType && !hasYoutubeId && !hasYoutubeUrl && !hasYoutubeThumbnail && !docTypeVideo && !typeVideo
     }
 
     fun selectCategory(category: Category) {

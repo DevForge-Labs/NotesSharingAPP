@@ -71,6 +71,14 @@ fun NotesSharingApp(
                 }
             }
 
+            val courseId = intent.getStringExtra("course_id")
+            if (!courseId.isNullOrBlank()) {
+                navController.navigate(AppDestination.ClassroomCourse.createRoute(courseId)) {
+                    popUpTo(AppDestination.Home.route)
+                }
+                intent.removeExtra("course_id")
+            }
+
             val docId = intent.getStringExtra("document_id")
             android.util.Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "NotesSharingApp onNewIntent listener - docId: $docId")
             if (!docId.isNullOrBlank()) {
@@ -138,10 +146,17 @@ fun NotesSharingApp(
                     
                     if (isCurrentlyAuth) {
                         val intent = activity?.intent
+                        val courseId = intent?.getStringExtra("course_id")
                         val docId = intent?.getStringExtra("document_id")
                         val videoId = intent?.getStringExtra("video_id")
                         val notificationId = intent?.getStringExtra("notification_id")
-                        if (!notificationId.isNullOrBlank()) {
+                        if (!courseId.isNullOrBlank()) {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                            navController.navigate(AppDestination.ClassroomCourse.createRoute(courseId))
+                            intent.removeExtra("course_id")
+                        } else if (!notificationId.isNullOrBlank()) {
                             navController.navigate(AppDestination.Home.route) {
                                 popUpTo(0) { inclusive = true }
                             }

@@ -1,7 +1,7 @@
 package com.pravor.notessharing.data.repository
 
 import com.pravor.notessharing.core.util.*
-
+import com.pravor.notessharing.BuildConfig
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pravor.notessharing.domain.model.VideoDetail
 import com.pravor.notessharing.domain.model.toVideoDetail
@@ -16,7 +16,10 @@ class VideoDetailRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
 
-    suspend fun getVideo(videoId: String): VideoDetail? {
+    suspend fun getVideo(
+        videoId: String,
+        requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null
+    ): VideoDetail? {
         val startTime = System.currentTimeMillis()
         android.util.Log.d("PERF", "[PERF] getVideo START id=$videoId thread=${Thread.currentThread().name}")
         return try {
@@ -44,6 +47,23 @@ class VideoDetailRepository {
             } else {
                 null
             }
+
+            // Academic Authorization Scope Validation
+            if (result != null && requestingScope != null && requestingScope.isCollegeValid) {
+                val isPermitted = requestingScope.isDocumentPermitted(
+                    docCollege = result.college,
+                    docBranch = result.branch,
+                    docSemester = result.semester,
+                    docSubjectId = null
+                )
+                if (!isPermitted) {
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.w("SECURITY", "[SECURITY] Video $videoId access DENIED for scope: ${requestingScope.scopeKey}")
+                    }
+                    return null
+                }
+            }
+
             val duration = System.currentTimeMillis() - startTime
             android.util.Log.d("PERF", "[PERF] getVideo END duration=${duration}ms id=$videoId thread=${Thread.currentThread().name}")
             result
@@ -104,7 +124,10 @@ class VideoDetailRepository {
                 source.equals("YOUTUBE", ignoreCase = true)
     }
 
-    suspend fun getRelatedVideos(video: VideoDetail): List<VideoDetail> = coroutineScope {
+    suspend fun getRelatedVideos(
+        video: VideoDetail,
+        requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null
+    ): List<VideoDetail> = coroutineScope {
         val startTime = System.currentTimeMillis()
         android.util.Log.d("PERF", "[PERF] getRelatedVideos START id=${video.id} thread=${Thread.currentThread().name}")
         
@@ -156,6 +179,18 @@ class VideoDetailRepository {
                 
                 val col = d.reference.parent.id
                 val mappedVideo = data.toVideoDetail(d.id, col)
+
+                // Academic Scope Validation
+                if (requestingScope != null && requestingScope.isCollegeValid) {
+                    val isPermitted = requestingScope.isDocumentPermitted(
+                        docCollege = mappedVideo.college,
+                        docBranch = mappedVideo.branch,
+                        docSemester = mappedVideo.semester,
+                        docSubjectId = null
+                    )
+                    if (!isPermitted) continue
+                }
+
                 val candidateNormalizedSubject = normalizeSubject(mappedVideo.subject)
                 
                 if (candidateNormalizedSubject == currentNormalizedSubject) {

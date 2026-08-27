@@ -39,26 +39,17 @@ open class SearchRepository(
      */
     suspend fun search(
         query: String,
-        userCollegeId: String? = null,
+        scope: AcademicScope,
         selectedDocumentTypes: Set<String> = emptySet()
     ): List<SearchResultModel> = withContext(Dispatchers.IO) {
-        if (appId.isBlank() || apiKey.isBlank()) {
+        if (appId.isBlank() || apiKey.isBlank() || !scope.isCollegeValid) {
             return@withContext emptyList()
         }
 
-        val canonicalCollegeId = userCollegeId?.takeIf { it.isNotBlank() }?.let {
-            com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(it)
-        }
-
-        if (canonicalCollegeId.isNullOrBlank()) {
-            android.util.Log.d("SearchRepository", "No college provided for search. Returning empty results.")
-            return@withContext emptyList()
-        }
-
-        val cacheKey = "${canonicalCollegeId}_$query"
+        val cacheKey = "${scope.scopeKey}_$query"
         val cachedResults = searchCache.get(cacheKey)
         val rawResults = cachedResults ?: try {
-            val networkResults = executeNetworkSearch(query, canonicalCollegeId, emptySet())
+            val networkResults = executeNetworkSearch(query, scope, emptySet())
             searchCache.put(cacheKey, networkResults)
             networkResults
         } catch (e: Exception) {
@@ -87,20 +78,44 @@ open class SearchRepository(
         }
     }
 
+    suspend fun search(
+        query: String,
+        userCollegeId: String?,
+        selectedDocumentTypes: Set<String> = emptySet()
+    ): List<SearchResultModel> {
+        val scope = AcademicScope(collegeId = userCollegeId ?: "")
+        return search(query, scope, selectedDocumentTypes)
+    }
+
     internal open suspend fun executeNetworkSearch(
         query: String,
-        userCollegeId: String,
+        scope: AcademicScope,
         selectedDocumentTypes: Set<String>
     ): List<SearchResultModel> {
-        val collegeFilter = "college:$userCollegeId"
-        val filterExpression = if (selectedDocumentTypes.isNotEmpty()) {
+        val filterParts = mutableListOf<String>()
+        filterParts.add("college:${scope.canonicalCollegeId}")
+
+        if (scope.hasBranch) {
+            filterParts.add("(branch:${scope.canonicalBranchId} OR branch:common OR branch:all)")
+        }
+
+        if (scope.hasSemester) {
+            val semDigits = scope.semester!!.filter { it.isDigit() }
+            if (semDigits.isNotEmpty()) {
+                filterParts.add("(semester:'${scope.semester}' OR semester:'$semDigits' OR semester:'Semester $semDigits')")
+            } else {
+                filterParts.add("semester:'${scope.semester}'")
+            }
+        }
+
+        if (selectedDocumentTypes.isNotEmpty()) {
             val typeFilters = selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
                 "documentType:$it"
             }
-            "$collegeFilter AND $typeFilters"
-        } else {
-            collegeFilter
+            filterParts.add(typeFilters)
         }
+
+        val filterExpression = filterParts.joinToString(" AND ")
 
         val params = SearchParamsObject(
             query = query,
@@ -111,7 +126,7 @@ open class SearchRepository(
             indexName = indexName,
             searchParams = params
         )
-        return response.hits.map { hit ->
+        val mapped = response.hits.mapNotNull { hit ->
             val id = hit.objectID
             val title = hit.additionalProperties?.get("title")?.jsonPrimitive?.content ?: ""
             val displaySubject = (hit.additionalProperties?.get("displaySubject") ?: hit.additionalProperties?.get("subject"))?.jsonPrimitive?.content ?: ""
@@ -126,6 +141,16 @@ open class SearchRepository(
             val college = hit.additionalProperties?.get("college")?.jsonPrimitive?.content ?: ""
             val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
             val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
+
+            if (scope != null && scope.isCollegeValid) {
+                val isPermitted = scope.isDocumentPermitted(
+                    docCollege = college,
+                    docBranch = branch,
+                    docSemester = semester,
+                    docSubjectId = null
+                )
+                if (!isPermitted) return@mapNotNull null
+            }
 
             SearchResultModel(
                 id = id,
@@ -146,5 +171,6 @@ open class SearchRepository(
                 documentType = documentType
             )
         }
+        return mapped
     }
 }

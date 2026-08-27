@@ -58,6 +58,7 @@ import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.pravor.notessharing.domain.model.SelectedUploadFile
 import com.pravor.notessharing.domain.model.UploadType
+import com.pravor.notessharing.ui.common.LiquidTransferProgressBar
 import com.pravor.notessharing.ui.common.components.SectionHeader
 import com.pravor.notessharing.ui.features.upload.YoutubePreview
 
@@ -403,100 +404,40 @@ fun UploadButton(
     progress: Float,
     onUpload: () -> Unit
 ) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(300, easing = LinearEasing),
-        label = "upload_progress_anim"
-    )
+    if (isSaving) {
+        val progressInt = (progress * 100).toInt()
+        LiquidTransferProgressBar(
+            progress = progress,
+            statusText = "$progressInt%",
+            showSpinner = false,
+            showCheckmarkOnComplete = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+        )
+    } else {
+        val primaryColor = MaterialTheme.colorScheme.primary
+        val onPrimary = MaterialTheme.colorScheme.onPrimary
+        val disabledColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+        val disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
 
-    val infiniteTransition = rememberInfiniteTransition(label = "wave_anim")
-    val wavePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 6.2831853f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "wave_phase"
-    )
-
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val onPrimary = MaterialTheme.colorScheme.onPrimary
-    val disabledColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-    val disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    val buttonBgColor = if (enabled || isSaving) primaryColor.copy(alpha = 0.25f) else disabledColor
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(buttonBgColor)
-            .clickable(
-                enabled = enabled && !isSaving,
-                onClick = onUpload
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isSaving) {
-            // Water / filling progress background
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val width = size.width
-                val height = size.height
-                val fillWidth = width * animatedProgress
-
-                // Base liquid fill rect
-                drawRect(
-                    color = primaryColor,
-                    size = androidx.compose.ui.geometry.Size(fillWidth, height)
-                )
-
-                // Liquid wave front
-                if (animatedProgress in 0.01f..0.99f) {
-                    val wavePath = Path()
-                    wavePath.moveTo(fillWidth, 0f)
-                    val steps = 30
-                    val stepHeight = height / steps
-                    for (i in 0..steps) {
-                        val currentY = i * stepHeight
-                        val waveX = fillWidth + sin(wavePhase + (currentY / height) * 6.2831853f) * 6.dp.toPx()
-                        wavePath.lineTo(waveX, currentY)
-                    }
-                    wavePath.lineTo(fillWidth, height)
-                    wavePath.close()
-                    drawPath(wavePath, color = primaryColor)
-                }
-            }
-        } else if (enabled) {
-            // Normal solid background when enabled
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(primaryColor)
-            )
-        }
-
-        // Foreground content (Icon + Text / Progress Status)
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(if (enabled) primaryColor else disabledColor)
+                .clickable(
+                    enabled = enabled,
+                    onClick = onUpload
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            if (isSaving) {
-                androidx.compose.material3.CircularProgressIndicator(
-                    color = onPrimary,
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.5.dp
-                )
-                Spacer(Modifier.width(12.dp))
-                val progressInt = (progress * 100).toInt()
-                Text(
-                    text = if (progressInt > 0) "Uploading... $progressInt%" else "Processing...",
-                    color = onPrimary,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.FileUpload,
                     contentDescription = null,

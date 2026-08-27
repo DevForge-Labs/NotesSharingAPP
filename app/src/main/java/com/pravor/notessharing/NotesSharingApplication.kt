@@ -27,6 +27,15 @@ class NotesSharingApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
+
+        // Initialize Classroom reminders and periodic sync
+        try {
+            com.pravor.notessharing.data.classroom.reminder.ClassroomReminderReceiver.createNotificationChannel(this)
+            com.pravor.notessharing.data.classroom.reminder.ClassroomSyncWorker.enqueuePeriodicSync(this)
+            com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(this)
+        } catch (e: Exception) {
+            android.util.Log.e("Application", "Failed to initialize Classroom reminder services", e)
+        }
     }
 
     companion object {

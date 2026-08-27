@@ -333,10 +333,13 @@ class DocumentDetailViewModel(
                 
                 if (allFilesExist) {
                     try {
-                        val docDetail = fetchFromFirestore(documentId)
+                        val currentUid = auth.currentUser?.uid
+                        val userProfile = if (currentUid != null) com.pravor.notessharing.data.repository.ProfileRepository().getProfile(currentUid) else null
+                        val userScope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(userProfile)
+                        val docDetail = repository.getDocument(documentId, userScope)
                         if (docDetail != null) {
                             val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
-                            val relatedDocs = repository.getRelatedDocuments(docDetail)
+                            val relatedDocs = repository.getRelatedDocuments(docDetail, userScope)
                             android.util.Log.d("REC_TRACE", "[DOC_VM] 6. Received by ViewModel (cached flow) count=${relatedDocs.size}")
                             observeUpvotes(docDetail.id, docDetail.documentType, relatedDocs)
                             
@@ -398,10 +401,14 @@ class DocumentDetailViewModel(
             }
 
             try {
-                val docDetail = fetchFromFirestore(documentId)
+                val currentUid = auth.currentUser?.uid
+                val userProfile = if (currentUid != null) com.pravor.notessharing.data.repository.ProfileRepository().getProfile(currentUid) else null
+                val userScope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(userProfile)
+
+                val docDetail = repository.getDocument(documentId, userScope)
                 if (docDetail != null) {
                     val contributorLevel = repository.getUploaderContributorLevel(docDetail.uploaderId) ?: "Bronze Contributor"
-                    val relatedDocs = repository.getRelatedDocuments(docDetail)
+                    val relatedDocs = repository.getRelatedDocuments(docDetail, userScope)
                     android.util.Log.d("REC_TRACE", "[DOC_VM] 6. Received by ViewModel count=${relatedDocs.size}")
                     observeUpvotes(docDetail.id, docDetail.documentType, relatedDocs)
                     
@@ -414,49 +421,12 @@ class DocumentDetailViewModel(
                     android.util.Log.d("REC_TRACE", "[DOC_VM] 7. Exposed through UI State success count=${uiStateToSet.relatedDocuments.size}")
                     _uiState.value = uiStateToSet
                 } else {
-                    _uiState.value = DocumentDetailUiState.Error("Document details not found.")
+                    _uiState.value = DocumentDetailUiState.Error("This document is not accessible or not available for your academic semester/branch.")
                 }
             } catch (e: Exception) {
                 _uiState.value = DocumentDetailUiState.Error(e.localizedMessage ?: "Failed to fetch document details.")
             }
         }
-    }
-
-    private suspend fun fetchFromFirestore(documentId: String): DocumentDetail? {
-        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets")
-        var targetCol: String? = null
-        val firestore = FirebaseFirestore.getInstance()
-        var snapshot: com.google.firebase.firestore.DocumentSnapshot? = null
-        for (col in collections) {
-            try {
-                // Try from local cache source first
-                val snap = firestore.collection(col).document(documentId).get(com.google.firebase.firestore.Source.CACHE).await()
-                if (snap.exists() && snap.data != null) {
-                    targetCol = col
-                    snapshot = snap
-                    break
-                }
-            } catch (e: Exception) {
-                try {
-                    val snap = firestore.collection(col).document(documentId).get().await()
-                    if (snap.exists() && snap.data != null) {
-                        targetCol = col
-                        snapshot = snap
-                        break
-                    }
-                } catch (e2: Exception) {
-                    // Try next collection
-                }
-            }
-        }
-
-        if (targetCol != null && snapshot != null) {
-            val data = snapshot.data
-            if (data != null) {
-                return data.toDocumentDetail(documentId, targetCol)
-            }
-        }
-        return repository.getDocument(documentId)
     }
 
     fun downloadDocument(context: Context) {

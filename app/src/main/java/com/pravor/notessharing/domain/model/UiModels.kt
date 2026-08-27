@@ -55,7 +55,11 @@ data class StudyFile(
     val examType: String? = null,
     val sectionDisplay: String? = null,
     val availability: ResourceAvailability = ResourceAvailability.ACTIVE,
-    val localThumbnailPath: String? = null
+    val localThumbnailPath: String? = null,
+    val college: String? = null,
+    val branch: String? = null,
+    val semester: String? = null,
+    val subjectId: String? = null
 ) {
     fun matchesSearchQuery(query: String): Boolean {
         if (query.isBlank()) return true

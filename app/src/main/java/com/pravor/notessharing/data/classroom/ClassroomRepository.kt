@@ -672,6 +672,7 @@ class ClassroomRepository(
                 }
 
                 ClassroomSyncManager.markSynced(syncKey)
+                com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(context)
                 Result.success(remoteCourseWork)
             } catch (e: ClassroomAuthException) {
                 authManager.refreshAuthState()
@@ -732,6 +733,7 @@ class ClassroomRepository(
                 lastSyncedAt = System.currentTimeMillis()
             )
         )
+        com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(context)
     }
 
     suspend fun saveSubmissions(courseId: String, submissions: List<ClassroomStudentSubmission>) = withContext(Dispatchers.IO) {
@@ -752,6 +754,7 @@ class ClassroomRepository(
         }
         if (entities.isNotEmpty()) {
             classroomDao.upsertSubmissions(entities)
+            com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(context)
         }
     }
 
@@ -780,6 +783,7 @@ class ClassroomRepository(
             classroomDao.deleteManualCompletion(courseWorkId, userId)
             Log.d(TAG, "Removed manual completion for courseWork $courseWorkId")
         }
+        com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(context)
     }
 
     suspend fun deleteManualCompletion(courseWorkId: String) = withContext(Dispatchers.IO) {
