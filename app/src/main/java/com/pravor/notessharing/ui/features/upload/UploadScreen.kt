@@ -82,7 +82,13 @@ fun UploadRoute(
         onTypeSelected = viewModel::selectUploadType,
         onExamYearChange = viewModel::selectExamYear,
         onExamTypeChange = viewModel::selectExamType,
-        onPickPdfs = { pdfPicker.launch(arrayOf("application/pdf")) },
+        onPickPdfs = {
+            pdfPicker.launch(arrayOf(
+                "application/pdf",
+                "application/vnd.ms-powerpoint",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            ))
+        },
         onPickImages = { imagePicker.launch(arrayOf("image/*")) },
         onCaptureImage = { cameraLauncher.launch(viewModel.createCameraUri()) },
         onYoutubeUrlChange = viewModel::updateYoutubeUrl,

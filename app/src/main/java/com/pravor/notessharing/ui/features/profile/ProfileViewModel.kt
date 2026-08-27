@@ -126,7 +126,7 @@ class ProfileViewModel(
                                 }
                             }
                             
-                            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+                            val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
                             val upvotesDeferred = collections.map { col ->
                                 async {
                                     try {

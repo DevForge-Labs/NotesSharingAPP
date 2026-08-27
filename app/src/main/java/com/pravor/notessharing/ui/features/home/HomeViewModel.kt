@@ -44,6 +44,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val homeFeedRepository = com.pravor.notessharing.data.repository.HomeFeedRepository(application)
     private var feedObservationJob: kotlinx.coroutines.Job? = null
     private val notificationRepository = com.pravor.notessharing.data.repository.NotificationRepository()
+    private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
     val notifications = notificationRepository.notifications
     val unreadNotificationsCount = notificationRepository.unreadCount
 
@@ -284,6 +285,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val isFirstProfileEmission = previousProfile == null
                 val collegeChanged = previousProfile?.college != profile?.college
                 val semesterChanged = previousProfile?.semester != profile?.semester
+                val branchChanged = previousProfile?.branch != profile?.branch
                 previousProfile = profile
                 _uploadsCount.value = profile?.totalUploads ?: 0
 
@@ -293,7 +295,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val semester = profile?.semester
-                if (isFirstProfileEmission || collegeChanged || semesterChanged) {
+                if (isFirstProfileEmission || collegeChanged || semesterChanged || branchChanged) {
                     lastReloadCause = "ProfileUpdate"
                     loadRealDocuments(semester)
                 }
@@ -501,27 +503,43 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val subjectIds = if (hasSemester && hasBranch) {
                         try {
                             val branchId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveBranchId(rawBranch!!)
-                            val doc = firestore.collection("curriculum")
-                                .document(canonicalCollegeId.lowercase())
-                                .get()
-                                .await()
+                            val catalog = metadataRepository.getSubjectCatalog()
+                            val collegeCatalog = catalog[canonicalCollegeId.lowercase()] as? Map<*, *>
+                            
+                            val semLower = semester!!.trim().lowercase(java.util.Locale.ROOT)
+                            val isFirstYear = semLower.contains("semester 1") || semLower.contains("sem 1") || semLower == "1" || semLower.startsWith("1st") ||
+                                              semLower.contains("semester 2") || semLower.contains("sem 2") || semLower == "2" || semLower.startsWith("2nd")
+                            
+                            val semesterData = if (isFirstYear) {
+                                val isGroupA = semLower.contains("semester 1") || semLower.contains("sem 1") || semLower == "1" || semLower.startsWith("1st")
+                                val groupKey = if (isGroupA) "GROUP_A" else "GROUP_B"
+                                collegeCatalog?.get(groupKey)
+                            } else {
+                                val branchCatalog = collegeCatalog?.get(branchId) as? Map<*, *>
+                                val semNum = semester.filter { it.isDigit() }
+                                branchCatalog?.get(semester) ?: (if (semNum.isNotEmpty()) branchCatalog?.get(semNum) else null)
+                            }
 
-                            val branchMap = doc.get(branchId) as? Map<*, *>
-                            val semesterData = branchMap?.get(semester!!)
                             when (semesterData) {
-                                is List<*> -> semesterData.mapNotNull { it as? String }
-                                is Map<*, *> -> semesterData.keys.mapNotNull { it as? String }
+                                is List<*> -> semesterData.mapNotNull { item ->
+                                    when (item) {
+                                        is Map<*, *> -> (item["id"] ?: item["subjectId"])?.toString()
+                                        is String -> item
+                                        else -> null
+                                    }
+                                }
+                                is Map<*, *> -> semesterData.keys.mapNotNull { it?.toString() }
                                 else -> emptyList()
                             }.filter { it.isNotBlank() }
                         } catch (e: Exception) {
-                            android.util.Log.e("CURRICULUM", "Error loading curriculum: ${e.message}", e)
+                            android.util.Log.e("CURRICULUM", "Error loading subject catalog: ${e.message}", e)
                             emptyList()
                         }
                     } else {
                         emptyList()
                     }
 
-                    val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+                    val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
                     val allDocs = coroutineScope {
                         val deferreds = collections.map { col ->
                             async {
@@ -809,8 +827,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             "pyq", "pyqs" -> "pyqs"
             "assignment", "assignments" -> "assignments"
             "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
-            "video", "videos", "youtube resource" -> "videos"
-            else -> "documents"
+            "video", "videos", "youtube resource", "playlist", "playlists", "video playlist" -> "videos"
+            else -> "notes"
         }
 
         viewModelScope.launch {
@@ -904,7 +922,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun checkDocumentExistsInFirestore(documentId: String): Boolean {
-        val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
         val firestore = FirebaseFirestore.getInstance()
         for (col in collections) {
             try {

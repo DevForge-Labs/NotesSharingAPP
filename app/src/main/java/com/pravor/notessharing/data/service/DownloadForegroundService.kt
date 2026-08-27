@@ -480,10 +480,10 @@ class DownloadForegroundService : Service() {
     private fun getCollectionName(documentType: String): String {
         return when (documentType.trim().lowercase()) {
             "assignment", "assignments" -> "assignments"
-            "notes" -> "notes"
+            "notes", "note" -> "notes"
             "pyq", "pyqs" -> "pyqs"
             "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
-            "videos", "youtube resource" -> "videos"
+            "video", "videos", "youtube resource", "playlist", "playlists", "video playlist" -> "videos"
             else -> "notes"
         }
     }

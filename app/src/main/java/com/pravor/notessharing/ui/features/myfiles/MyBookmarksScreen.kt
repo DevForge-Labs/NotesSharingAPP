@@ -114,8 +114,8 @@ fun MyBookmarksScreen(
                     "pyq", "pyqs" -> "pyqs"
                     "assignment", "assignments" -> "assignments"
                     "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
-                    "video", "videos", "youtube resource" -> "videos"
-                    else -> "documents"
+                    "video", "videos", "youtube resource", "playlist", "playlists", "video playlist" -> "videos"
+                    else -> "notes"
                 }
                 file.id to col
             }

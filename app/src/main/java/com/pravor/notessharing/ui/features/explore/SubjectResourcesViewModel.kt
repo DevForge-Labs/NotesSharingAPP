@@ -138,7 +138,7 @@ class SubjectResourcesViewModel(
                 }
 
                 val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
-                val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+                val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
                 val allDocs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val deferreds = collections.map { col ->
                         async {
@@ -255,8 +255,8 @@ class SubjectResourcesViewModel(
             "pyq", "pyqs" -> "pyqs"
             "assignment", "assignments" -> "assignments"
             "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
-            "video", "videos", "youtube resource" -> "videos"
-            else -> "documents"
+            "video", "videos", "youtube resource", "playlist", "playlists", "video playlist" -> "videos"
+            else -> "notes"
         }
 
         viewModelScope.launch {

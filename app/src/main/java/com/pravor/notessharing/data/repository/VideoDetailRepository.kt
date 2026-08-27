@@ -20,7 +20,7 @@ class VideoDetailRepository {
         val startTime = System.currentTimeMillis()
         android.util.Log.d("PERF", "[PERF] getVideo START id=$videoId thread=${Thread.currentThread().name}")
         return try {
-            val collections = listOf("documents", "videos")
+            val collections = listOf("videos")
             var foundData: Pair<Map<String, Any>, String>? = null
             coroutineScope {
                 val deferreds = collections.map { col ->
@@ -108,7 +108,7 @@ class VideoDetailRepository {
         val startTime = System.currentTimeMillis()
         android.util.Log.d("PERF", "[PERF] getRelatedVideos START id=${video.id} thread=${Thread.currentThread().name}")
         
-        val collections = listOf("documents", "videos")
+        val collections = listOf("videos")
         if (video.college.isBlank()) {
             return@coroutineScope emptyList()
         }

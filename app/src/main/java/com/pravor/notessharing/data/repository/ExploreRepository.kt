@@ -98,7 +98,7 @@ class ExploreRepository(private val context: Context) {
     }
 
     private suspend fun doFetchExploreContent(canonicalCollegeId: String): ExploreContent = withContext(Dispatchers.IO) {
-        val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
         
         val allDocs = coroutineScope {
             val deferreds = collections.map { col ->

@@ -405,7 +405,8 @@ class UploadRepository(private val context: Context) {
 
             for ((index, file) in selectedFiles.withIndex()) {
                 val ext = getFileExtension(file.displayName, file.uri)
-                val fileName = if (ext == "pdf") {
+                val isPptx = ext in listOf("ppt", "pptx")
+                val fileName = if (ext == "pdf" || isPptx) {
                     if (selectedFiles.size > 1) {
                         sanitizeFileName(file.displayName)
                     } else {
@@ -416,7 +417,11 @@ class UploadRepository(private val context: Context) {
                     "page${index + 1}.$ext"
                 }
                 
-                val storagePath = "$folderName/$folderSlug/$fileName"
+                val storagePath = if (isPptx) {
+                    "$folderName/$folderSlug/original/$fileName"
+                } else {
+                    "$folderName/$folderSlug/$fileName"
+                }
 
                 val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
                     val fileUploadedBytes = (fileProgress * file.sizeBytes).toLong()
@@ -435,16 +440,17 @@ class UploadRepository(private val context: Context) {
 
             val firstFileExtension = getFileExtension(selectedFiles.first().displayName, selectedFiles.first().uri)
             val isPdf = firstFileExtension == "pdf"
-            val fileType = if (isPdf) "pdf" else "image"
+            val isPptx = firstFileExtension in listOf("ppt", "pptx")
+            val fileType = if (isPdf) "pdf" else if (isPptx) "document" else "image"
             val mimeType = when (firstFileExtension) {
                 "pdf" -> "application/pdf"
+                "ppt" -> "application/vnd.ms-powerpoint"
+                "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                 "jpg", "jpeg" -> "image/jpeg"
                 "png" -> "image/png"
                 "webp" -> "image/webp"
                 else -> "application/octet-stream"
             }
-
-
 
             val doc = mutableMapOf<String, Any>(
                     "documentId" to documentId,
@@ -478,9 +484,20 @@ class UploadRepository(private val context: Context) {
                     "mimeType" to mimeType,
                     "fileUrls" to downloadUrls,
                     "thumbnailUrl" to (if (fileType == "image") downloadUrls.first() else ""),
+                    "thumbnailGenerated" to false,
                     "attachmentCount" to selectedFiles.size,
-                    "trendingScore" to 0.0
+                    "trendingScore" to 0.0,
+                    "processingStatus" to (if (isPptx) "PROCESSING" else "READY")
                 )
+
+            if (isPptx) {
+                doc["originalFileExtension"] = firstFileExtension
+                doc["originalMimeType"] = mimeType
+                doc["originalStoragePath"] = storagePaths.first()
+                doc["originalStoragePaths"] = storagePaths
+                doc["originalFileUrl"] = downloadUrls.first()
+                doc["originalFileUrls"] = downloadUrls
+            }
 
                 if (subjectId.isNotBlank()) {
                     doc["subjectId"] = subjectId
@@ -518,7 +535,7 @@ class UploadRepository(private val context: Context) {
 
     suspend fun getDocumentFileUrls(documentId: String): List<String> {
         return try {
-            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+            val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
             var foundData: Map<String, Any>? = null
             coroutineScope {
                 val deferreds = collections.map { col ->
@@ -556,7 +573,7 @@ class UploadRepository(private val context: Context) {
     suspend fun resolveFilesForDocument(id: String): Pair<String, List<String>> {
         // Try loading from Firestore first
         try {
-            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+            val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
             var foundData: Map<String, Any>? = null
             coroutineScope {
                 val deferreds = collections.map { col ->

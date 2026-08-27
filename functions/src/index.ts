@@ -19,3 +19,4 @@ export * from "./triggers/reportTrigger.js";
 export * from "./upvote.js";
 export * from "./trending.js";
 export * from "./videoRepair.js";
+export * from "./tasks/documentConversionTask.js";

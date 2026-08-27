@@ -78,7 +78,7 @@ object DownloadService {
 
                 // Prefetch document detail from Firestore to populate Firestore's offline cache
                 try {
-                    val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+                    val collections = listOf("notes", "pyqs", "assignments", "cheatsheets")
                     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
                     for (col in collections) {
                         try {

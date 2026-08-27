@@ -194,7 +194,7 @@ class TrendingFeedRepository(private val context: Context) {
     }
 
     private fun isAllCollectionsEnded(): Boolean {
-        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "documents")
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
         return collections.all { isCollectionEnd[it] == true }
     }
 
@@ -203,7 +203,7 @@ class TrendingFeedRepository(private val context: Context) {
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
             android.util.Log.d("PERF", "[PERF] Trending page fetch START thread=${Thread.currentThread().name}")
         }
-        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "documents")
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
 
         if (isRefresh) {
             lastSnapshots.clear()

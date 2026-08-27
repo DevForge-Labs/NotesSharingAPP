@@ -188,8 +188,8 @@ class TrendingNotesViewModel(application: Application) : AndroidViewModel(applic
             "pyq", "pyqs" -> "pyqs"
             "assignment", "assignments" -> "assignments"
             "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
-            "video", "videos", "youtube resource" -> "videos"
-            else -> "documents"
+            "video", "videos", "youtube resource", "playlist", "playlists", "video playlist" -> "videos"
+            else -> "notes"
         }
 
         viewModelScope.launch {

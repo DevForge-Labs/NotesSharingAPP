@@ -32,6 +32,9 @@ import java.util.Locale
 object ExploreMapper {
 
     fun documentToDiscoverNote(data: Map<String, Any?>): DiscoverFeedItem.Note? {
+        val processingStatus = data["processingStatus"] as? String
+        if (processingStatus == "PROCESSING" || processingStatus == "FAILED") return null
+
         val id = data["documentId"] as? String ?: ""
         val title = (data["title"] as? String ?: "").removeFileExtension()
         val uploaderId = data["uploaderId"] as? String
@@ -102,6 +105,9 @@ object ExploreMapper {
         resolvedLevels: Map<String, String>? = null
     ): TrendingNote? {
         val data = doc.data ?: return null
+        val processingStatus = data["processingStatus"] as? String
+        if (processingStatus == "PROCESSING" || processingStatus == "FAILED") return null
+
         val id = data["documentId"] as? String ?: ""
         val title = (data["title"] as? String ?: data["videoTitle"] as? String ?: "").removeFileExtension()
         val uploaderId = data["uploaderId"] as? String
@@ -199,6 +205,9 @@ object ExploreMapper {
     }
 
     fun documentToFeedItem(doc: Map<String, Any?>): FeedItem? {
+        val processingStatus = doc["processingStatus"] as? String
+        if (processingStatus == "PROCESSING" || processingStatus == "FAILED") return null
+
         val id = doc["documentId"] as? String ?: ""
         val title = (doc["title"] as? String ?: "").removeFileExtension()
         val uploaderId = doc["uploaderId"] as? String
