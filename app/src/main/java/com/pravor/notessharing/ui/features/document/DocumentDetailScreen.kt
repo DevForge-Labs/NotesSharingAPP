@@ -369,28 +369,34 @@ fun DocumentDetailScreen(
                                 pendingRemoveUpvoteId = successState.document.id
                             },
                             onAttachmentClick = { url ->
-                                val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
-                                val isImage = url.contains(".jpg", ignoreCase = true) || url.contains(".jpeg", ignoreCase = true) ||
-                                              url.contains(".png", ignoreCase = true) || url.contains(".webp", ignoreCase = true) ||
-                                              url.contains("unsplash.com", ignoreCase = true)
-
-                                if (isPdf) {
-                                    onNavigateToPdfViewer(successState.document.id, url, successState.document.title)
-                                } else if (isImage) {
-                                    onNavigateToImageViewer(successState.document.id, url, successState.document.title)
+                                if (successState.document.processingStatus == "PROCESSING") {
+                                    Toast.makeText(context, "Converting presentation to PDF... Please wait a moment.", Toast.LENGTH_SHORT).show()
+                                } else if (successState.document.processingStatus == "FAILED") {
+                                    Toast.makeText(context, "Conversion failed: ${successState.document.processingError ?: "Invalid presentation"}", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    try {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                                        context.startActivity(intent)
-                                        scope.launch {
-                                            ViewTrackingRepository().incrementViewCountDirect(
-                                                successState.document.id,
-                                                successState.document.collection,
-                                                successState.document.documentType
-                                            )
+                                    val isPdf = url.contains(".pdf", ignoreCase = true) || url.contains("dummy.pdf")
+                                    val isImage = url.contains(".jpg", ignoreCase = true) || url.contains(".jpeg", ignoreCase = true) ||
+                                                  url.contains(".png", ignoreCase = true) || url.contains(".webp", ignoreCase = true) ||
+                                                  url.contains("unsplash.com", ignoreCase = true)
+
+                                    if (isPdf) {
+                                        onNavigateToPdfViewer(successState.document.id, url, successState.document.title)
+                                    } else if (isImage) {
+                                        onNavigateToImageViewer(successState.document.id, url, successState.document.title)
+                                    } else {
+                                        try {
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                            context.startActivity(intent)
+                                            scope.launch {
+                                                ViewTrackingRepository().incrementViewCountDirect(
+                                                    successState.document.id,
+                                                    successState.document.collection,
+                                                    successState.document.documentType
+                                                )
+                                            }
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "No app available to open this link", Toast.LENGTH_SHORT).show()
                                         }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "No app available to open this link", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },

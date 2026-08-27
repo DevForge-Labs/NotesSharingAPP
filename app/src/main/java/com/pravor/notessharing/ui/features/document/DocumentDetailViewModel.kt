@@ -423,7 +423,7 @@ class DocumentDetailViewModel(
     }
 
     private suspend fun fetchFromFirestore(documentId: String): DocumentDetail? {
-        val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets")
         var targetCol: String? = null
         val firestore = FirebaseFirestore.getInstance()
         var snapshot: com.google.firebase.firestore.DocumentSnapshot? = null

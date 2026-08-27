@@ -395,14 +395,14 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
-        // Notes / Cheat Sheets / Assignments: PDF or images (JPG, JPEG, PNG, WEBP) allowed.
+        // Notes / Cheat Sheets / Assignments: PDF, PowerPoint (.ppt, .pptx), or images (JPG, JPEG, PNG, WEBP) allowed.
         if (current.selectedType in listOf(UploadType.Notes, UploadType.CheatSheet, UploadType.Assignment)) {
-            val allowedExtensions = listOf("pdf", "jpg", "jpeg", "png", "webp")
+            val allowedExtensions = listOf("pdf", "jpg", "jpeg", "png", "webp", "ppt", "pptx")
             for (uri in uris) {
                 val name = getFileName(uri)
                 val ext = name.substringAfterLast('.', "").lowercase()
                 if (ext !in allowedExtensions) {
-                    _uiState.update { it.copy(errorMessage = "Only PDF and image files (JPG, JPEG, PNG, WEBP) are allowed.") }
+                    _uiState.update { it.copy(errorMessage = "Only PDF, PowerPoint (.ppt, .pptx), and image files are allowed.") }
                     return
                 }
             }

@@ -128,7 +128,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             try {
-                val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets", "videos")
+                val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
                 val allDocs = coroutineScope {
                     val deferreds = collections.map { col ->
                         async {

@@ -16,6 +16,13 @@ export class SearchService {
    */
   static async indexResource(collectionName: string, docId: string, data: any): Promise<boolean> {
     try {
+      // Guard: Do not index documents that are still PROCESSING, FAILED, or marked deleted
+      const status = data ? data.processingStatus : null;
+      if (status === "PROCESSING" || status === "FAILED" || data?.isDeleted === true) {
+        logger.info(`Skipping search indexing for ${collectionName}/${docId}: status is ${status || "isDeleted"}`);
+        return false;
+      }
+
       const config = getSearchConfig();
       if (!config.appId || !config.adminApiKey) {
         logger.warn("Skipping search indexing: Search configuration parameters are not fully set.", {
@@ -138,6 +145,11 @@ export class SearchService {
    */
   static shouldReindex(beforeData: any, afterData: any): boolean {
     if (!beforeData || !afterData) return true;
+
+    // Guard: Do not trigger re-indexing while document is in PROCESSING, FAILED, or deleted
+    if (afterData.processingStatus === "PROCESSING" || afterData.processingStatus === "FAILED" || afterData.isDeleted === true) {
+      return false;
+    }
 
     // Helper to generate the exact mapped index payload with stable key ordering
     const getPayload = (data: any) => {

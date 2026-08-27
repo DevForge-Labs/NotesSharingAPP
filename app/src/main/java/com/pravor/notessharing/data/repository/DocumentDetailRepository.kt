@@ -60,7 +60,7 @@ class DocumentDetailRepository {
             Log.d("PERF", "[PERF] getDocument START id=$documentId")
         }
         return try {
-            val collections = listOf("documents", "notes", "pyqs", "assignments", "cheatsheets")
+            val collections = listOf("notes", "pyqs", "assignments", "cheatsheets")
             var foundData: Pair<Map<String, Any>, String>? = null
             coroutineScope {
                 val deferreds = collections.map { col ->

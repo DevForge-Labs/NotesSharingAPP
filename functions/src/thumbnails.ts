@@ -174,8 +174,9 @@ export async function generateThumbnailForDocument(
       }
     }
 
-    if (thumbnailUrls.length === 0) {
-      logger.warn(`No thumbnails were generated for document ${docId}.`);
+    const hasValidThumbnail = thumbnailUrls.some(url => Boolean(url && url.trim().length > 0));
+    if (!hasValidThumbnail) {
+      logger.warn(`No valid thumbnails were generated for document ${docId}.`);
       return;
     }
 

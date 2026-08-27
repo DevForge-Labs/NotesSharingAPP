@@ -37,8 +37,8 @@ class UpvoteRepository {
             "pyq", "pyqs" -> "pyqs"
             "assignment", "assignments" -> "assignments"
             "cheat sheet", "cheatsheet", "cheatsheets" -> "cheatsheets"
-            "video", "videos", "youtube resource", "youtube" -> "videos"
-            else -> "documents"
+            "video", "videos", "youtube resource", "youtube", "playlist", "playlists", "video playlist" -> "videos"
+            else -> "notes"
         }
     }
 
