@@ -144,11 +144,12 @@ class SearchViewModel(
             try {
                 val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
                 val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
+                val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
                 val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
-                val userCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+                val scope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(userProfile, metadataRepository)
 
-                if (userCollege.isNullOrBlank()) {
-                    android.util.Log.d("SearchViewModel", "No college in user profile. Skipping campus search.")
+                if (!scope.isCollegeValid) {
+                    android.util.Log.d("SearchViewModel", "No valid college in user profile. Skipping campus search.")
                     _uiState.value = SearchUiState.Empty
                     return@launch
                 }
@@ -164,7 +165,7 @@ class SearchViewModel(
                     }
                 }.toSet()
 
-                val results = searchRepository.search(trimmed, userCollege, docTypes)
+                val results = searchRepository.search(trimmed, scope, docTypes)
                 if (results.isEmpty()) {
                     _uiState.value = SearchUiState.Empty
                 } else {

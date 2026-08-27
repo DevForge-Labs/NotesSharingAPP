@@ -29,7 +29,11 @@ class ContinueLearningRepository(context: Context) {
         examYear: String? = null,
         section: String? = null,
         sectionDisplay: String? = null,
-        youtubeThumbnailUrl: String? = null
+        youtubeThumbnailUrl: String? = null,
+        college: String? = null,
+        branch: String? = null,
+        semester: String? = null,
+        subjectId: String? = null
     ) {
         android.util.Log.d("WidgetDebug", "ContinueLearningRepository.saveLastOpened: id=$id, type=$type, title=$title, subject=$subject")
         val json = JSONObject()
@@ -49,6 +53,10 @@ class ContinueLearningRepository(context: Context) {
             .put("section", section ?: "")
             .put("sectionDisplay", sectionDisplay ?: "")
             .put("youtubeThumbnailUrl", youtubeThumbnailUrl ?: "")
+            .put("college", college ?: "")
+            .put("branch", branch ?: "")
+            .put("semester", semester ?: "")
+            .put("subjectId", subjectId ?: "")
         
         val thumbnailUrlsArray = org.json.JSONArray()
         thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
@@ -58,11 +66,26 @@ class ContinueLearningRepository(context: Context) {
         preferences.edit().putString(key, json.toString()).apply()
     }
 
-    fun getLastOpened(): FeedItem? {
+    fun getLastOpened(requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null): FeedItem? {
         val key = "${KEY_LAST_OPENED}_${getUserId()}"
         val raw = preferences.getString(key, null) ?: return null
         return try {
             val json = JSONObject(raw)
+            val docCollege = json.optString("college").ifBlank { null }
+            val docBranch = json.optString("branch").ifBlank { null }
+            val docSemester = json.optString("semester").ifBlank { null }
+            val docSubjectId = json.optString("subjectId").ifBlank { null }
+
+            if (requestingScope != null && requestingScope.isCollegeValid) {
+                val isPermitted = requestingScope.isDocumentPermitted(
+                    docCollege = docCollege,
+                    docBranch = docBranch,
+                    docSemester = docSemester,
+                    docSubjectId = docSubjectId
+                )
+                if (!isPermitted) return null
+            }
+
             val id = json.getString("id")
             val type = json.getString("type")
             val title = json.getString("title")

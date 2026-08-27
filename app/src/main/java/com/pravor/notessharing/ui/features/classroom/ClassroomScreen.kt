@@ -1,8 +1,9 @@
 package com.pravor.notessharing.ui.features.classroom
 
+import android.app.Activity
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,29 +13,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,18 +39,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.pravor.notessharing.ui.common.CustomPullRefreshIndicator
 import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.features.classroom.components.ClassVisibilityBottomSheet
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomAccountCard
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomClassesHeader
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomConnectCard
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomCourseCard
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomCoursesAllHiddenCard
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomCoursesEmptyCard
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomCoursesErrorCard
+import com.pravor.notessharing.ui.features.classroom.components.ClassroomCoursesLoadingCard
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomDisconnectDialog
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomDisconnectRow
 import com.pravor.notessharing.ui.features.classroom.components.ClassroomUpcomingCard
@@ -84,9 +84,7 @@ fun ClassroomRoute(
     ClassroomScreen(
         uiState = uiState,
         onConnectClick = {
-            viewModel.launchClassroomAuth { intent ->
-                authLauncher.launch(intent)
-            }
+            authLauncher.launch(viewModel.getAuthIntent())
         },
         onDisconnectConfirmed = viewModel::disconnectClassroom,
         onCourseClick = onCourseClick,
@@ -114,9 +112,18 @@ fun ClassroomScreen(
     var showDisconnectDialog by remember { mutableStateOf(false) }
     var showVisibilitySheet by remember { mutableStateOf(false) }
 
-    val isConnected = uiState is ClassroomUiState.Connected
     val isRefreshing = (uiState as? ClassroomUiState.Connected)?.isRefreshing == true
     val pullToRefreshState = rememberPullToRefreshState()
+
+    // Classroom background animation for connected state
+    val bgLottieCompositionResult = rememberLottieComposition(
+        LottieCompositionSpec.Asset("App_animations/classroom_home_back.json")
+    )
+    val bgLottieComposition = bgLottieCompositionResult.value
+    val bgLottieProgress by animateLottieCompositionAsState(
+        composition = bgLottieComposition,
+        iterations = LottieConstants.IterateForever
+    )
 
     val connectedEmail = (uiState as? ClassroomUiState.Connected)?.account?.email.orEmpty()
 
@@ -179,22 +186,39 @@ fun ClassroomScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
-            state = pullToRefreshState,
-            indicator = {
-                CustomPullRefreshIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    restingOffset = 64.dp,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-            },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Background animated Lottie illustration for connected state
+            if (bgLottieComposition != null && uiState is ClassroomUiState.Connected) {
+                LottieAnimation(
+                    composition = bgLottieComposition,
+                    progress = { bgLottieProgress },
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center)
+                        .offset(y = 75.dp)
+                        .alpha(0.30f)
+                )
+            }
+
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                state = pullToRefreshState,
+                indicator = {
+                    CustomPullRefreshIndicator(
+                        state = pullToRefreshState,
+                        isRefreshing = isRefreshing,
+                        restingOffset = 64.dp,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                },
+                modifier = Modifier.fillMaxSize()
+            ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -236,7 +260,7 @@ fun ClassroomScreen(
                         }
                     }
                     is ClassroomUiState.Connected -> {
-                        // 1. Redesigned Hero Account & Sync Card
+                        // 1. Hero Account & Sync Card
                         item(key = "account-card") {
                             ClassroomAccountCard(
                                 account = uiState.account,
@@ -245,7 +269,7 @@ fun ClassroomScreen(
                             )
                         }
 
-                        // 2. Upcoming Assignments Summary Card (Placed directly below sync card and above My Classes)
+                        // 2. Upcoming Assignments Summary Card
                         item(key = "upcoming-card") {
                             ClassroomUpcomingCard(
                                 upcomingCount = uiState.upcomingCount,
@@ -256,240 +280,46 @@ fun ClassroomScreen(
 
                         // 3. "My Classes" Section Header with Class Visibility Filter Action
                         item(key = "classes-header") {
-                            val hasHidden = uiState.hiddenCourseIds.isNotEmpty()
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "My Classes",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                if (uiState.allCourses.isNotEmpty()) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = if (hasHidden) ElectricBlue.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        border = if (hasHidden) BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.35f)) else null,
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = { showVisibilitySheet = true },
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            BadgedBox(
-                                                badge = {
-                                                    if (hasHidden) {
-                                                        Badge(
-                                                            containerColor = ElectricBlue,
-                                                            modifier = Modifier.size(6.dp)
-                                                        ) {}
-                                                    }
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Tune,
-                                                    contentDescription = "Manage class visibility",
-                                                    tint = if (hasHidden) ElectricBlue else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            ClassroomClassesHeader(
+                                hasHiddenCourses = uiState.hiddenCourseIds.isNotEmpty(),
+                                showFilterButton = uiState.allCourses.isNotEmpty(),
+                                onFilterClick = { showVisibilitySheet = true }
+                            )
                         }
 
-                        // 3. Courses List State
+                        // 4. Courses List / State
                         if (uiState.isCoursesLoading && uiState.allCourses.isEmpty()) {
                             item(key = "loading-courses") {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(24.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        CircularProgressIndicator(
-                                            color = ElectricBlue,
-                                            modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.5.dp
-                                        )
-                                        Spacer(Modifier.width(14.dp))
-                                        Text(
-                                            text = "Loading classes from Google Classroom...",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
+                                ClassroomCoursesLoadingCard()
                             }
                         } else if (uiState.coursesError != null && uiState.allCourses.isEmpty()) {
                             item(key = "error-courses") {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(20.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Text(
-                                            text = "Couldn't load your classes",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        Text(
-                                            text = uiState.coursesError,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Button(
-                                            onClick = onRetryCourses,
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue),
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = "Retry",
-                                                color = Color(0xFF07121E),
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
+                                ClassroomCoursesErrorCard(
+                                    errorMessage = uiState.coursesError,
+                                    onRetry = onRetryCourses
+                                )
                             }
                         } else if (uiState.allCourses.isEmpty()) {
                             item(key = "empty-courses") {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(28.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            modifier = Modifier.size(52.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Class,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                                    modifier = Modifier.size(26.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(Modifier.height(12.dp))
-                                        Text(
-                                            text = "No active classes found",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            text = "Your Google Classroom courses will appear here when you're enrolled.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
+                                ClassroomCoursesEmptyCard()
                             }
                         } else if (uiState.visibleCourses.isEmpty()) {
-                            // User hid all their active classes
                             item(key = "all-hidden-courses") {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(28.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            modifier = Modifier.size(52.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Tune,
-                                                    contentDescription = null,
-                                                    tint = ElectricBlue,
-                                                    modifier = Modifier.size(26.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(Modifier.height(12.dp))
-                                        Text(
-                                            text = "No classes visible",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            text = "You've hidden all your classes from the main list.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Spacer(Modifier.height(12.dp))
-                                        OutlinedButton(
-                                            onClick = { showVisibilitySheet = true },
-                                            shape = RoundedCornerShape(12.dp),
-                                            border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.5f))
-                                        ) {
-                                            Text(
-                                                text = "Manage hidden classes",
-                                                color = ElectricBlue,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                    }
-                                }
+                                ClassroomCoursesAllHiddenCard(
+                                    onManageHiddenClick = { showVisibilitySheet = true }
+                                )
                             }
                         } else {
-                            items(uiState.visibleCourses, key = { it.id }) { course ->
+                            itemsIndexed(uiState.visibleCourses, key = { _, course -> course.id }) { index, course ->
                                 ClassroomCourseCard(
                                     course = course,
+                                    index = index,
                                     onClick = { onCourseClick(course.id) }
                                 )
                             }
                         }
 
-                        // 4. Dedicated Disconnect Row at the bottom of the list
+                        // 5. Dedicated Disconnect Row at the bottom of the list
                         item(key = "disconnect-row") {
                             Spacer(Modifier.height(8.dp))
                             ClassroomDisconnectRow(
@@ -519,4 +349,5 @@ fun ClassroomScreen(
             }
         }
     }
+}
 }

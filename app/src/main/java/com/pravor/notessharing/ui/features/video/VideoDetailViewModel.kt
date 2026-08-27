@@ -56,10 +56,12 @@ class VideoDetailViewModel(
         viewModelScope.launch {
             _uiState.value = VideoDetailUiState.Loading
             try {
-                val video = repository.getVideo(videoId)
+                val userProfile = if (currentUid != null) com.pravor.notessharing.data.repository.ProfileRepository().getProfile(currentUid) else null
+                val userScope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(userProfile)
+                val video = repository.getVideo(videoId, userScope)
                 if (video != null) {
                     val contributorLevel = repository.getUploaderContributorLevel(video.uploaderId) ?: "Bronze Contributor"
-                    val related = repository.getRelatedVideos(video)
+                    val related = repository.getRelatedVideos(video, userScope)
                     android.util.Log.d("REC_TRACE", "[VIDEO_VM] 6. Received by ViewModel count=${related.size}")
                     
                     observeUpvotes(video.id, video.collection, related)
@@ -68,7 +70,7 @@ class VideoDetailViewModel(
                     android.util.Log.d("REC_TRACE", "[VIDEO_VM] 7. Exposed through UI State success count=${uiStateToSet.relatedVideos.size}")
                     _uiState.value = uiStateToSet
                 } else {
-                    _uiState.value = VideoDetailUiState.Error("Video not found in repository")
+                    _uiState.value = VideoDetailUiState.Error("This video is not accessible or not available for your academic semester/branch.")
                 }
             } catch (e: Exception) {
                 _uiState.value = VideoDetailUiState.Error(e.message ?: "Failed to load video details")

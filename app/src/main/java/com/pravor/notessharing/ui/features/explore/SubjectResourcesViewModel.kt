@@ -90,6 +90,7 @@ class SubjectResourcesViewModel(
     )
 
     private val profileRepository = com.pravor.notessharing.data.repository.ProfileRepository()
+    private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
 
     init {
         val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
@@ -129,15 +130,15 @@ class SubjectResourcesViewModel(
             try {
                 val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
                 val userProfile = if (currentUid != null) profileRepository.getProfile(currentUid) else null
-                val rawCollege = userProfile?.college?.takeIf { it.isNotBlank() }
+                val scope = com.pravor.notessharing.core.util.AcademicScopeResolver.resolve(userProfile, metadataRepository)
 
-                if (rawCollege.isNullOrBlank()) {
-                    android.util.Log.d("SubjectResourcesVM", "No college found in user profile. Skipping resources load.")
+                if (!scope.isCollegeValid) {
+                    android.util.Log.d("SubjectResourcesVM", "No valid college found in user profile. Skipping resources load.")
                     _rawResources.value = emptyList()
                     return@launch
                 }
 
-                val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
+                val canonicalCollegeId = scope.canonicalCollegeId
                 val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
                 val allDocs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val deferreds = collections.map { col ->
@@ -165,9 +166,25 @@ class SubjectResourcesViewModel(
                     val data = doc.data ?: return@mapNotNull null
                     val docSubject = data["subject"] as? String ?: ""
                     val docSubjectNorm = com.pravor.notessharing.ui.common.utils.normalizeSubject(docSubject)
+                    val docSubjectId = data["subjectId"] as? String
 
                     // Match by normalized subject name or ID
-                    if (docSubjectNorm != targetNormalized) {
+                    val matchesSubject = (docSubjectNorm == targetNormalized) ||
+                            (!docSubjectId.isNullOrBlank() && targetNormalized.contains(docSubjectId.lowercase(java.util.Locale.ROOT)))
+
+                    if (!matchesSubject) {
+                        return@mapNotNull null
+                    }
+
+                    // Enforce academic context (semester, branch, college)
+                    val matchesScope = scope.isDocumentPermitted(
+                        docCollege = data["college"] as? String ?: canonicalCollegeId,
+                        docBranch = data["branch"] as? String,
+                        docSemester = data["semester"] as? String,
+                        docSubjectId = docSubjectId
+                    )
+
+                    if (!matchesScope) {
                         return@mapNotNull null
                     }
 

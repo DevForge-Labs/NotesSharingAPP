@@ -12,6 +12,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed class ClassroomTokenResult {
     data class Success(val token: String) : ClassroomTokenResult()
@@ -139,15 +141,9 @@ class ClassroomAuthManager(private val context: Context) {
         return GoogleSignIn.getClient(context, gsoBuilder.build())
     }
 
-    suspend fun getSignInIntent(): Intent = withContext(Dispatchers.IO) {
+    fun getSignInIntent(): Intent {
         val client = getSignInClient()
-        try {
-            Tasks.await(client.signOut())
-            Log.d(TAG, "GoogleSignInClient session signed out before launching sign-in intent.")
-        } catch (e: Exception) {
-            Log.w(TAG, "GoogleSignInClient.signOut() before connect encountered an error: ${e.message}", e)
-        }
-        client.signInIntent
+        return client.signInIntent
     }
 
     fun handleSignInResult(data: Intent?) {
@@ -184,9 +180,15 @@ class ClassroomAuthManager(private val context: Context) {
             )
 
             Log.d(TAG, "Google Classroom connected successfully for email: $email")
+            com.pravor.notessharing.data.classroom.reminder.ClassroomSyncWorker.enqueuePeriodicSync(context)
+            com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(context)
         } catch (e: ApiException) {
             Log.e(TAG, "Google Sign-In failed with status code: ${e.statusCode}", e)
-            if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED || e.statusCode == 12501) {
+            if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED || 
+                e.statusCode == 12501 || 
+                e.statusCode == 16 || 
+                e.statusCode == CommonStatusCodes.CANCELED
+            ) {
                 Log.d(TAG, "Google Sign-In was cancelled by user.")
                 refreshAuthState()
             } else {
@@ -253,6 +255,9 @@ class ClassroomAuthManager(private val context: Context) {
         } catch (e: Exception) {
             Log.w(TAG, "Failed to completely revoke GoogleSignInClient access", e)
         }
+
+        com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.cancelAllReminders(context)
+        com.pravor.notessharing.data.classroom.reminder.ClassroomSyncWorker.cancelPeriodicSync(context)
 
         _authState.value = ClassroomAuthState.Disconnected
         Log.d(TAG, "Google Classroom account disconnected.")

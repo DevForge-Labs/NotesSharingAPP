@@ -26,14 +26,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.pravor.notessharing.ui.theme.ElectricBlue
 import com.pravor.notessharing.ui.theme.Mint
 
@@ -42,6 +49,15 @@ fun ClassroomConnectCard(
     onConnectClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val loginLottieCompositionResult = rememberLottieComposition(
+        LottieCompositionSpec.Asset("App_animations/classroom_login_page.json")
+    )
+    val loginLottieComposition = loginLottieCompositionResult.value
+    val loginLottieProgress by animateLottieCompositionAsState(
+        composition = loginLottieComposition,
+        iterations = LottieConstants.IterateForever
+    )
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -60,7 +76,7 @@ fun ClassroomConnectCard(
                         )
                     )
                 )
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Surface(
@@ -79,7 +95,7 @@ fun ClassroomConnectCard(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
             Text(
                 text = "Connect Google Classroom",
@@ -89,28 +105,41 @@ fun ClassroomConnectCard(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
             Text(
                 text = "Connect your student Google account to seamlessly access your registered classes, stream lecture notes, and assignments.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                lineHeight = 20.sp
+                lineHeight = 22.sp
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 FeatureBenefitItem("Direct access to enrolled course streams")
                 FeatureBenefitItem("View registered subjects and coursework")
                 FeatureBenefitItem("Keep your student Google account connected safely")
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
+
+            // Animated Classroom Blackboard Illustration inside the Card
+            if (loginLottieComposition != null) {
+                LottieAnimation(
+                    composition = loginLottieComposition,
+                    progress = { loginLottieProgress },
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(140.dp)
+                )
+                Spacer(Modifier.height(26.dp))
+            } else {
+                Spacer(Modifier.height(16.dp))
+            }
 
             Button(
                 onClick = onConnectClick,

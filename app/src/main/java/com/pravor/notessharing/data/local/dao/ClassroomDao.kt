@@ -142,12 +142,27 @@ interface ClassroomDao {
     @Query("SELECT * FROM classroom_coursework WHERE userId = :userId")
     fun observeAllCourseWork(userId: String): Flow<List<ClassroomCourseWorkEntity>>
 
+    @Query("SELECT * FROM classroom_coursework WHERE userId = :userId")
+    suspend fun getAllCourseWork(userId: String): List<ClassroomCourseWorkEntity>
+
     @Query("SELECT * FROM classroom_attachments WHERE userId = :userId")
     fun observeAllAttachments(userId: String): Flow<List<ClassroomAttachmentEntity>>
+
+    @Query("SELECT * FROM classroom_attachments WHERE userId = :userId")
+    suspend fun getAllAttachments(userId: String): List<ClassroomAttachmentEntity>
 
     @Query("SELECT * FROM classroom_submissions WHERE userId = :userId")
     fun observeAllSubmissions(userId: String): Flow<List<ClassroomSubmissionEntity>>
 
+    @Query("SELECT * FROM classroom_submissions WHERE userId = :userId")
+    suspend fun getAllSubmissions(userId: String): List<ClassroomSubmissionEntity>
+
     @Query("SELECT courseWorkId FROM classroom_manual_completions WHERE userId = :userId AND completed = 1")
     fun observeAllManualCompletions(userId: String): Flow<List<String>>
+
+    @Query("SELECT courseWorkId FROM classroom_manual_completions WHERE userId = :userId AND completed = 1")
+    suspend fun getAllManualCompletions(userId: String): List<String>
+
+    @Query("SELECT courseId FROM classroom_hidden_courses WHERE userId = :userId AND classroomAccount = :classroomAccount")
+    suspend fun getHiddenCourseIds(userId: String, classroomAccount: String): List<String>
 }

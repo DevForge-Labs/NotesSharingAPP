@@ -143,16 +143,15 @@ class TrendingFeedRepository(private val context: Context) {
         )
     }
 
-    suspend fun refresh(collegeId: String) {
-        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        if (canonicalCollegeId.isBlank()) {
+    suspend fun refresh(scope: AcademicScope) {
+        if (!scope.isCollegeValid) {
             _trendingNotes.value = emptyList()
             return
         }
         
-        // Hydrate from college-specific disk cache if memory state is empty
+        // Hydrate from scope-specific disk cache if memory state is empty
         if (_trendingNotes.value.isEmpty()) {
-            val cached = getCachedNotes(canonicalCollegeId)
+            val cached = getCachedNotes(scope.scopeKey)
             if (cached.isNotEmpty()) {
                 _trendingNotes.value = cached
             }
@@ -161,9 +160,9 @@ class TrendingFeedRepository(private val context: Context) {
         if (_isRefreshing.value) return
         _isRefreshing.value = true
         try {
-            val newNotes = fetchPageFromFirestore(canonicalCollegeId, isRefresh = true)
+            val newNotes = fetchPageFromFirestore(scope, isRefresh = true)
             _trendingNotes.value = newNotes
-            saveCachedNotes(canonicalCollegeId, newNotes)
+            saveCachedNotes(scope.scopeKey, newNotes)
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
@@ -171,20 +170,19 @@ class TrendingFeedRepository(private val context: Context) {
         }
     }
 
-    suspend fun loadMore(collegeId: String) {
-        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        if (canonicalCollegeId.isBlank()) {
+    suspend fun loadMore(scope: AcademicScope) {
+        if (!scope.isCollegeValid) {
             _trendingNotes.value = emptyList()
             return
         }
         if (_isLoadingMore.value || isAllCollectionsEnded()) return
         _isLoadingMore.value = true
         try {
-            val nextNotes = fetchPageFromFirestore(canonicalCollegeId, isRefresh = false)
+            val nextNotes = fetchPageFromFirestore(scope, isRefresh = false)
             if (nextNotes.isNotEmpty()) {
                 val merged = (_trendingNotes.value + nextNotes).distinctBy { it.id }
                 _trendingNotes.value = merged
-                saveCachedNotes(canonicalCollegeId, merged)
+                saveCachedNotes(scope.scopeKey, merged)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -198,12 +196,13 @@ class TrendingFeedRepository(private val context: Context) {
         return collections.all { isCollectionEnd[it] == true }
     }
 
-    private suspend fun fetchPageFromFirestore(canonicalCollegeId: String, isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
+    private suspend fun fetchPageFromFirestore(scope: AcademicScope, isRefresh: Boolean): List<TrendingNote> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         if (com.pravor.notessharing.BuildConfig.DEBUG) {
             android.util.Log.d("PERF", "[PERF] Trending page fetch START thread=${Thread.currentThread().name}")
         }
         val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
+        val canonicalCollegeId = scope.canonicalCollegeId
 
         if (isRefresh) {
             lastSnapshots.clear()
@@ -221,7 +220,7 @@ class TrendingFeedRepository(private val context: Context) {
                         var query = firestore.collection(col)
                             .whereEqualTo("college", canonicalCollegeId)
                             .orderBy("trendingScore", Query.Direction.DESCENDING)
-                            .limit(PAGE_SIZE.toLong())
+                            .limit(PAGE_SIZE.toLong() * 2)
 
                         val lastSnap = lastSnapshots[col]
                         if (lastSnap != null) {
@@ -257,10 +256,17 @@ class TrendingFeedRepository(private val context: Context) {
                             val isTitleBlank = title.isNullOrBlank()
                             val isDummyUploader = uploaderId == "dummy-uid"
 
-                            !ExploreMapper.isVideoResource(data) && !isIdBlank && !isTitleBlank && !isDummyUploader
+                            val matchesScope = scope.isDocumentPermitted(
+                                docCollege = data["college"] as? String ?: canonicalCollegeId,
+                                docBranch = data["branch"] as? String,
+                                docSemester = data["semester"] as? String,
+                                docSubjectId = data["subjectId"] as? String
+                            )
+
+                            !ExploreMapper.isVideoResource(data) && !isIdBlank && !isTitleBlank && !isDummyUploader && matchesScope
                         }
 
-                        val advanceCursorTo = if (nonVideoDocs.isEmpty() && docs.isNotEmpty()) {
+                        val advanceCursorTo = if (docs.isNotEmpty()) {
                             docs.last()
                         } else {
                             null

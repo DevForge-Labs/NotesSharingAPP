@@ -32,34 +32,31 @@ class ExploreRepository(private val context: Context) {
         private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 
-    fun observeExploreContent(collegeId: String): Flow<ExploreContent?> {
-        return roomRepository.observeExploreContent(collegeId)
+    fun observeExploreContent(scopeKey: String): Flow<ExploreContent?> {
+        return roomRepository.observeExploreContent(scopeKey)
     }
 
-    suspend fun getCachedContent(collegeId: String): ExploreContent? {
-        val canonical = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        if (canonical.isBlank()) return null
-        val cache = memoryCaches.getOrPut(canonical) { TimedValueCache(5 * 60 * 1000L) }
+    suspend fun getCachedContent(scopeKey: String): ExploreContent? {
+        if (scopeKey.isBlank()) return null
+        val cache = memoryCaches.getOrPut(scopeKey) { TimedValueCache(5 * 60 * 1000L) }
         val inMemory = cache.getExpiredButAvailable()
         if (inMemory != null) return inMemory
         
-        val fromRoom = roomRepository.getCachedContent(canonical)
+        val fromRoom = roomRepository.getCachedContent(scopeKey)
         if (fromRoom != null) {
             cache.putExpired(fromRoom)
         }
         return fromRoom
     }
 
-    fun isCacheExpired(collegeId: String): Boolean {
-        val canonical = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        if (canonical.isBlank()) return true
-        val cache = memoryCaches[canonical] ?: return true
+    fun isCacheExpired(scopeKey: String): Boolean {
+        if (scopeKey.isBlank()) return true
+        val cache = memoryCaches[scopeKey] ?: return true
         return cache.isExpired()
     }
 
-    suspend fun fetchExploreContent(collegeId: String): ExploreContent {
-        val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
-        if (canonicalCollegeId.isBlank()) {
+    suspend fun fetchExploreContent(scope: AcademicScope): ExploreContent {
+        if (!scope.isCollegeValid) {
             return ExploreContent(
                 topics = emptyList(),
                 popularUploads = emptyList(),
@@ -81,7 +78,7 @@ class ExploreRepository(private val context: Context) {
             } else {
                 val next = repositoryScope.async {
                     try {
-                        doFetchExploreContent(canonicalCollegeId)
+                        doFetchExploreContent(scope)
                     } finally {
                         mutex.withLock {
                             if (activeFetch === coroutineContext[Job]) {
@@ -97,18 +94,38 @@ class ExploreRepository(private val context: Context) {
         return deferred.await()
     }
 
-    private suspend fun doFetchExploreContent(canonicalCollegeId: String): ExploreContent = withContext(Dispatchers.IO) {
+    private suspend fun doFetchExploreContent(scope: AcademicScope): ExploreContent = withContext(Dispatchers.IO) {
         val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
+        val canonicalCollegeId = scope.canonicalCollegeId
         
         val allDocs = coroutineScope {
             val deferreds = collections.map { col ->
                 async {
                     try {
-                        firestore.collection(col)
-                            .whereEqualTo("college", canonicalCollegeId)
-                            .get()
-                            .await()
-                            .documents
+                        if (scope.subjectIds.isNotEmpty()) {
+                            val colRef = firestore.collection(col)
+                            val chunks = scope.subjectIds.chunked(30)
+                            chunks.flatMap { chunk ->
+                                colRef.whereEqualTo("college", canonicalCollegeId)
+                                    .whereIn("subjectId", chunk)
+                                    .get()
+                                    .await()
+                                    .documents
+                            }
+                        } else if (scope.hasSemester) {
+                            firestore.collection(col)
+                                .whereEqualTo("college", canonicalCollegeId)
+                                .whereEqualTo("semester", scope.semester)
+                                .get()
+                                .await()
+                                .documents
+                        } else {
+                            firestore.collection(col)
+                                .whereEqualTo("college", canonicalCollegeId)
+                                .get()
+                                .await()
+                                .documents
+                        }
                     } catch (e: Exception) {
                         emptyList()
                     }
@@ -117,14 +134,24 @@ class ExploreRepository(private val context: Context) {
             deferreds.awaitAll().flatten()
         }.sortedWith(ExploreRankingUtils.documentSnapshotComparator)
 
-        val realFeed = allDocs.mapNotNull { doc ->
+        val eligibleDocs = allDocs.filter { doc ->
+            val data = doc.data ?: return@filter false
+            scope.isDocumentPermitted(
+                docCollege = data["college"] as? String ?: canonicalCollegeId,
+                docBranch = data["branch"] as? String,
+                docSemester = data["semester"] as? String,
+                docSubjectId = data["subjectId"] as? String
+            )
+        }
+
+        val realFeed = eligibleDocs.mapNotNull { doc ->
             val data = doc.data ?: return@mapNotNull null
             ExploreMapper.documentToFeedItem(data)
         }
 
         val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
 
-        val allResources = allDocs.mapNotNull { doc ->
+        val allResources = eligibleDocs.mapNotNull { doc ->
             ExploreMapper.documentToTrendingNote(doc, bookmarkedIds)
         }
 
@@ -135,7 +162,7 @@ class ExploreRepository(private val context: Context) {
         val assignmentsList = ExploreRankingUtils.filterAssignments(sortedResources)
         val videosList = ExploreRankingUtils.filterVideos(sortedResources)
 
-        val realDiscover = allDocs.mapNotNull { doc ->
+        val realDiscover = eligibleDocs.mapNotNull { doc ->
             val data = doc.data ?: return@mapNotNull null
             ExploreMapper.documentToDiscoverNote(data)
         }
@@ -154,9 +181,9 @@ class ExploreRepository(private val context: Context) {
             discoverItems = realDiscover.distinctBy { it.id }
         )
 
-        // Sync with timed in-memory cache and Room DB persistence
-        memoryCaches.getOrPut(canonicalCollegeId) { TimedValueCache(5 * 60 * 1000L) }.put(freshContent)
-        roomRepository.saveExploreContent(canonicalCollegeId, freshContent)
+        // Sync with timed in-memory cache and Room DB persistence scoped to exact academic context
+        memoryCaches.getOrPut(scope.scopeKey) { TimedValueCache(5 * 60 * 1000L) }.put(freshContent)
+        roomRepository.saveExploreContent(scope.scopeKey, freshContent)
 
         freshContent
     }

@@ -29,12 +29,13 @@ data class NotificationPreferencesUiState(
     val weeklyDigest: Boolean = true,
     val examAlerts: Boolean = true,
     val trendingResources: Boolean = true,
+    val classroom: Boolean = true,
     val showDisableConfirmationDialog: Boolean = false
 ) {
     val enabledCount: Int
         get() = listOf(
             downloads, personal, contentAlerts, announcements,
-            weeklyDigest, examAlerts, trendingResources
+            weeklyDigest, examAlerts, trendingResources, classroom
         ).count { it }
 }
 
@@ -59,7 +60,8 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
                 announcements = sharedPrefs.getBoolean("pref_notifications_announcements", true),
                 weeklyDigest = sharedPrefs.getBoolean("pref_notifications_weekly_digest", true),
                 examAlerts = sharedPrefs.getBoolean("pref_notifications_exam_alerts", true),
-                trendingResources = sharedPrefs.getBoolean("pref_notifications_trending_resources", true)
+                trendingResources = sharedPrefs.getBoolean("pref_notifications_trending_resources", true),
+                classroom = sharedPrefs.getBoolean("pref_notifications_classroom", true)
             )
         }
     }
@@ -74,6 +76,14 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
             "pref_notifications_weekly_digest" -> _uiState.update { it.copy(weeklyDigest = enabled) }
             "pref_notifications_exam_alerts" -> _uiState.update { it.copy(examAlerts = enabled) }
             "pref_notifications_trending_resources" -> _uiState.update { it.copy(trendingResources = enabled) }
+            "pref_notifications_classroom" -> {
+                _uiState.update { it.copy(classroom = enabled) }
+                if (enabled) {
+                    com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(getApplication())
+                } else {
+                    com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.cancelAllReminders(getApplication())
+                }
+            }
         }
     }
 
@@ -107,7 +117,14 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
             putBoolean("pref_notifications_weekly_digest", enabled)
             putBoolean("pref_notifications_exam_alerts", enabled)
             putBoolean("pref_notifications_trending_resources", enabled)
+            putBoolean("pref_notifications_classroom", enabled)
         }.apply()
+
+        if (enabled) {
+            com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(getApplication())
+        } else {
+            com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.cancelAllReminders(getApplication())
+        }
 
         _uiState.update {
             it.copy(
@@ -118,7 +135,8 @@ class NotificationPreferencesViewModel(application: Application) : AndroidViewMo
                 announcements = enabled,
                 weeklyDigest = enabled,
                 examAlerts = enabled,
-                trendingResources = enabled
+                trendingResources = enabled,
+                classroom = enabled
             )
         }
     }

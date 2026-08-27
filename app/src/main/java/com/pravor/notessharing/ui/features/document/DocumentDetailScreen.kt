@@ -100,7 +100,10 @@ fun DocumentDetailRoute(
                 typeField = doc.documentType,
                 examYear = doc.examYear,
                 section = doc.section,
-                sectionDisplay = doc.sectionDisplay
+                sectionDisplay = doc.sectionDisplay,
+                college = doc.college,
+                branch = doc.branch,
+                semester = doc.semester
             )
             ContinueLearningRepository(context).saveLastOpened(
                 id = doc.id,
@@ -117,7 +120,10 @@ fun DocumentDetailRoute(
                 typeField = doc.documentType,
                 examYear = doc.examYear,
                 section = doc.section,
-                sectionDisplay = doc.sectionDisplay
+                sectionDisplay = doc.sectionDisplay,
+                college = doc.college,
+                branch = doc.branch,
+                semester = doc.semester
             )
             com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
         }

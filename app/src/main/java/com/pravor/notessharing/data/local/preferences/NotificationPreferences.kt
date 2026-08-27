@@ -10,7 +10,8 @@ enum class NotificationCategory {
     ANNOUNCEMENTS,
     WEEKLY_DIGEST,
     EXAM_ALERTS,
-    TRENDING_RESOURCES
+    TRENDING_RESOURCES,
+    CLASSROOM
 }
 
 object NotificationCategoryResolver {
@@ -22,6 +23,9 @@ object NotificationCategoryResolver {
         // 1. Prioritize matching structured notification type
         if (typeLower.isNotEmpty()) {
             when {
+                typeLower.contains("classroom") || typeLower.contains("coursework") ||
+                    typeLower.contains("assignment_reminder") -> return NotificationCategory.CLASSROOM
+                
                 typeLower == "resource_deleted" -> return NotificationCategory.PERSONAL
                 
                 typeLower.contains("personal") || typeLower.contains("contributor") || 
@@ -46,6 +50,8 @@ object NotificationCategoryResolver {
 
         // 2. Fall back to title/body keyword matching only if structured type is absent/unrecognized
         when {
+            titleLower.contains("classroom") || bodyLower.contains("classroom") -> return NotificationCategory.CLASSROOM
+
             titleLower.contains("bookmark") || titleLower.contains("removed") || 
                 titleLower.contains("deleted") || titleLower.contains("contributor") || 
                 titleLower.contains("achievement") || titleLower.contains("account") || 
@@ -94,6 +100,7 @@ class NotificationPreferences(private val context: Context) {
     fun isWeeklyDigestEnabled(): Boolean = sharedPrefs.getBoolean("pref_notifications_weekly_digest", true)
     fun isExamAlertsEnabled(): Boolean = sharedPrefs.getBoolean("pref_notifications_exam_alerts", true)
     fun isTrendingResourcesEnabled(): Boolean = sharedPrefs.getBoolean("pref_notifications_trending_resources", true)
+    fun isClassroomEnabled(): Boolean = sharedPrefs.getBoolean("pref_notifications_classroom", true)
 
     fun shouldShowSystemNotification(category: NotificationCategory): Boolean {
         if (!isMasterEnabled()) return false
@@ -105,6 +112,7 @@ class NotificationPreferences(private val context: Context) {
             NotificationCategory.WEEKLY_DIGEST -> isWeeklyDigestEnabled()
             NotificationCategory.EXAM_ALERTS -> isExamAlertsEnabled()
             NotificationCategory.TRENDING_RESOURCES -> isTrendingResourcesEnabled()
+            NotificationCategory.CLASSROOM -> isClassroomEnabled()
         }
     }
 }

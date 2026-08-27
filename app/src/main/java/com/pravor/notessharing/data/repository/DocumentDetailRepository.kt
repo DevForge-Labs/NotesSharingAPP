@@ -54,7 +54,10 @@ class DocumentDetailRepository {
         private val contributorLevelCache = TimedMemoryCache<String, String>(10 * 60 * 1000L)
     }
 
-    suspend fun getDocument(documentId: String): DocumentDetail? {
+    suspend fun getDocument(
+        documentId: String,
+        requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null
+    ): DocumentDetail? {
         val startTime = System.currentTimeMillis()
         if (BuildConfig.DEBUG) {
             Log.d("PERF", "[PERF] getDocument START id=$documentId")
@@ -93,6 +96,23 @@ class DocumentDetailRepository {
             } else {
                 null
             }
+
+            // Academic Authorization Scope Validation
+            if (result != null && requestingScope != null && requestingScope.isCollegeValid) {
+                val isPermitted = requestingScope.isDocumentPermitted(
+                    docCollege = result.college,
+                    docBranch = result.branch,
+                    docSemester = result.semester,
+                    docSubjectId = null
+                )
+                if (!isPermitted) {
+                    if (BuildConfig.DEBUG) {
+                        Log.w("SECURITY", "[SECURITY] Document $documentId access DENIED for scope: ${requestingScope.scopeKey}")
+                    }
+                    return null
+                }
+            }
+
             if (BuildConfig.DEBUG) {
                 val duration = System.currentTimeMillis() - startTime
                 Log.d("PERF", "[PERF] getDocument END duration=${duration}ms")
@@ -175,7 +195,10 @@ class DocumentDetailRepository {
                 source.equals("YOUTUBE", ignoreCase = true)
     }
 
-    suspend fun getRelatedDocuments(doc: DocumentDetail): List<DocumentDetail> = coroutineScope {
+    suspend fun getRelatedDocuments(
+        doc: DocumentDetail,
+        requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null
+    ): List<DocumentDetail> = coroutineScope {
         val startTime = System.currentTimeMillis()
         if (BuildConfig.DEBUG) {
             Log.d("PERF", "[PERF] getRelatedDocuments START id=${doc.id} thread=${Thread.currentThread().name}")
@@ -235,6 +258,18 @@ class DocumentDetailRepository {
                 afterCurrentItemExclusion++
                 
                 val mappedDoc = data.toDocumentDetail(d.id, col)
+                
+                // Academic Scope Validation
+                if (requestingScope != null && requestingScope.isCollegeValid) {
+                    val isPermitted = requestingScope.isDocumentPermitted(
+                        docCollege = mappedDoc.college,
+                        docBranch = mappedDoc.branch,
+                        docSemester = mappedDoc.semester,
+                        docSubjectId = data["subjectId"] as? String
+                    )
+                    if (!isPermitted) continue
+                }
+
                 val candidateNormalizedSubject = normalizeSubject(mappedDoc.subject)
                 
                 if (candidateNormalizedSubject == currentNormalizedSubject) {
