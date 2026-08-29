@@ -57,21 +57,21 @@ fun NotesSearchBar(
     val bgBrush = if (isPressed) {
         Brush.verticalGradient(
             colors = listOf(
-                Color(0xFF1E2836),
-                Color(0xFF141A23)
+                Color(0xFF1E2836).copy(alpha = 0.78f),
+                Color(0xFF141A23).copy(alpha = 0.82f)
             )
         )
     } else {
         Brush.verticalGradient(
             colors = listOf(
-                Color(0xFF141922),
-                Color(0xFF0D1016)
+                Color(0xFF141922).copy(alpha = 0.74f),
+                Color(0xFF0D1016).copy(alpha = 0.78f)
             )
         )
     }
 
     val borderTint by animateColorAsState(
-        targetValue = if (isPressed) Color(0xFF58D6D1).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.08f),
+        targetValue = if (isPressed) Color(0xFF58D6D1).copy(alpha = 0.45f) else Color(0xFF58D6D1).copy(alpha = 0.22f),
         label = "search-border-tint"
     )
 

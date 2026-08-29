@@ -54,6 +54,10 @@ class ProfileRepository(
         }
     }
 
+    suspend fun getLocalProfile(uid: String): Profile? = withContext(Dispatchers.IO) {
+        userProfileDao.getProfile(uid)?.toDomainModel()
+    }
+
     suspend fun getProfile(uid: String): Profile? = withContext(Dispatchers.IO) {
         val cachedEntity = userProfileDao.getProfile(uid)
         if (cachedEntity != null) {

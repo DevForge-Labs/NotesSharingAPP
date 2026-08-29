@@ -36,7 +36,8 @@ fun TrendingNoteDiscoveryCard(
     LaunchedEffect(note.id) {
         if (!hasCache) {
             isLoading = true
-            val doc = detailRepository.getDocument(note.id)
+            val targetCol = if (note.documentType.isNotBlank()) note.documentType else note.type
+            val doc = detailRepository.getDocument(note.id, collectionName = targetCol)
             documentDetail = doc
             if (doc != null) {
                 contributorLevel = detailRepository.getUploaderContributorLevel(doc.uploaderId)

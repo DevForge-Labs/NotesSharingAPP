@@ -65,49 +65,46 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             manager.downloadedDocumentsFlow.collect { docs ->
                 val studyFiles = mutableListOf<StudyFile>()
+                val allAttachments = manager.getDownloadedAttachments()
+                val attachmentsByDoc = allAttachments.groupBy { it.documentId }
+
                 for (doc in docs) {
-                    val detail = docRepository.getDocument(doc.documentId)
-                    if (detail != null) {
-                        studyFiles.add(docDetailToStudyFile(detail, doc.downloadedAt, doc.localThumbnailPath))
-                    } else {
-                        // Check if the local files for this document actually exist on device
-                        val attachments = manager.getDownloadedAttachments().filter { it.documentId == doc.documentId }
-                        val pdfExists = attachments.isNotEmpty() && attachments.all { java.io.File(it.localPath).exists() }
-                        val thumbnailExists = !doc.localThumbnailPath.isNullOrBlank() && java.io.File(doc.localThumbnailPath).exists()
-                        
-                        if (pdfExists) {
-                            val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.ROOT).trim()) {
-                                "pyq", "pyqs" -> FileType.Pyq
-                                "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
-                                "assignment", "assignments" -> FileType.Notes
-                                "notes" -> FileType.Notes
-                                else -> FileType.Pdf
-                            }
-                            val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-                            val downloadDateStr = "Downloaded " + sdf.format(java.util.Date(doc.downloadedAt))
-                            
-                            studyFiles.add(
-                                StudyFile(
-                                    id = doc.documentId,
-                                    title = doc.title.ifBlank { "Archived Download" },
-                                    uploadDate = downloadDateStr,
-                                    fileType = fileTypeEnum,
-                                    downloadsCount = doc.downloadsCount,
-                                    upvotes = doc.upvotes,
-                                    thumbnailUrl = doc.thumbnailUrl,
-                                    subject = doc.subject.ifBlank { "General" },
-                                    documentType = doc.documentType,
-                                    examYear = doc.examYear,
-                                    examType = doc.examType,
-                                    sectionDisplay = doc.sectionDisplay,
-                                    availability = com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD,
-                                    localThumbnailPath = if (thumbnailExists) doc.localThumbnailPath else null
-                                )
-                            )
-                        } else {
-                            // Local PDF is missing -> remove the stale download
-                            manager.removeDownload(doc.documentId)
+                    val attachments = attachmentsByDoc[doc.documentId] ?: emptyList()
+                    val pdfExists = attachments.isNotEmpty() && attachments.all { java.io.File(it.localPath).exists() }
+                    val thumbnailExists = !doc.localThumbnailPath.isNullOrBlank() && java.io.File(doc.localThumbnailPath).exists()
+                    
+                    if (pdfExists) {
+                        val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.ROOT).trim()) {
+                            "pyq", "pyqs" -> FileType.Pyq
+                            "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
+                            "assignment", "assignments" -> FileType.Notes
+                            "notes" -> FileType.Notes
+                            else -> FileType.Pdf
                         }
+                        val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+                        val downloadDateStr = "Downloaded " + sdf.format(java.util.Date(doc.downloadedAt))
+                        
+                        studyFiles.add(
+                            StudyFile(
+                                id = doc.documentId,
+                                title = doc.title.ifBlank { "Downloaded Document" },
+                                uploadDate = downloadDateStr,
+                                fileType = fileTypeEnum,
+                                downloadsCount = doc.downloadsCount,
+                                upvotes = doc.upvotes,
+                                thumbnailUrl = doc.thumbnailUrl,
+                                subject = doc.subject.ifBlank { "General" },
+                                documentType = doc.documentType,
+                                examYear = doc.examYear,
+                                examType = doc.examType,
+                                sectionDisplay = doc.sectionDisplay,
+                                availability = com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD,
+                                localThumbnailPath = if (thumbnailExists) doc.localThumbnailPath else null
+                            )
+                        )
+                    } else {
+                        // Local PDF is missing -> remove the stale download
+                        manager.removeDownload(doc.documentId)
                     }
                 }
                 downloadedDocs = studyFiles

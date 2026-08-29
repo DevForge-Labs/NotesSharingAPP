@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -45,7 +46,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -73,6 +77,7 @@ import com.pravor.notessharing.ui.common.components.GroupedUploadViewerDialog
 import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.common.components.UploadViewerData
 import com.pravor.notessharing.ui.common.loading.KnowledgeNetworkLoading
+import com.pravor.notessharing.ui.features.home.components.HomeAtmosphericBackground
 import com.pravor.notessharing.ui.features.home.components.HomeNotificationsBottomSheet
 import com.pravor.notessharing.ui.features.home.components.HomeSuccessContent
 import com.pravor.notessharing.ui.features.myfiles.BookmarkUiState
@@ -95,22 +100,18 @@ fun HomeRoute(
     onVideoClick: (String) -> Unit = {},
     pendingNotificationId: String? = null,
     onClearPendingNotificationId: () -> Unit = {},
-    viewModel: HomeViewModel = viewModel(),
-    myFilesViewModel: MyFilesViewModel = viewModel(),
-    bookmarkViewModel: BookmarkViewModel = viewModel()
+    viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val myFilesUiState by myFilesViewModel.uiState.collectAsStateWithLifecycle()
-    val bookmarkUiState by bookmarkViewModel.uiState.collectAsStateWithLifecycle()
     val activeDownloadsCount by DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
     val uploadsCount by viewModel.uploadsCount.collectAsStateWithLifecycle()
+    val bookmarks by com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collectAsStateWithLifecycle()
+    val bookmarksCount = bookmarks.size
 
     LaunchedEffect(Unit) {
         viewModel.refreshRecentlyOpened()
-        bookmarkViewModel.loadBookmarksForCurrentUser()
-        myFilesViewModel.loadDownloads(context)
 
         FirebaseMessaging.getInstance().token
             .addOnCompleteListener { task ->
@@ -132,10 +133,6 @@ fun HomeRoute(
             }
     }
 
-    val bookmarksCount = when (val state = bookmarkUiState) {
-        is BookmarkUiState.Success -> state.bookmarks.size
-        else -> 0
-    }
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadNotificationsCount by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
 
@@ -147,7 +144,6 @@ fun HomeRoute(
                 viewModel.loadRealDocuments(isPullToRefresh = true)
             }
         },
-        myFilesUiState = myFilesUiState,
         uploadsCount = uploadsCount,
         bookmarksCount = bookmarksCount,
         activeDownloadsCount = activeDownloadsCount,
@@ -178,7 +174,6 @@ fun HomeScreen(
     uiState: HomeUiState,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    myFilesUiState: MyFilesUiState,
     uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
@@ -200,13 +195,9 @@ fun HomeScreen(
     onVideoClick: (String) -> Unit,
     pendingNotificationId: String? = null,
     onClearPendingNotificationId: () -> Unit = {},
+    myFilesUiState: MyFilesUiState = MyFilesUiState.Loading,
     modifier: Modifier = Modifier
 ) {
-    val recompositionCount = remember { AtomicInteger(0) }
-    SideEffect {
-        android.util.Log.d("RECOMPOSE", "[RECOMPOSE] HomeScreen count=${recompositionCount.incrementAndGet()}")
-    }
-
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var selectedUploadForViewer by remember { mutableStateOf<UploadViewerData?>(null) }
@@ -236,6 +227,7 @@ fun HomeScreen(
         .distinctUntilChanged()
         .collect { (firstVisible, visibleCount) ->
             if (visibleCount > 0) {
+                android.util.Log.d("PERF", "[PERF] First feed actually rendered firstVisible=$firstVisible visibleCount=$visibleCount thread=${Thread.currentThread().name}")
                 android.util.Log.d("PERF", "[PERF] First visible item=$firstVisible")
                 android.util.Log.d("PERF", "[PERF] Visible items count=$visibleCount")
             }
@@ -264,7 +256,14 @@ fun HomeScreen(
 
     val pullToRefreshState = rememberPullToRefreshState()
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Atmospheric drifting ambient geometry background
+        HomeAtmosphericBackground(modifier = Modifier.fillMaxSize())
+
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
@@ -279,9 +278,7 @@ fun HomeScreen(
             },
             modifier = Modifier.fillMaxSize()
         ) {
-            Crossfade(
-                targetState = stateKey,
-                label = "home-state",
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawWithContent {

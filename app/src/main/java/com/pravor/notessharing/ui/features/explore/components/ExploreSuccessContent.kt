@@ -221,7 +221,8 @@ fun ExploreSuccessContent(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                        border = BorderStroke(1.dp, videosColor.copy(alpha = 0.28f)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF160D10).copy(alpha = 0.74f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -233,7 +234,7 @@ fun ExploreSuccessContent(
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                tint = videosColor.copy(alpha = 0.7f),
                                 modifier = Modifier.size(44.dp)
                             )
                             Spacer(Modifier.height(8.dp))
@@ -250,7 +251,8 @@ fun ExploreSuccessContent(
                 item(key = "videos-container", contentType = "videos_container") {
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = Color(0xFF141922).copy(alpha = 0.74f),
+                        border = BorderStroke(1.dp, videosColor.copy(alpha = 0.28f)),
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp,
                         modifier = Modifier.fillMaxWidth()
@@ -453,9 +455,9 @@ fun SubjectHeroCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f)),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.32f)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = Color(0xFF13171E).copy(alpha = 0.74f)
         )
     ) {
         Column(

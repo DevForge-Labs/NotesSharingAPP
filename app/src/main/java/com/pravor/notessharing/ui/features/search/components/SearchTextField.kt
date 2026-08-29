@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -55,12 +56,17 @@ fun SearchTextField(
             .fillMaxWidth()
             .height(52.dp)
             .background(
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF141922).copy(alpha = 0.74f),
+                        Color(0xFF0D1016).copy(alpha = 0.78f)
+                    )
+                ),
                 shape = RoundedCornerShape(26.dp)
             )
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                color = Color(0xFF58D6D1).copy(alpha = 0.25f),
                 shape = RoundedCornerShape(26.dp)
             )
             .padding(horizontal = 16.dp),

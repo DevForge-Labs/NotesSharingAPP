@@ -126,20 +126,28 @@ fun SearchScreen(
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }
+            },
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Background atmospheric illustration
+            SearchAtmosphericBackground(modifier = Modifier.fillMaxSize())
 
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
                     SearchTextField(
                         value = state.query,
@@ -264,4 +272,5 @@ fun SearchScreen(
             }
         }
     }
+}
 }

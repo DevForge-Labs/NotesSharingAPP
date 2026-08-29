@@ -56,17 +56,37 @@ class DocumentDetailRepository {
 
     suspend fun getDocument(
         documentId: String,
+        requestingScope: com.pravor.notessharing.core.util.AcademicScope?
+    ): DocumentDetail? = getDocument(documentId, collectionName = null, requestingScope = requestingScope)
+
+    suspend fun getDocument(
+        documentId: String,
+        collectionName: String? = null,
         requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null
-    ): DocumentDetail? {
+    ): DocumentDetail? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         if (BuildConfig.DEBUG) {
-            Log.d("PERF", "[PERF] getDocument START id=$documentId")
+            Log.d("PERF", "[PERF] getDocument START id=$documentId collection=$collectionName thread=${Thread.currentThread().name}")
         }
-        return try {
-            val collections = listOf("notes", "pyqs", "assignments", "cheatsheets")
+        return@withContext try {
+            val targetCollections = if (!collectionName.isNullOrBlank()) {
+                val clean = collectionName.lowercase().trim()
+                val mapped = when {
+                    clean.contains("pyq") -> "pyqs"
+                    clean.contains("assignment") -> "assignments"
+                    clean.contains("cheat") || clean.contains("formula") -> "cheatsheets"
+                    clean.contains("notes") || clean.contains("note") -> "notes"
+                    clean.contains("video") || clean.contains("youtube") -> "videos"
+                    else -> clean
+                }
+                listOf(mapped)
+            } else {
+                listOf("notes", "pyqs", "assignments", "cheatsheets")
+            }
+
             var foundData: Pair<Map<String, Any>, String>? = null
             coroutineScope {
-                val deferreds = collections.map { col ->
+                val deferreds = targetCollections.map { col ->
                     async {
                         try {
                             if (BuildConfig.DEBUG) {
@@ -109,7 +129,7 @@ class DocumentDetailRepository {
                     if (BuildConfig.DEBUG) {
                         Log.w("SECURITY", "[SECURITY] Document $documentId access DENIED for scope: ${requestingScope.scopeKey}")
                     }
-                    return null
+                    return@withContext null
                 }
             }
 

@@ -22,6 +22,7 @@ import com.pravor.notessharing.ui.features.about.AppSettingsViewModel
 import com.pravor.notessharing.ui.features.auth.AuthViewModel
 import com.pravor.notessharing.ui.features.auth.SessionState
 import com.pravor.notessharing.ui.common.*
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
@@ -36,16 +37,19 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         
-        try {
-            com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(applicationContext)
-        } catch (ex: Exception) {
-            android.util.Log.e("MainActivity", "Widget update error: ${ex.message}", ex)
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            try {
+                com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(applicationContext)
+            } catch (ex: Exception) {
+                android.util.Log.e("MainActivity", "Widget update error: ${ex.message}", ex)
+            }
+            logAppSignatures()
         }
         
         val startTime = System.currentTimeMillis()
         splashScreen.setKeepOnScreenCondition {
             val elapsedTime = System.currentTimeMillis() - startTime
-            authViewModel.sessionState.value == SessionState.Checking && elapsedTime < 2500
+            authViewModel.sessionState.value == SessionState.Checking && elapsedTime < 1000
         }
         enableEdgeToEdge(
             navigationBarStyle = SystemBarStyle.auto(
@@ -53,7 +57,6 @@ class MainActivity : ComponentActivity() {
                 android.graphics.Color.TRANSPARENT
             )
         )
-        logAppSignatures()
 
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
         val notificationsEnabled = prefs.getBoolean("notifications_enabled", true)

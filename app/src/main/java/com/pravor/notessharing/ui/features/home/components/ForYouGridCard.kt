@@ -77,6 +77,11 @@ import com.pravor.notessharing.ui.common.DocumentPlaceholder
 import com.pravor.notessharing.ui.common.theme.getStudyResourceTheme
 import java.util.Locale
 
+private val CardBorderShape = RoundedCornerShape(22.dp)
+private val ThumbnailShape = RoundedCornerShape(14.dp)
+private val BadgeShape = RoundedCornerShape(6.dp)
+private val PlayCircleShape = CircleShape
+
 @Composable
 fun ForYouGridCard(
     item: FeedItem,
@@ -86,65 +91,29 @@ fun ForYouGridCard(
     modifier: Modifier = Modifier
 ) {
     val isVideo = item.fileType == FileType.Video
-    val rawDocType = (item.documentType ?: item.type)
-        ?.lowercase(Locale.ROOT)?.trim()
+    val rawDocType = (item.documentType ?: item.type)?.lowercase(Locale.ROOT)?.trim()
 
-    val isPyq = when (rawDocType) {
-        "pyq" -> true
-        "cheatsheet", "cheat sheet", "assignment", "notes" -> false
-        else -> item.fileType == FileType.Pyq ||
-                item.tags.any { it.equals("pyq", ignoreCase = true) } ||
-                item.title.contains("pyq", ignoreCase = true) ||
-                item.description.contains("pyq", ignoreCase = true)
+    val docTypeStr = remember(item.id, rawDocType, item.fileType) {
+        when (rawDocType) {
+            "pyq" -> "PYQ"
+            "cheatsheet", "cheat sheet" -> "Cheat Sheet"
+            "assignment" -> "Assignment"
+            "notes" -> "Notes"
+            "video", "youtube resource" -> if (item.youtubeVideoId.isNullOrBlank() || (!item.youtubeUrl.isNullOrBlank() && extractYoutubePlaylistId(item.youtubeUrl) != null)) "YouTube Playlist" else "YouTube Video"
+            else -> when {
+                isVideo -> if (item.youtubeVideoId.isNullOrBlank() || (!item.youtubeUrl.isNullOrBlank() && extractYoutubePlaylistId(item.youtubeUrl) != null)) "YouTube Playlist" else "YouTube Video"
+                item.fileType == FileType.Pyq || item.tags.any { it.equals("pyq", ignoreCase = true) } || item.title.contains("pyq", ignoreCase = true) -> "PYQ"
+                item.fileType == FileType.CheatSheet || item.tags.any { it.equals("cheat sheet", ignoreCase = true) || it.equals("cheatsheet", ignoreCase = true) || it.equals("formula", ignoreCase = true) } || item.title.contains("cheat", ignoreCase = true) || item.title.contains("formula", ignoreCase = true) -> "Cheat Sheet"
+                item.fileType == FileType.LabManual || item.tags.any { it.equals("assignment", ignoreCase = true) } || item.title.contains("assignment", ignoreCase = true) -> "Assignment"
+                else -> "Notes"
+            }
+        }
     }
 
-    val isCheatSheet = when (rawDocType) {
-        "cheatsheet", "cheat sheet" -> true
-        "pyq", "assignment", "notes" -> false
-        else -> item.fileType == FileType.CheatSheet ||
-                item.tags.any { it.equals("cheat sheet", ignoreCase = true) || it.equals("cheatsheet", ignoreCase = true) || it.equals("formula", ignoreCase = true) } ||
-                item.title.contains("cheat", ignoreCase = true) ||
-                item.title.contains("formula", ignoreCase = true) ||
-                item.description.contains("cheat", ignoreCase = true) ||
-                item.description.contains("formula", ignoreCase = true)
-    }
+    val isPyq = remember(docTypeStr) { docTypeStr == "PYQ" }
+    val isAssignment = remember(docTypeStr) { docTypeStr == "Assignment" }
 
-    val isAssignment = when (rawDocType) {
-        "assignment" -> true
-        "pyq", "cheatsheet", "cheat sheet", "notes" -> false
-        else -> item.fileType == FileType.LabManual ||
-                item.tags.any { it.equals("assignment", ignoreCase = true) } ||
-                item.title.contains("assignment", ignoreCase = true) ||
-                item.description.contains("assignment", ignoreCase = true)
-    }
-
-    val isNotes = when (rawDocType) {
-        "notes" -> true
-        "pyq", "cheatsheet", "cheat sheet", "assignment" -> false
-        else -> item.fileType == FileType.Notes ||
-                item.tags.any { it.equals("notes", ignoreCase = true) || it.equals("lecture", ignoreCase = true) } ||
-                item.title.contains("notes", ignoreCase = true) ||
-                item.title.contains("lecture", ignoreCase = true) ||
-                item.description.contains("notes", ignoreCase = true) ||
-                item.description.contains("lecture", ignoreCase = true)
-    }
-
-    val isYouTubePlaylist = isVideo && (
-        item.youtubeVideoId.isNullOrBlank() ||
-        (!item.youtubeUrl.isNullOrBlank() && extractYoutubePlaylistId(item.youtubeUrl) != null)
-    )
-
-    val docTypeStr = when {
-        isYouTubePlaylist -> "YouTube Playlist"
-        isVideo -> "YouTube Video"
-        isPyq -> "PYQ"
-        isAssignment -> "Assignment"
-        isCheatSheet -> "Cheat Sheet"
-        isNotes -> "Notes"
-        else -> "PDF"
-    }
-
-    val theme = getStudyResourceTheme(docTypeStr)
+    val theme = remember(docTypeStr, item.id) { getStudyResourceTheme(docTypeStr, item.id) }
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 
@@ -152,273 +121,291 @@ fun ForYouGridCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)),
+        shape = CardBorderShape,
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(10.dp)
+                .padding(11.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1.4f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.18f)), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                var hasImageLoaded by remember { mutableStateOf(false) }
-                var imageLoadError by remember { mutableStateOf(false) }
-
-                if (isVideo) {
-                    val isYouTubeResource = item.type == "YouTube Resource" || item.documentType == "YouTube Resource"
-                    val finalImageUrl = if (isYouTubeResource) {
-                        if (!item.thumbnailUrl.isNullOrBlank()) {
-                            item.thumbnailUrl
-                        } else if (!item.youtubeThumbnailUrl.isNullOrBlank()) {
-                            item.youtubeThumbnailUrl
-                        } else {
-                            null
-                        }
-                    } else {
-                        if (!item.thumbnailUrl.isNullOrBlank()) {
-                            item.thumbnailUrl
-                        } else {
-                            null
-                        }
-                    }
-
-                    var hasThumbnailError by remember(finalImageUrl) { mutableStateOf(finalImageUrl.isNullOrBlank()) }
-                    if (!hasThumbnailError && !finalImageUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = finalImageUrl,
-                            contentDescription = item.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            onSuccess = { hasImageLoaded = true },
-                            onError = { hasThumbnailError = true; imageLoadError = true }
-                        )
-                        if (hasImageLoaded) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                accentColor.copy(alpha = 0.12f),
-                                                accentColor.copy(alpha = 0.05f),
-                                                Color.Black.copy(alpha = 0.45f)
-                                            )
-                                        )
-                                    )
-                            )
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.Black.copy(alpha = 0.55f),
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        DocumentPlaceholder(documentType = "Video", modifier = Modifier.fillMaxSize())
-                    }
-                } else {
-                    val imageUrl = if (!item.thumbnailUrl.isNullOrBlank()) item.thumbnailUrl else null
-                    if (!imageUrl.isNullOrBlank()) {
-                        val context = LocalContext.current
-                        val imageRequest = remember(imageUrl) {
-                            ImageRequest.Builder(context)
-                                .data(imageUrl)
-                                .crossfade(true)
-                                .size(280, 200)
-                                .memoryCachePolicy(CachePolicy.ENABLED)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .build()
-                        }
-                        AsyncImage(
-                            model = imageRequest,
-                            contentDescription = item.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            onSuccess = { hasImageLoaded = true },
-                            onError = { imageLoadError = true }
-                        )
-                        if (hasImageLoaded) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                accentColor.copy(alpha = 0.12f),
-                                                accentColor.copy(alpha = 0.05f),
-                                                Color.Black.copy(alpha = 0.45f)
-                                            )
-                                        )
-                                    )
-                            )
-                        }
-                    }
-                    val showFallback = (imageUrl.isNullOrBlank() || imageLoadError) && !hasImageLoaded
-                    if (showFallback) {
-                        DocumentPlaceholder(documentType = docTypeStr, modifier = Modifier.fillMaxSize())
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.Black.copy(alpha = 0.65f),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = docTypeStr.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color = accentColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                minLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
+            ForYouCardThumbnail(item = item, docTypeStr = docTypeStr, isVideo = isVideo, accentColor = accentColor)
             Spacer(Modifier.height(8.dp))
+            ForYouCardInfo(item = item, isPyq = isPyq, isAssignment = isAssignment, accentColor = accentColor)
+            Spacer(Modifier.height(8.dp))
+            ForYouCardActions(item = item, accentColor = accentColor, onUpvoteClick = onUpvoteClick, onBookmarkClick = onBookmarkClick)
+        }
+    }
+}
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                val subjText = item.subject?.trim()?.ifBlank { null } ?: "General"
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = accentColor.copy(alpha = 0.06f),
-                    border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.2f)),
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    Text(
-                        text = subjText,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = accentColor.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+@Composable
+private fun ForYouCardThumbnail(
+    item: FeedItem,
+    docTypeStr: String,
+    isVideo: Boolean,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1.08f)
+            .clip(ThumbnailShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.22f)), ThumbnailShape),
+        contentAlignment = Alignment.Center
+    ) {
+        var imageLoadError by remember(item.id) { mutableStateOf(false) }
 
-                val metaText = when {
-                    isPyq -> item.examYear?.trim()?.ifBlank { null }
-                    isAssignment -> (item.sectionDisplay ?: item.section)?.trim()?.ifBlank { null }
-                    else -> null
-                }
-
-                if (!metaText.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = accentColor.copy(alpha = 0.12f),
-                        border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.35f))
-                    ) {
-                        Text(
-                            text = metaText,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = accentColor,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                    }
-                }
+        if (isVideo) {
+            val isYouTubeResource = item.type == "YouTube Resource" || item.documentType == "YouTube Resource"
+            val finalImageUrl = if (isYouTubeResource) {
+                if (!item.thumbnailUrl.isNullOrBlank()) item.thumbnailUrl
+                else if (!item.youtubeThumbnailUrl.isNullOrBlank()) item.youtubeThumbnailUrl
+                else null
+            } else {
+                if (!item.thumbnailUrl.isNullOrBlank()) item.thumbnailUrl else null
             }
 
-            Spacer(Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = null,
-                            tint = Color(0xFF64B5F6),
-                            modifier = Modifier.size(16.dp)
+            if (!imageLoadError && !finalImageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = finalImageUrl,
+                    contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onError = { imageLoadError = true }
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    accentColor.copy(alpha = 0.10f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.50f)
+                                )
+                            )
                         )
-                        Text(
-                            text = item.downloadsCount.toString(),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = Color(0xFF64B5F6).copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.clickable { onUpvoteClick() }
-                    ) {
-                        val upvoteTint = if (item.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
-                        Icon(
-                            imageVector = if (item.isUpvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                            contentDescription = "Upvote",
-                            tint = upvoteTint,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = item.upvotes.toString(),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = upvoteTint.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                IconButton(
-                    onClick = onBookmarkClick,
-                    modifier = Modifier.size(26.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(PlayCircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (item.isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                        contentDescription = "Bookmark",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            } else {
+                DocumentPlaceholder(documentType = "Video", modifier = Modifier.fillMaxSize())
+            }
+        } else {
+            val imageUrl = if (!item.thumbnailUrl.isNullOrBlank()) item.thumbnailUrl else null
+            if (!imageUrl.isNullOrBlank() && !imageLoadError) {
+                val context = LocalContext.current
+                val imageRequest = remember(imageUrl) {
+                    ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .crossfade(false)
+                        .size(320, 300)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .build()
+                }
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onError = { imageLoadError = true }
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    accentColor.copy(alpha = 0.10f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.50f)
+                                )
+                            )
+                        )
+                )
+            } else {
+                DocumentPlaceholder(documentType = docTypeStr, modifier = Modifier.fillMaxSize())
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .clip(BadgeShape)
+                .background(Color.Black.copy(alpha = 0.65f))
+                .border(BorderStroke(0.5.dp, accentColor.copy(alpha = 0.4f)), BadgeShape)
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+        ) {
+            Text(
+                text = docTypeStr.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp),
+                color = accentColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun ForYouCardInfo(
+    item: FeedItem,
+    isPyq: Boolean,
+    isAssignment: Boolean,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 18.sp,
+                letterSpacing = 0.15.sp
+            ),
+            color = Color.White,
+            maxLines = 2,
+            minLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val subjText = item.subject?.trim()?.ifBlank { null } ?: "General"
+            Box(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .clip(BadgeShape)
+                    .background(accentColor.copy(alpha = 0.08f))
+                    .border(BorderStroke(0.5.dp, accentColor.copy(alpha = 0.22f)), BadgeShape)
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = subjText,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                    color = accentColor,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            val metaText = when {
+                isPyq -> item.examYear?.trim()?.ifBlank { null }
+                isAssignment -> (item.sectionDisplay ?: item.section)?.trim()?.ifBlank { null }
+                else -> null
+            }
+
+            if (!metaText.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier
+                        .clip(BadgeShape)
+                        .background(Color.White.copy(alpha = 0.06f))
+                        .border(BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)), BadgeShape)
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = metaText,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = Color(0xFFCBD5E1),
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ForYouCardActions(
+    item: FeedItem,
+    accentColor: Color,
+    onUpvoteClick: () -> Unit,
+    onBookmarkClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = null,
+                    tint = Color(0xFF64B5F6),
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = item.downloadsCount.toString(),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                    color = Color(0xFF64B5F6).copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier.clickable { onUpvoteClick() }
+            ) {
+                val upvoteTint = if (item.isUpvoted) Color(0xFFFFB74D) else MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = if (item.isUpvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                    contentDescription = "Upvote",
+                    tint = upvoteTint,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = item.upvotes.toString(),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                    color = upvoteTint.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        IconButton(
+            onClick = onBookmarkClick,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = if (item.isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                contentDescription = "Bookmark",
+                tint = if (item.isSaved) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -441,7 +428,7 @@ fun StudyHubCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
+        targetValue = if (isPressed) 0.98f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium
@@ -458,10 +445,10 @@ fun StudyHubCard(
                 indication = null,
                 onClick = onClick
             ),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Row(
             modifier = Modifier
@@ -471,43 +458,36 @@ fun StudyHubCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = accentColor.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.32f)),
+                    modifier = Modifier.size(46.dp)
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = accentColor.copy(alpha = 0.12f),
-                        modifier = Modifier.size(44.dp),
-                        border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (lottieAsset != null) {
-                                val lottieCompositionResult = rememberLottieComposition(
-                                    LottieCompositionSpec.Asset(lottieAsset)
-                                )
-                                val lottieComposition = lottieCompositionResult.value
-                                val lottieProgress by animateLottieCompositionAsState(
-                                    composition = lottieComposition,
-                                    iterations = LottieConstants.IterateForever
-                                )
+                    Box(contentAlignment = Alignment.Center) {
+                        if (lottieAsset != null) {
+                            val lottieCompositionResult = rememberLottieComposition(
+                                LottieCompositionSpec.Asset(lottieAsset)
+                            )
+                            val lottieComposition = lottieCompositionResult.value
+                            val lottieProgress by animateLottieCompositionAsState(
+                                composition = lottieComposition,
+                                iterations = LottieConstants.IterateForever
+                            )
 
-                                if (lottieComposition != null) {
-                                    LottieAnimation(
-                                        composition = lottieComposition,
-                                        progress = { lottieProgress },
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .scale(lottieScale)
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        tint = accentColor,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
+                            if (lottieComposition != null) {
+                                LottieAnimation(
+                                    composition = lottieComposition,
+                                    progress = { lottieProgress },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .scale(lottieScale)
+                                )
                             } else {
                                 Icon(
                                     imageVector = icon,
@@ -516,45 +496,54 @@ fun StudyHubCard(
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = metadata,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                            color = accentColor,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        if (secondaryMetadata != null) {
-                            Text(
-                                text = secondaryMetadata,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                color = accentColor.copy(alpha = 0.8f),
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(top = 2.dp)
+                        } else {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.5.sp,
+                            letterSpacing = 0.15.sp
+                        ),
+                        color = Color.White
+                    )
 
-                Text(
-                    text = contextHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    Text(
+                        text = metadata,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = accentColor
+                    )
+
+                    if (secondaryMetadata != null) {
+                        Text(
+                            text = secondaryMetadata,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            color = accentColor.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        Text(
+                            text = contextHint,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                            color = Color(0xFF94A3B8),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -562,16 +551,28 @@ fun StudyHubCard(
             if (actionContent != null) {
                 actionContent()
             } else {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(20.dp)
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = accentColor.copy(alpha = 0.10f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = accentColor.copy(alpha = 0.9f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+private val SkeletonBgBrush = Brush.verticalGradient(listOf(Color(0xFF181B1F), Color(0xFF0F1113)))
+private val SkeletonLine4Shape = RoundedCornerShape(4.dp)
 
 @Composable
 fun ForYouGridCardSkeleton(
@@ -590,7 +591,7 @@ fun ForYouGridCardSkeleton(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = CardBorderShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -598,14 +599,14 @@ fun ForYouGridCardSkeleton(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color(0xFF181B1F), Color(0xFF0F1113))))
-                .padding(10.dp)
+                .background(SkeletonBgBrush)
+                .padding(11.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.4f)
-                    .clip(RoundedCornerShape(16.dp))
+                    .aspectRatio(1.08f)
+                    .clip(ThumbnailShape)
                     .background(Color.White.copy(alpha = 0.06f * alpha))
             )
 
@@ -615,7 +616,7 @@ fun ForYouGridCardSkeleton(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(SkeletonLine4Shape)
                     .background(Color.White.copy(alpha = 0.06f * alpha))
             )
             Spacer(Modifier.height(6.dp))
@@ -623,11 +624,11 @@ fun ForYouGridCardSkeleton(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(SkeletonLine4Shape)
                     .background(Color.White.copy(alpha = 0.06f * alpha))
             )
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -636,21 +637,21 @@ fun ForYouGridCardSkeleton(
                 Box(
                     modifier = Modifier
                         .width(64.dp)
-                        .height(24.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .height(20.dp)
+                        .clip(BadgeShape)
                         .background(Color.White.copy(alpha = 0.06f * alpha))
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Box(
                     modifier = Modifier
                         .width(44.dp)
-                        .height(24.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .height(20.dp)
+                        .clip(BadgeShape)
                         .background(Color.White.copy(alpha = 0.06f * alpha))
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -658,7 +659,7 @@ fun ForYouGridCardSkeleton(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -686,3 +687,4 @@ fun ForYouGridCardSkeleton(
         }
     }
 }
+

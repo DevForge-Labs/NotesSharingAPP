@@ -21,7 +21,9 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    private val _sessionState = MutableStateFlow<SessionState>(SessionState.Checking)
+    private val _sessionState = MutableStateFlow<SessionState>(
+        if (repository.currentUser != null) SessionState.LoggedIn else SessionState.Checking
+    )
     val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
 
     var tempGoogleProfile: Profile? = null
@@ -59,7 +61,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                     _colleges.value = list
                 }
             } catch (e: Exception) {
-                _collegesError.value = "Failed to load colleges"
+                _collegesError.value = "Unable to load colleges"
             } finally {
                 _isCollegesLoading.value = false
             }
@@ -95,7 +97,6 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
 
     fun checkSession() {
         viewModelScope.launch {
-            _sessionState.update { SessionState.Checking }
             val currentUser = repository.currentUser
             if (currentUser != null) {
                 val profile = repository.getUserProfile(currentUser.uid)
