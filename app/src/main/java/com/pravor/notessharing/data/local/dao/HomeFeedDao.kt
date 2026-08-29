@@ -18,6 +18,9 @@ interface HomeFeedDao {
     @Query("SELECT * FROM home_feed_items ORDER BY upvotes DESC, uploadedAtMs DESC")
     fun observeAllHomeFeed(): Flow<List<HomeFeedItemEntity>>
 
+    @Query("SELECT * FROM home_feed_items ORDER BY upvotes DESC, uploadedAtMs DESC")
+    suspend fun getAllCachedHomeFeed(): List<HomeFeedItemEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertFeedItems(items: List<HomeFeedItemEntity>): List<Long>
 

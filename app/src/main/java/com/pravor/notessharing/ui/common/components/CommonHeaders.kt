@@ -4,8 +4,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,115 +44,92 @@ fun SectionHeader(
     iconTint: Color = MaterialTheme.colorScheme.primary,
     onSeeMoreClick: (() -> Unit)? = null
 ) {
-    if (icon != null) {
-        Surface(
-            modifier = modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.15.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+    val accentColor = when {
+        title.contains("Continue Reading", ignoreCase = true) -> Color(0xFF58D6D1)
+        title.contains("For You", ignoreCase = true) -> Color(0xFFC7A6FF)
+        title.contains("Study Hub", ignoreCase = true) -> Color(0xFFFFB45C)
+        title.contains("Trending", ignoreCase = true) -> Color(0xFFFFB45C)
+        title.contains("Video", ignoreCase = true) -> Color(0xFFFF6B6B)
+        title.contains("Collection", ignoreCase = true) -> Color(0xFF7AD7FF)
+        title.contains("Revision", ignoreCase = true) -> Color(0xFFC7A6FF)
+        title.contains("Discover", ignoreCase = true) -> Color(0xFF58D6D1)
+        else -> Color(0xFF94A3B8)
+    }
 
-                if (onSeeMoreClick != null) {
-                    Text(
-                        text = "See More",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(100.dp))
-                            .clickable(onClick = onSeeMoreClick)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
-                }
-            }
-        }
-    } else {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Row(
-            modifier = modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
         ) {
-            val accentColor = when {
-                title.contains("Continue Reading", ignoreCase = true) -> Color(0xFF58D6D1)
-                title.contains("For You", ignoreCase = true) -> Color(0xFFC7A6FF)
-                title.contains("Study Hub", ignoreCase = true) -> Color(0xFFFFB45C)
-                title.contains("Trending", ignoreCase = true) -> Color(0xFFFFB45C)
-                title.contains("Video", ignoreCase = true) -> Color(0xFFFF6B6B)
-                title.contains("Collection", ignoreCase = true) -> Color(0xFF7AD7FF)
-                title.contains("Revision", ignoreCase = true) -> Color(0xFFC7A6FF)
-                title.contains("Discover", ignoreCase = true) -> Color(0xFF58D6D1)
-                else -> Color(0xFF94A3B8)
+            if (icon != null) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = iconTint.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, iconTint.copy(alpha = 0.35f)),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = accentColor.copy(alpha = 0.85f),
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(18.dp)
+                ) {}
             }
 
-            val widthScale = remember { Animatable(0f) }
-            LaunchedEffect(Unit) {
-                widthScale.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .width(16.dp * widthScale.value)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(accentColor)
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.15.sp,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    letterSpacing = 0.2.sp
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                overflow = TextOverflow.Ellipsis
             )
+        }
 
-            if (onSeeMoreClick != null) {
+        if (onSeeMoreClick != null) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onSeeMoreClick)
+            ) {
                 Text(
-                    text = "See More",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "See All",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(100.dp))
-                        .clickable(onClick = onSeeMoreClick)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun CategoryChip(

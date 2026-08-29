@@ -35,10 +35,16 @@ class HomeFeedRepository(
 
     suspend fun getCachedHomeFeed(scopeKey: String): List<FeedItem> = withContext(Dispatchers.IO) {
         val entities = if (scopeKey.isBlank()) {
-            homeFeedDao.getCachedHomeFeed("")
+            homeFeedDao.getAllCachedHomeFeed()
         } else {
-            homeFeedDao.getCachedHomeFeed(scopeKey)
+            val scoped = homeFeedDao.getCachedHomeFeed(scopeKey)
+            if (scoped.isNotEmpty()) scoped else homeFeedDao.getAllCachedHomeFeed()
         }
+        entities.map { it.toDomainModel() }.filter { item -> isEligibleHomeFeedItem(item) }
+    }
+
+    suspend fun getAllCachedHomeFeed(): List<FeedItem> = withContext(Dispatchers.IO) {
+        val entities = homeFeedDao.getAllCachedHomeFeed()
         entities.map { it.toDomainModel() }.filter { item -> isEligibleHomeFeedItem(item) }
     }
 

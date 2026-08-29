@@ -74,10 +74,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import com.pravor.notessharing.ui.theme.ElectricBlue
+
 @Composable
 fun HomeSuccessContent(
     content: HomeContent,
-    myFilesUiState: MyFilesUiState,
+    myFilesUiState: MyFilesUiState = MyFilesUiState.Loading,
     uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
@@ -95,10 +98,6 @@ fun HomeSuccessContent(
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
-    val libraryFiles = when (myFilesUiState) {
-        is MyFilesUiState.Success -> (myFilesUiState.content.savedFiles + myFilesUiState.content.uploadedFiles).take(5)
-        else -> emptyList()
-    }
     val visibleFeedItems = content.feedItems.take(6)
 
     Box(Modifier.fillMaxSize()) {
@@ -107,8 +106,8 @@ fun HomeSuccessContent(
                 .fillMaxSize()
                 .statusBarsPadding(),
             state = listState,
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 16.dp + bottomPadding),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "home-greeting", contentType = "greeting") {
                 SmartBannerSlot(
@@ -118,22 +117,21 @@ fun HomeSuccessContent(
             }
             if (content.recentlyOpened != null) {
                 item(key = "continue-title", contentType = "section") {
-                    Spacer(Modifier.height(6.dp))
                     SectionHeader("Continue Reading")
                 }
                 item(key = "continue-card", contentType = "continue-reading") {
+                    val roId = content.recentlyOpened.id
+                    val onContinueClick = remember(roId) { { onDocumentClick(roId) } }
                     ContinueReadingCard(
                         item = content.recentlyOpened,
-                        onClick = { onDocumentClick(content.recentlyOpened.id) }
+                        onClick = onContinueClick
                     )
                 }
             }
             item(key = "for-you-title", contentType = "section") {
-                Spacer(Modifier.height(6.dp))
-                SectionHeader("For You")
+                SectionHeader("For You", onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null)
             }
-            if (content.isLoadingFeed) {
-                // Show a premium dark skeleton grid of 6 placeholders matching 2-column paired layout
+            if (content.isLoadingFeed && visibleFeedItems.isEmpty()) {
                 (0 until 3).forEach { rowIndex ->
                     item(key = "for-you-skeleton-row-$rowIndex", contentType = "for-you-skeleton-row") {
                         Row(
@@ -150,6 +148,7 @@ fun HomeSuccessContent(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
                         Column(
@@ -163,7 +162,7 @@ fun HomeSuccessContent(
                                 imageVector = Icons.Default.Description,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(40.dp)
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
@@ -178,8 +177,9 @@ fun HomeSuccessContent(
                 }
             } else {
                 val gridRows = visibleFeedItems.chunked(2)
-                gridRows.forEachIndexed { rowIndex, rowItems ->
-                    item(key = "for-you-row-$rowIndex", contentType = "for-you-grid-row") {
+                gridRows.forEach { rowItems ->
+                    val rowKey = "for-you-row-${rowItems.joinToString("-") { it.id }}"
+                    item(key = rowKey, contentType = "for-you-grid-row") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -204,64 +204,63 @@ fun HomeSuccessContent(
                         val interactionSource = remember { MutableInteractionSource() }
                         val isPressed by interactionSource.collectIsPressedAsState()
                         val scale by animateFloatAsState(
-                            targetValue = if (isPressed) 0.97f else 1.0f,
+                            targetValue = if (isPressed) 0.98f else 1.0f,
                             animationSpec = tween(durationMillis = 100),
                             label = "see-more-scale"
                         )
-                        val buttonElevation by animateFloatAsState(
-                            targetValue = if (isPressed) 1f else 4f,
-                            animationSpec = tween(durationMillis = 100),
-                            label = "see-more-elevation"
-                        )
 
-                        Box(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
                                 .graphicsLayer(scaleX = scale, scaleY = scale)
-                                .shadow(
-                                    elevation = buttonElevation.dp,
-                                    shape = RoundedCornerShape(24.dp),
-                                    clip = false,
-                                    ambientColor = Color(0xFF14B8A6).copy(alpha = 0.15f),
-                                    spotColor = Color(0xFF14B8A6).copy(alpha = 0.3f)
-                                )
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color(0xFF0F766E), // Deep teal
-                                            Color(0xFF115E59)  // Dark teal
-                                        )
-                                    )
-                                )
+                                .clip(RoundedCornerShape(18.dp))
                                 .clickable(
                                     interactionSource = interactionSource,
                                     indication = androidx.compose.foundation.LocalIndication.current,
                                     onClick = onSeeMoreClick
-                                )
-                                .border(
-                                    BorderStroke(1.dp, Color(0xFF2DD4BF).copy(alpha = 0.25f)),
-                                    shape = RoundedCornerShape(24.dp)
-                                )
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
+                                ),
+                            shape = RoundedCornerShape(18.dp),
+                            border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.38f)),
+                            color = Color.Transparent,
+                            shadowElevation = 2.dp
                         ) {
-                            Text(
-                                text = "See More",
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp,
-                                    letterSpacing = 0.5.sp
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color(0xFF13202C).copy(alpha = 0.74f),
+                                                Color(0xFF0B131A).copy(alpha = 0.78f)
+                                            )
+                                        )
+                                    )
+                                    .padding(vertical = 14.dp, horizontal = 20.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Explore All Study Resources",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        color = ElectricBlue,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp,
+                                        letterSpacing = 0.2.sp
+                                    )
                                 )
-                            )
+                                Spacer(Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = ElectricBlue,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
             item(key = "study-hub-title", contentType = "section") {
-                Spacer(Modifier.height(12.dp))
                 SectionHeader("Study Hub")
             }
 
@@ -273,8 +272,8 @@ fun HomeSuccessContent(
                     contextHint = "Your contributions to the community",
                     icon = Icons.Default.UploadFile,
                     lottieAsset = "App_animations/uploading_screen_logo.json",
-                    accentColor = Color(0xFF58D6D1), // Premium soft teal/blue
-                    cardBrush = Brush.verticalGradient(listOf(Color(0xFF13201F), Color(0xFF0C1312))),
+                    accentColor = Color(0xFF58D6D1),
+                    cardBrush = Brush.verticalGradient(listOf(Color(0xFF112222).copy(alpha = 0.72f), Color(0xFF0C1414).copy(alpha = 0.75f), Color(0xFF090A0E).copy(alpha = 0.78f))),
                     onClick = onMyUploadsClick,
                     actionContent = {
                         Surface(
@@ -305,8 +304,8 @@ fun HomeSuccessContent(
                     contextHint = "Quick access to saved study material",
                     icon = Icons.Default.Bookmark,
                     lottieAsset = "App_animations/bookmark_screen_icon.json",
-                    accentColor = Color(0xFFFFB45C), // Premium warm tint
-                    cardBrush = Brush.verticalGradient(listOf(Color(0xFF241C15), Color(0xFF16110D))),
+                    accentColor = Color(0xFFFFB45C),
+                    cardBrush = Brush.verticalGradient(listOf(Color(0xFF241C15).copy(alpha = 0.72f), Color(0xFF14100D).copy(alpha = 0.75f), Color(0xFF090A0E).copy(alpha = 0.78f))),
                     onClick = onMyBookmarksClick
                 )
             }
@@ -346,8 +345,8 @@ fun HomeSuccessContent(
                     contextHint = "Your downloaded study collection",
                     icon = Icons.Default.Download,
                     lottieAsset = "App_animations/download_screen_logo.json",
-                    accentColor = Color(0xFFCFD8DC), // Muted slate/academic tint
-                    cardBrush = Brush.verticalGradient(listOf(Color(0xFF1D2124), Color(0xFF111315))),
+                    accentColor = Color(0xFF7AD7FF),
+                    cardBrush = Brush.verticalGradient(listOf(Color(0xFF131F2A).copy(alpha = 0.72f), Color(0xFF0D141C).copy(alpha = 0.75f), Color(0xFF090A0E).copy(alpha = 0.78f))),
                     onClick = onMyDownloadsClick,
                     secondaryMetadata = activeDownloadsText
                 )

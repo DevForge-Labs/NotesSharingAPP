@@ -67,9 +67,9 @@ fun VideoRecommendationCard(
     val accentColor = theme.accentColor
     val cardBrush = theme.cardBrush
 
-    val badgeBgColor = remember(accentColor) { accentColor.copy(alpha = 0.08f) }
-    val badgeBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.3f) }
-    val cardBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.12f) }
+    val badgeBgColor = remember(accentColor) { accentColor.copy(alpha = 0.12f) }
+    val badgeBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.35f) }
+    val cardBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.35f) }
 
     val cardBorder = remember(cardBorderColor) { BorderStroke(1.dp, cardBorderColor) }
     val badgeBorder = remember(badgeBorderColor) { BorderStroke(0.5.dp, badgeBorderColor) }

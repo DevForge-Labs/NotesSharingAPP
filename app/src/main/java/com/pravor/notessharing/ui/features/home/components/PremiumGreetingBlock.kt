@@ -1,57 +1,57 @@
 package com.pravor.notessharing.ui.features.home.components
 
-import com.pravor.notessharing.ui.common.navigation.*
-
-import com.pravor.notessharing.ui.common.loading.*
-
-import com.pravor.notessharing.ui.common.*
-
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Badge
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.SubcomposeAsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.pravor.notessharing.ui.theme.ElectricBlue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
 sealed interface SmartBannerState {
     object GreetingMode : SmartBannerState
-    // Future extensibility:
-    // data class ExamCampaign(val title: String, val subtitle: String, val accentColor: Color) : SmartBannerState
 }
 
 @Composable
@@ -99,18 +99,16 @@ private fun PremiumGreetingBlock(
 
     val subtitle = remember { curatedOneLiners.random() }
 
-    // Animatable variables calibrated for perceptible, smooth card entrance reveals
     val cardAlpha = remember { Animatable(0f) }
     val cardOffsetY = remember { Animatable(16f) }
     val cardScale = remember { Animatable(0.98f) }
     
     val subtitleAlpha = remember { Animatable(0f) }
-    val subtitleOffsetY = remember { Animatable(8f) }
+    val subtitleOffsetY = remember { Animatable(6f) }
 
     val density = LocalDensity.current
 
     LaunchedEffect(Unit) {
-        // Animating greeting card container fade, slide, and scale upward
         launch {
             cardAlpha.animateTo(
                 targetValue = 1f,
@@ -130,10 +128,8 @@ private fun PremiumGreetingBlock(
             )
         }
         
-        // Exact 90ms staggered reveal delay
         delay(90)
         
-        // Animating supporting one-liner fade & slide upward inside the card
         launch {
             subtitleAlpha.animateTo(
                 targetValue = 1f,
@@ -150,8 +146,8 @@ private fun PremiumGreetingBlock(
 
     val cardBrush = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF141922), // premium ambient teal-blue top
-            Color(0xFF0D1016)  // deep dark slate bottom
+            Color(0xFF13202C).copy(alpha = 0.74f),
+            Color(0xFF0B131A).copy(alpha = 0.78f)
         )
     )
 
@@ -165,51 +161,87 @@ private fun PremiumGreetingBlock(
                 scaleX = cardScale.value
                 scaleY = cardScale.value
             },
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color(0xFF58D6D1).copy(alpha = 0.08f)),
-        color = Color.Transparent, // Custom background gradient applied inside column
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.38f)),
+        color = Color.Transparent,
+        shadowElevation = 4.dp
     ) {
-        Column(
+        Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .background(cardBrush)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 22.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // 1. User Avatar with Electric Blue Accent Stroke
+            HomeUserAvatar(
+                photoUrl = currentUser?.photoUrl?.toString(),
+                displayName = displayName ?: currentUser?.email
+            )
+
+            // 2. Greeting & Daily Supporting Message
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Text(
                     text = greeting,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                        letterSpacing = 0.15.sp,
-                        lineHeight = 26.sp
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.5.sp,
+                        letterSpacing = 0.2.sp,
+                        lineHeight = 24.sp
                     ),
-                    color = Color(0xFFF5F7FA),
-                    modifier = Modifier.weight(1f)
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                val bellRotation = remember { Animatable(0f) }
-                LaunchedEffect(unreadCount) {
-                    if (unreadCount > 0) {
-                        while (true) {
-                            bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
-                            delay(8000)
-                        }
-                    } else {
-                        bellRotation.snapTo(0f)
-                    }
-                }
 
-                IconButton(onClick = onBellClick) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    ),
+                    color = Color(0xFF94A3B8),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = subtitleAlpha.value
+                        translationY = with(density) { subtitleOffsetY.value.dp.toPx() }
+                    }
+                )
+            }
+
+            // 3. Notification Bell with Badge & Glass Surface
+            val bellRotation = remember { Animatable(0f) }
+            LaunchedEffect(unreadCount) {
+                if (unreadCount > 0) {
+                    while (true) {
+                        bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                        bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
+                        bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
+                        bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                        bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
+                        delay(8000)
+                    }
+                } else {
+                    bellRotation.snapTo(0f)
+                }
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = ElectricBlue.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.30f)),
+                modifier = Modifier.size(42.dp)
+            ) {
+                IconButton(
+                    onClick = onBellClick,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     BadgedBox(
                         badge = {
                             if (unreadCount > 0) {
@@ -232,35 +264,85 @@ private fun PremiumGreetingBlock(
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications",
-                            tint = Color(0xFFF5F7FA),
-                            modifier = Modifier.graphicsLayer {
-                                rotationZ = bellRotation.value
-                                transformOrigin = TransformOrigin(0.5f, 0.0f)
-                            }
+                            tint = ElectricBlue,
+                            modifier = Modifier
+                                .size(21.dp)
+                                .graphicsLayer {
+                                    rotationZ = bellRotation.value
+                                    transformOrigin = TransformOrigin(0.5f, 0.0f)
+                                }
                         )
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(6.dp))
-            
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 13.sp,
-                    letterSpacing = 0.25.sp,
-                    lineHeight = 18.sp
-                ),
-                color = Color(0xFF94A3B8),
-                modifier = Modifier.graphicsLayer {
-                    alpha = subtitleAlpha.value
-                    translationY = with(density) { subtitleOffsetY.value.dp.toPx() }
-                }
-            )
         }
     }
 }
+
+@Composable
+private fun HomeUserAvatar(
+    photoUrl: String?,
+    displayName: String?
+) {
+    val initial = when {
+        !displayName.isNullOrBlank() -> displayName.trim().first().uppercaseChar().toString()
+        else -> "U"
+    }
+
+    Surface(
+        shape = CircleShape,
+        color = Color(0xFF1E293B),
+        border = BorderStroke(1.5.dp, ElectricBlue.copy(alpha = 0.50f)),
+        modifier = Modifier.size(52.dp)
+    ) {
+        if (!photoUrl.isNullOrBlank()) {
+            SubcomposeAsyncImage(
+                model = photoUrl,
+                contentDescription = "User Profile",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                error = {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text = initial,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = ElectricBlue
+                        )
+                    }
+                },
+                loading = {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text = initial,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = ElectricBlue
+                        )
+                    }
+                }
+            )
+        } else {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = initial,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = ElectricBlue
+                )
+            }
+        }
+    }
+}
+
 
 private val curatedOneLiners = listOf(
     "Steady progress builds confidence",

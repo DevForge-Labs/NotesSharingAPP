@@ -138,7 +138,8 @@ fun TrendingNoteCard(
 
         withContext(Dispatchers.IO) {
             try {
-                val doc = repository.getDocument(note.id)
+                val targetCollection = if (note.documentType.isNotBlank()) note.documentType else note.type
+                val doc = repository.getDocument(note.id, collectionName = targetCollection)
                 if (doc != null) {
                     val urlToUse = if (!doc.thumbnailUrl.isNullOrBlank()) {
                         doc.thumbnailUrl
@@ -229,7 +230,7 @@ fun TrendingNoteCard(
         // Brighten and increase vibrancy slightly for a subtle themed glow
         hsv[1] = (hsv[1] * 1.15f).coerceAtMost(1.0f)
         hsv[2] = (hsv[2] * 1.20f).coerceAtMost(1.0f)
-        Color(android.graphics.Color.HSVToColor(hsv)).copy(alpha = 0.25f)
+        Color(android.graphics.Color.HSVToColor(hsv)).copy(alpha = 0.35f)
     }
 
     PressScaleSurface(
@@ -298,15 +299,15 @@ fun TrendingNoteCard(
                 }
             }
 
-            // Opaque grey and black vertical gradient for extreme text/chip legibility
+            // Translucent vertical gradient for text/chip legibility with atmospheric depth
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .background(
                         Brush.verticalGradient(
                             0.48f to Color.Transparent,
-                            0.68f to Color(0xFF1C1C1E).copy(alpha = 0.98f),
-                            0.88f to Color.Black
+                            0.68f to Color(0xFF1C1C1E).copy(alpha = 0.78f),
+                            0.88f to Color(0xFF090A0E).copy(alpha = 0.82f)
                         )
                     )
             )

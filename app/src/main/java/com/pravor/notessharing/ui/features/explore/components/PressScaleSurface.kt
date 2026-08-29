@@ -45,7 +45,7 @@ fun PressScaleSurface(
                 onClick = onClick
             ),
         shape = shape,
-        color = if (brush == null) MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,
+        color = if (brush == null) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else Color.Transparent,
         tonalElevation = 4.dp,
         shadowElevation = 6.dp
     ) {

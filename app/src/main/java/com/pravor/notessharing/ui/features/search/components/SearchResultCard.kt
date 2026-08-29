@@ -127,11 +127,11 @@ fun SearchResultCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = Color(0xFF13171E).copy(alpha = 0.74f)
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = accentColor.copy(alpha = 0.15f)
+            color = accentColor.copy(alpha = 0.32f)
         )
     ) {
         Row(

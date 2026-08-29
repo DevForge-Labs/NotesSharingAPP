@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.background
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import com.pravor.notessharing.ui.common.CustomPullRefreshIndicator
@@ -251,7 +252,14 @@ fun ExploreScreen(
     val blurRadius = (pullProgress * 2).dp
     val dimAlpha = pullProgress * 0.08f
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Atmospheric animated background illustration
+        ExploreAtmosphericBackground(modifier = Modifier.fillMaxSize())
+
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
