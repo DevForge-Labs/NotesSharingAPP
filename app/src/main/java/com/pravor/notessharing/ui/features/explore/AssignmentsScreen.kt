@@ -103,7 +103,8 @@ fun AssignmentsScreen(
     onBookmarkClick: (TrendingNote) -> Unit,
     onUpvoteClick: (String, String?, Int) -> Unit
 ) {
-    var selectedBranch by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedSubject by remember { mutableStateOf("") }
 
     when (uiState) {
         ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning campus trends", loading = true)
@@ -112,14 +113,36 @@ fun AssignmentsScreen(
         is ExploreUiState.Success -> {
             val allTrendingNotes = uiState.content.assignments
 
+            val subjectList = remember(allTrendingNotes) {
+                allTrendingNotes.mapNotNull { it.subject.takeIf { s -> s.isNotBlank() } }
+                    .map { com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(it, it).trim() }
+                    .distinct()
+            }
+
             // Frontend filtering of Assignments resources using pre-ranked dataset
-            val assignmentNotes = remember(allTrendingNotes, selectedBranch) {
+            val assignmentNotes = remember(allTrendingNotes, searchQuery, selectedSubject) {
+                val q = searchQuery.trim().lowercase(java.util.Locale.ROOT)
+                val normSelected = if (selectedSubject.isNotBlank()) com.pravor.notessharing.ui.common.utils.normalizeSubject(selectedSubject) else ""
+
                 allTrendingNotes.filter { note ->
-                    // Apply selective branch filtering
-                    if (selectedBranch.isNotEmpty()) {
-                        val noteBranch = note.branch.lowercase(java.util.Locale.ROOT)
-                        val queryBranch = selectedBranch.lowercase(java.util.Locale.ROOT)
-                        if (!noteBranch.contains(queryBranch) && !queryBranch.contains(noteBranch)) return@filter false
+                    // Apply selective subject filtering
+                    if (normSelected.isNotEmpty()) {
+                        val noteNormSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.subject)
+                        val noteDispSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.displaySubject ?: "")
+                        if (noteNormSubj != normSelected && noteDispSubj != normSelected) {
+                            return@filter false
+                        }
+                    }
+
+                    // Apply local search query
+                    if (q.isNotEmpty()) {
+                        val matchesTitle = note.title.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesSubj = note.subject.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesDesc = note.description.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesUploader = note.uploaderName.lowercase(java.util.Locale.ROOT).contains(q)
+                        if (!matchesTitle && !matchesSubj && !matchesDesc && !matchesUploader) {
+                            return@filter false
+                        }
                     }
 
                     true
@@ -132,68 +155,25 @@ fun AssignmentsScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh
             ) {
-                item(key = "assignments-filters", contentType = "filters") {
-                    Row(
+                item(key = "assignments-controls", contentType = "controls") {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Dropdown filter for branch
-                        var dropdownExpanded by remember { mutableStateOf(false) }
-                        Box {
-                            Surface(
-                                onClick = { dropdownExpanded = true },
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    val branchDisplayLabel = when (selectedBranch) {
-                                        "Computer Science" -> "CS"
-                                        "" -> "Branch"
-                                        else -> selectedBranch
-                                    }
-                                    Text(
-                                        text = "$branchDisplayLabel ▼",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = dropdownExpanded,
-                                onDismissRequest = { dropdownExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("All Branches") },
-                                    onClick = {
-                                        selectedBranch = ""
-                                        dropdownExpanded = false
-                                    }
-                                )
-                                listOf(
-                                    "Computer Science" to "Computer Science (CS)",
-                                    "Electrical" to "Electrical",
-                                    "Civil" to "Civil",
-                                    "ECE" to "ECE",
-                                    "Mechanical" to "Mechanical"
-                                ).forEach { (value, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            selectedBranch = value
-                                            dropdownExpanded = false
-                                        }
-                                    )
-                                }
-                            }
+                        com.pravor.notessharing.ui.common.components.LocalSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholderText = "Search assignments..."
+                        )
+
+                        if (subjectList.isNotEmpty()) {
+                            com.pravor.notessharing.ui.common.components.SubjectFilterRow(
+                                subjects = subjectList,
+                                selectedSubject = selectedSubject,
+                                onSelectSubject = { selectedSubject = it }
+                            )
                         }
                     }
                 }
@@ -207,7 +187,7 @@ fun AssignmentsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No assignment resources found matching the branch.",
+                                text = "No assignment resources found matching the search criteria.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -40,6 +40,10 @@ import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.common.AdaptiveScrollbar
 import com.pravor.notessharing.ui.common.components.StatePanel
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.pravor.notessharing.ui.features.trending.TrendingNotesUiState
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -104,6 +108,38 @@ fun TrendingNotesContent(
                 is TrendingNotesUiState.Success -> {
                     val documentNotes = uiState.trendingNotes
                     val listState = rememberLazyListState()
+                    var searchQuery by remember { mutableStateOf("") }
+                    var selectedSubject by remember { mutableStateOf("") }
+
+                    val subjectList = remember(documentNotes) {
+                        documentNotes.mapNotNull { it.subject.takeIf { s -> s.isNotBlank() } }
+                            .map { com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(it, it).trim() }
+                            .distinct()
+                    }
+
+                    val filteredNotes = remember(documentNotes, searchQuery, selectedSubject) {
+                        val q = searchQuery.trim().lowercase(java.util.Locale.ROOT)
+                        val normSelected = if (selectedSubject.isNotBlank()) com.pravor.notessharing.ui.common.utils.normalizeSubject(selectedSubject) else ""
+                        documentNotes.filter { note ->
+                            if (normSelected.isNotEmpty()) {
+                                val noteNormSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.subject)
+                                val noteDispSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.displaySubject ?: "")
+                                if (noteNormSubj != normSelected && noteDispSubj != normSelected) {
+                                    return@filter false
+                                }
+                            }
+                            if (q.isNotEmpty()) {
+                                val matchesTitle = note.title.lowercase(java.util.Locale.ROOT).contains(q)
+                                val matchesSubj = note.subject.lowercase(java.util.Locale.ROOT).contains(q)
+                                val matchesDesc = note.description.lowercase(java.util.Locale.ROOT).contains(q)
+                                val matchesUploader = note.uploaderName.lowercase(java.util.Locale.ROOT).contains(q)
+                                if (!matchesTitle && !matchesSubj && !matchesDesc && !matchesUploader) {
+                                    return@filter false
+                                }
+                            }
+                            true
+                        }
+                    }
 
                     LaunchedEffect(listState) {
                         androidx.compose.runtime.snapshotFlow {
@@ -143,18 +179,55 @@ fun TrendingNotesContent(
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp + bottomPadding),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            itemsIndexed(
-                                items = documentNotes,
-                                key = { index, note -> note.id.ifBlank { "trending-note-card-$index" } },
-                                contentType = { _, _ -> "trending-note-card" }
-                            ) { _, note ->
-                                TrendingNoteDiscoveryCard(
-                                    note = note,
-                                    detailRepository = detailRepository,
-                                    onClick = { onDocumentClick(note.id) },
-                                    onBookmarkClick = { onBookmarkClick(note) },
-                                    onUpvoteClick = { onUpvoteClick(note) }
-                                )
+                            item(key = "trending-search-and-filters", contentType = "header-controls") {
+                                androidx.compose.foundation.layout.Column(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    com.pravor.notessharing.ui.common.components.LocalSearchBar(
+                                        query = searchQuery,
+                                        onQueryChange = { searchQuery = it },
+                                        placeholderText = "Search trending notes..."
+                                    )
+                                    if (subjectList.isNotEmpty()) {
+                                        com.pravor.notessharing.ui.common.components.SubjectFilterRow(
+                                            subjects = subjectList,
+                                            selectedSubject = selectedSubject,
+                                            onSelectSubject = { selectedSubject = it }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (filteredNotes.isEmpty()) {
+                                item(key = "empty-filtered-trending", contentType = "empty") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No trending notes match your search.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                            } else {
+                                itemsIndexed(
+                                    items = filteredNotes,
+                                    key = { index, note -> note.id.ifBlank { "trending-note-card-$index" } },
+                                    contentType = { _, _ -> "trending-note-card" }
+                                ) { _, note ->
+                                    TrendingNoteDiscoveryCard(
+                                        note = note,
+                                        detailRepository = detailRepository,
+                                        onClick = { onDocumentClick(note.id) },
+                                        onBookmarkClick = { onBookmarkClick(note) },
+                                        onUpvoteClick = { onUpvoteClick(note) }
+                                    )
+                                }
                             }
 
                             // Show loading indicator at the bottom if loading more pages
