@@ -254,7 +254,12 @@ fun ContinueReadingCard(
     val actionText = if (isVideo) "Continue Watching" else "Continue Reading"
     val lastOpenedText = remember(item.uploadDate, isVideo) { formatRelativeTime(item.uploadDate, isVideo = isVideo) }
     val subtitleText = remember(item.id, item.subject, item.examYear, item.sectionDisplay, item.section, isVideo, badgeText) {
-        val subj = item.subject?.trim()?.ifBlank { null } ?: "General"
+        val rawSubj = item.subject?.trim()?.ifBlank { null } ?: "General"
+        val subj = try {
+            com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveShortName(item.subjectId ?: rawSubj, rawSubj)
+        } catch (e: Exception) {
+            rawSubj
+        }
         when {
             isVideo || isNotes || isCheatSheet -> subj
             isPyq -> {

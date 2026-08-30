@@ -295,7 +295,12 @@ private fun ForYouCardInfo(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val subjText = item.subject?.trim()?.ifBlank { null } ?: "General"
+            val rawSubj = item.subject?.trim()?.ifBlank { null } ?: "General"
+            val subjText = try {
+                com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveShortName(item.subjectId ?: rawSubj, rawSubj)
+            } catch (e: Exception) {
+                rawSubj
+            }
             Box(
                 modifier = Modifier
                     .weight(1f, fill = false)

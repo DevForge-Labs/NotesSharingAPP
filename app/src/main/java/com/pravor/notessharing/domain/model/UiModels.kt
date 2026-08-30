@@ -28,6 +28,7 @@ data class FeedItem(
     val documentType: String? = null,
     val type: String? = null,
     val subject: String? = null,
+    val subjectId: String? = null,
     val examYear: String? = null,
     val examType: String? = null,
     val section: String? = null,

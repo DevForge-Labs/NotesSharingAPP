@@ -889,6 +889,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val documentTypeField = doc["documentType"] as? String
         val typeField = doc["type"] as? String
         val subjectField = subject
+        val subjectIdField = (doc["subjectId"] ?: doc["subject_id"])?.toString() ?: subjectField
         val examYearField = (doc["examYear"] ?: doc["year"])?.toString()
         val examTypeField = doc["examType"] as? String
         val sectionField = doc["section"] as? String
@@ -922,6 +923,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             documentType = documentTypeField,
             type = typeField,
             subject = subjectField,
+            subjectId = subjectIdField,
             examYear = examYearField,
             examType = examTypeField,
             section = sectionField,
