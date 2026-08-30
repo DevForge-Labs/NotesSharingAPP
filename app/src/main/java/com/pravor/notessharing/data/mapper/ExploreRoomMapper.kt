@@ -59,6 +59,14 @@ fun ExploreItemEntity.toFeedItem(): FeedItem {
 }
 
 fun ExploreItemEntity.toTrendingNote(): TrendingNote {
+    val resolvedResourceType = when {
+        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("pyq", "pyqs") || type?.trim()?.lowercase(java.util.Locale.US) in listOf("pyq", "pyqs") -> com.pravor.notessharing.domain.model.ResourceType.PYQ
+        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet") || type?.trim()?.lowercase(java.util.Locale.US) in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet") -> com.pravor.notessharing.domain.model.ResourceType.CHEAT_SHEET
+        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("assignment", "assignments") || type?.trim()?.lowercase(java.util.Locale.US) in listOf("assignment", "assignments") -> com.pravor.notessharing.domain.model.ResourceType.ASSIGNMENT
+        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("video", "videos", "youtube resource", "playlist", "playlists") || (!youtubeVideoId.isNullOrBlank()) || (!youtubeUrl.isNullOrBlank()) -> com.pravor.notessharing.domain.model.ResourceType.VIDEO
+        else -> com.pravor.notessharing.domain.model.ResourceType.NOTE
+    }
+
     return TrendingNote(
         id = id,
         title = title,
@@ -86,6 +94,7 @@ fun ExploreItemEntity.toTrendingNote(): TrendingNote {
         displaySubject = null,
         sectionDisplay = sectionDisplay,
         uploadedAt = uploadedAtMs,
+        resourceType = resolvedResourceType,
         youtubeVideoId = youtubeVideoId ?: "",
         youtubeThumbnailUrl = youtubeThumbnailUrl,
         youtubeUrl = youtubeUrl ?: ""

@@ -102,30 +102,11 @@ class ExploreRepository(private val context: Context) {
             val deferreds = collections.map { col ->
                 async {
                     try {
-                        if (scope.subjectIds.isNotEmpty()) {
-                            val colRef = firestore.collection(col)
-                            val chunks = scope.subjectIds.chunked(30)
-                            chunks.flatMap { chunk ->
-                                colRef.whereEqualTo("college", canonicalCollegeId)
-                                    .whereIn("subjectId", chunk)
-                                    .get()
-                                    .await()
-                                    .documents
-                            }
-                        } else if (scope.hasSemester) {
-                            firestore.collection(col)
-                                .whereEqualTo("college", canonicalCollegeId)
-                                .whereEqualTo("semester", scope.semester)
-                                .get()
-                                .await()
-                                .documents
-                        } else {
-                            firestore.collection(col)
-                                .whereEqualTo("college", canonicalCollegeId)
-                                .get()
-                                .await()
-                                .documents
-                        }
+                        firestore.collection(col)
+                            .whereEqualTo("college", canonicalCollegeId)
+                            .get()
+                            .await()
+                            .documents
                     } catch (e: Exception) {
                         emptyList()
                     }

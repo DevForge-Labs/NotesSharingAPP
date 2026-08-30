@@ -217,31 +217,22 @@ class TrendingFeedRepository(private val context: Context) {
                 async {
                     if (isCollectionEnd[col] == true) return@async Pair(emptyList<DocumentSnapshot>(), null)
                     try {
-                        var query = firestore.collection(col)
-                            .whereEqualTo("college", canonicalCollegeId)
-                            .orderBy("trendingScore", Query.Direction.DESCENDING)
-                            .limit(PAGE_SIZE.toLong() * 2)
-
-                        val lastSnap = lastSnapshots[col]
-                        if (lastSnap != null) {
-                            query = query.startAfter(lastSnap)
-                        }
-
-                        val firestoreQueryStartTime = System.currentTimeMillis()
-                        if (com.pravor.notessharing.BuildConfig.DEBUG) {
-                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=$col thread=${Thread.currentThread().name}")
-                        }
-                        val snap = query.get().await()
-                        if (com.pravor.notessharing.BuildConfig.DEBUG) {
-                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                            android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=$col duration=${firestoreQueryDuration}ms docs=${snap.size()} thread=${Thread.currentThread().name}")
+                        val snap = try {
+                            firestore.collection(col)
+                                .whereEqualTo("college", canonicalCollegeId)
+                                .get()
+                                .await()
+                        } catch (e: Exception) {
+                            firestore.collection(col)
+                                .get()
+                                .await()
                         }
 
                         if (snap.isEmpty) {
                             isCollectionEnd[col] = true
                         }
                         
-                        val docs = snap.documents
+                        val docs = snap.documents.sortedWith(ExploreRankingUtils.documentSnapshotComparator)
                         val nonVideoDocs = docs.filter { doc ->
                             val data = doc.data ?: return@filter false
                             val docId = doc.id

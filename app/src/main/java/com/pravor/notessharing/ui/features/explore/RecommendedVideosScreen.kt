@@ -140,10 +140,43 @@ fun RecommendedVideosScreen(
                     StatePanel("Explore failed", uiState.message)
                 }
                 is ExploreUiState.Success -> {
-                    val videos = remember(uiState.content.videos) {
+                    var searchQuery by remember { mutableStateOf("") }
+                    var selectedSubject by remember { mutableStateOf("") }
+
+                    val allVideos = remember(uiState.content.videos) {
                         uiState.content.videos.map { it.toVideoRecommendation() }
                     }
-                    if (videos.isEmpty()) {
+
+                    val subjectList = remember(allVideos) {
+                        allVideos.mapNotNull { it.subject.takeIf { s -> s.isNotBlank() } }
+                            .map { com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(it, it).trim() }
+                            .distinct()
+                    }
+
+                    val filteredVideos = remember(allVideos, searchQuery, selectedSubject) {
+                        val q = searchQuery.trim().lowercase(java.util.Locale.ROOT)
+                        val normSelected = if (selectedSubject.isNotBlank()) com.pravor.notessharing.ui.common.utils.normalizeSubject(selectedSubject) else ""
+
+                        allVideos.filter { video ->
+                            if (normSelected.isNotEmpty()) {
+                                val normSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(video.subject)
+                                if (normSubj != normSelected) {
+                                    return@filter false
+                                }
+                            }
+                            if (q.isNotEmpty()) {
+                                val matchesTitle = video.title.lowercase(java.util.Locale.ROOT).contains(q)
+                                val matchesChannel = video.channelName.lowercase(java.util.Locale.ROOT).contains(q)
+                                val matchesSubj = video.subject.lowercase(java.util.Locale.ROOT).contains(q)
+                                if (!matchesTitle && !matchesChannel && !matchesSubj) {
+                                    return@filter false
+                                }
+                            }
+                            true
+                        }
+                    }
+
+                    if (allVideos.isEmpty()) {
                         EmptyVideosState()
                     } else {
                         LazyColumn(
@@ -151,16 +184,56 @@ fun RecommendedVideosScreen(
                             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp + bottomPadding),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            itemsIndexed(videos, key = { index, video -> video.id.ifBlank { "video_$index" } }, contentType = { _, _ -> "video" }) { _, video ->
-                                val onBookmarkClickRemembered = remember(video) {
-                                    { onBookmarkClick(video) }
+                            item(key = "videos-controls", contentType = "controls") {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    com.pravor.notessharing.ui.common.components.LocalSearchBar(
+                                        query = searchQuery,
+                                        onQueryChange = { searchQuery = it },
+                                        placeholderText = "Search recommended videos..."
+                                    )
+
+                                    if (subjectList.isNotEmpty()) {
+                                        com.pravor.notessharing.ui.common.components.SubjectFilterRow(
+                                            subjects = subjectList,
+                                            selectedSubject = selectedSubject,
+                                            onSelectSubject = { selectedSubject = it }
+                                        )
+                                    }
                                 }
-                                VideoRecommendationCard(
-                                    video = video,
-                                    isUpvoted = video.isUpvoted,
-                                    onBookmarkClick = onBookmarkClickRemembered,
-                                    onClick = { onVideoClick(video.id) }
-                                )
+                            }
+
+                            if (filteredVideos.isEmpty()) {
+                                item(key = "empty-filtered-videos", contentType = "empty") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No videos match your search.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                            } else {
+                                itemsIndexed(filteredVideos, key = { index, video -> video.id.ifBlank { "video_$index" } }, contentType = { _, _ -> "video" }) { _, video ->
+                                    val onBookmarkClickRemembered = remember(video) {
+                                        { onBookmarkClick(video) }
+                                    }
+                                    VideoRecommendationCard(
+                                        video = video,
+                                        isUpvoted = video.isUpvoted,
+                                        onBookmarkClick = onBookmarkClickRemembered,
+                                        onClick = { onVideoClick(video.id) }
+                                    )
+                                }
                             }
                         }
                     }

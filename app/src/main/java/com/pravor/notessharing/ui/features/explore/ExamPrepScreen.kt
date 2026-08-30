@@ -105,8 +105,9 @@ fun ExamPrepScreen(
     onBookmarkClick: (TrendingNote) -> Unit,
     onUpvoteClick: (String, String?, Int) -> Unit
 ) {
-    var selectedBranch by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("") } // "PYQ", "Cheat Sheet", or "" for all
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedSubject by remember { mutableStateOf("") }
 
     when (uiState) {
         ExploreUiState.Loading -> StatePanel("Finding topics", "Scanning campus trends", loading = true)
@@ -115,21 +116,45 @@ fun ExamPrepScreen(
         is ExploreUiState.Success -> {
             val allTrendingNotes = uiState.content.examPrep
 
+            val subjectList = remember(allTrendingNotes) {
+                allTrendingNotes.mapNotNull { it.subject.takeIf { s -> s.isNotBlank() } }
+                    .map { com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(it, it).trim() }
+                    .distinct()
+            }
+
             // Frontend filtering of Exam Prep resources using pre-ranked dataset
-            val examPrepNotes = remember(allTrendingNotes, selectedBranch, selectedType) {
+            val examPrepNotes = remember(allTrendingNotes, selectedType, searchQuery, selectedSubject) {
+                val q = searchQuery.trim().lowercase(java.util.Locale.ROOT)
+                val normSelected = if (selectedSubject.isNotBlank()) com.pravor.notessharing.ui.common.utils.normalizeSubject(selectedSubject) else ""
+
                 allTrendingNotes.filter { note ->
-                    val isPyq = note.resourceType == ResourceType.PYQ
-                    val isCheatSheet = note.resourceType == ResourceType.CHEAT_SHEET
+                    val docType = (note.documentType.ifBlank { note.type ?: "" }).trim().lowercase(java.util.Locale.ROOT)
+                    val isPyq = note.resourceType == ResourceType.PYQ || docType in listOf("pyq", "pyqs")
+                    val isCheatSheet = note.resourceType == ResourceType.CHEAT_SHEET || docType in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet")
 
                     // Apply selective type filtering
                     if (selectedType == "PYQ" && !isPyq) return@filter false
                     if (selectedType == "Cheat Sheet" && !isCheatSheet) return@filter false
 
-                    // Apply selective branch filtering
-                    if (selectedBranch.isNotEmpty()) {
-                        val noteBranch = note.branch.lowercase(java.util.Locale.ROOT)
-                        val queryBranch = selectedBranch.lowercase(java.util.Locale.ROOT)
-                        if (!noteBranch.contains(queryBranch) && !queryBranch.contains(noteBranch)) return@filter false
+                    // Apply selective subject filtering
+                    if (normSelected.isNotEmpty()) {
+                        val noteNormSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.subject)
+                        val noteDispSubj = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.displaySubject ?: "")
+                        if (noteNormSubj != normSelected && noteDispSubj != normSelected) {
+                            return@filter false
+                        }
+                    }
+
+                    // Apply local search query
+                    if (q.isNotEmpty()) {
+                        val matchesTitle = note.title.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesSubj = note.subject.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesDesc = note.description.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesUploader = note.uploaderName.lowercase(java.util.Locale.ROOT).contains(q)
+                        val matchesYear = note.examYear?.lowercase(java.util.Locale.ROOT)?.contains(q) ?: false
+                        if (!matchesTitle && !matchesSubj && !matchesDesc && !matchesUploader && !matchesYear) {
+                            return@filter false
+                        }
                     }
 
                     true
@@ -142,102 +167,81 @@ fun ExamPrepScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh
             ) {
-                item(key = "exam-prep-filters", contentType = "filters") {
-                    Row(
+                item(key = "exam-prep-controls", contentType = "controls") {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Dropdown filter for branch
-                        var dropdownExpanded by remember { mutableStateOf(false) }
-                        Box {
+                        com.pravor.notessharing.ui.common.components.LocalSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholderText = "Search PYQs and Cheat Sheets..."
+                        )
+
+                        if (subjectList.isNotEmpty()) {
+                            com.pravor.notessharing.ui.common.components.SubjectFilterRow(
+                                subjects = subjectList,
+                                selectedSubject = selectedSubject,
+                                onSelectSubject = { selectedSubject = it }
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // All Types filter chip
+                            val isAllTypeSelected = selectedType.isEmpty()
                             Surface(
-                                onClick = { dropdownExpanded = true },
+                                onClick = { selectedType = "" },
                                 shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                color = if (isAllTypeSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(if (isAllTypeSelected) 1.5.dp else 1.dp, if (isAllTypeSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
                             ) {
-                                Row(
+                                Text(
+                                    text = "All Types",
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    val branchDisplayLabel = when (selectedBranch) {
-                                        "Computer Science" -> "CS"
-                                        "" -> "Branch"
-                                        else -> selectedBranch
-                                    }
-                                    Text(
-                                        text = "$branchDisplayLabel ▼",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = dropdownExpanded,
-                                onDismissRequest = { dropdownExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("All Branches") },
-                                    onClick = {
-                                        selectedBranch = ""
-                                        dropdownExpanded = false
-                                    }
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isAllTypeSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isAllTypeSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                listOf(
-                                    "Computer Science" to "Computer Science (CS)",
-                                    "Electrical" to "Electrical",
-                                    "Civil" to "Civil",
-                                    "ECE" to "ECE",
-                                    "Mechanical" to "Mechanical"
-                                ).forEach { (value, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            selectedBranch = value
-                                            dropdownExpanded = false
-                                        }
-                                    )
-                                }
                             }
-                        }
 
-                        // PYQ filter chip
-                        val isPyqSelected = selectedType == "PYQ"
-                        Surface(
-                            onClick = { selectedType = if (isPyqSelected) "" else "PYQ" },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isPyqSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                            border = BorderStroke(if (isPyqSelected) 1.5.dp else 1.dp, if (isPyqSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            Text(
-                                text = "PYQs",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isPyqSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                            // PYQ filter chip
+                            val isPyqSelected = selectedType == "PYQ"
+                            Surface(
+                                onClick = { selectedType = if (isPyqSelected) "" else "PYQ" },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isPyqSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(if (isPyqSelected) 1.5.dp else 1.dp, if (isPyqSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Text(
+                                    text = "PYQs",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isPyqSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isPyqSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
-                        // Cheat Sheets filter chip
-                        val isCsSelected = selectedType == "Cheat Sheet"
-                        Surface(
-                            onClick = { selectedType = if (isCsSelected) "" else "Cheat Sheet" },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isCsSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                            border = BorderStroke(if (isCsSelected) 1.5.dp else 1.dp, if (isCsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            Text(
-                                text = "Cheat Sheets",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isCsSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                            )
+                            // Cheat Sheet filter chip
+                            val isCheatSheetSelected = selectedType == "Cheat Sheet"
+                            Surface(
+                                onClick = { selectedType = if (isCheatSheetSelected) "" else "Cheat Sheet" },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isCheatSheetSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(if (isCheatSheetSelected) 1.5.dp else 1.dp, if (isCheatSheetSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Text(
+                                    text = "Cheat Sheets",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isCheatSheetSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isCheatSheetSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
