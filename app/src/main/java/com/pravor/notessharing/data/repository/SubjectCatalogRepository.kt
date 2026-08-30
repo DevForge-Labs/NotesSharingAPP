@@ -206,6 +206,7 @@ class SubjectCatalogRepository(
 
     suspend fun parseAndSaveCatalog(rawCatalog: Map<String, Any>) = withContext(Dispatchers.IO) {
         val entitiesToPersist = mutableListOf<SubjectCatalogEntity>()
+        val newCacheMap = mutableMapOf<String, SubjectMetadata>()
         val now = System.currentTimeMillis()
 
         for ((collegeKey, collegeValue) in rawCatalog) {
@@ -237,7 +238,7 @@ class SubjectCatalogRepository(
                             lastSyncedAtMs = now
                         )
                         entitiesToPersist.add(entity)
-                        inMemorySubjectCache[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
+                        newCacheMap[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
                     }
                 } else {
                     // Branch level: cse, it, etc.
@@ -268,7 +269,7 @@ class SubjectCatalogRepository(
                                 lastSyncedAtMs = now
                             )
                             entitiesToPersist.add(entity)
-                            inMemorySubjectCache[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
+                            newCacheMap[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
                         }
                     }
                 }
@@ -278,6 +279,8 @@ class SubjectCatalogRepository(
         if (entitiesToPersist.isNotEmpty()) {
             subjectDao.clearAll()
             subjectDao.upsertSubjects(entitiesToPersist)
+            inMemorySubjectCache.clear()
+            inMemorySubjectCache.putAll(newCacheMap)
             Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache")
         }
     }
