@@ -337,14 +337,14 @@ private fun ForYouCardInfo(
                 Box(
                     modifier = Modifier
                         .clip(BadgeShape)
-                        .background(Color.White.copy(alpha = 0.06f))
-                        .border(BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)), BadgeShape)
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                        .background(accentColor.copy(alpha = 0.08f))
+                        .border(BorderStroke(0.5.dp, accentColor.copy(alpha = 0.22f)), BadgeShape)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = metaText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = Color(0xFFCBD5E1),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                        color = accentColor,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
