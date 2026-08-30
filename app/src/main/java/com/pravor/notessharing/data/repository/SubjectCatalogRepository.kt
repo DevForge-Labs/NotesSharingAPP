@@ -51,7 +51,7 @@ class SubjectCatalogRepository(
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        // Prime in-memory cache from Room on creation
+        // 1. Prime in-memory cache from Room on startup
         repositoryScope.launch {
             try {
                 val cached = subjectDao.getAllSubjects()
@@ -67,11 +67,34 @@ class SubjectCatalogRepository(
                 Log.w(TAG, "Error priming subject cache from Room", e)
             }
         }
+
+        // 2. Attach real-time snapshot listener for instant live updates from Firestore
+        try {
+            firestore.collection("app_config")
+                .document("subject_catalog")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.w(TAG, "Subject catalog snapshot listener error", error)
+                        return@addSnapshotListener
+                    }
+                    if (snapshot != null && snapshot.exists() && snapshot.data != null) {
+                        repositoryScope.launch {
+                            try {
+                                parseAndSaveCatalog(snapshot.data!!)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error processing real-time catalog update", e)
+                            }
+                        }
+                    }
+                }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to attach real-time catalog listener", e)
+        }
     }
 
     /**
-     * Resolves the compact badge / short name for a subject (e.g. "daa" -> "DAA").
-     * Uses in-memory cache first, then falls back to fallbackName.
+     * Resolves the compact badge / short name for a subject (e.g. "daa" -> "DAA", "Software Engineering" -> "SE").
+     * Uses in-memory cache first, then searches catalog entries, then falls back to fallbackName.
      */
     fun resolveShortName(subjectId: String?, fallbackName: String? = null): String {
         if (subjectId.isNullOrBlank() && fallbackName.isNullOrBlank()) return ""
@@ -81,7 +104,16 @@ class SubjectCatalogRepository(
         }
         val cleanFallback = fallbackName?.trim() ?: ""
         if (cleanFallback.isNotEmpty()) {
-            inMemorySubjectCache[cleanFallback.lowercase()]?.let { return it.shortName }
+            val fallbackKey = cleanFallback.lowercase()
+            inMemorySubjectCache[fallbackKey]?.let { return it.shortName }
+
+            // Search by full display name or short name in catalog
+            val match = inMemorySubjectCache.values.firstOrNull {
+                it.name.equals(cleanFallback, ignoreCase = true) ||
+                it.shortName.equals(cleanFallback, ignoreCase = true) ||
+                it.id.equals(cleanFallback, ignoreCase = true)
+            }
+            if (match != null) return match.shortName
             return cleanFallback
         }
         return cleanId.uppercase()
@@ -98,7 +130,15 @@ class SubjectCatalogRepository(
         }
         val cleanFallback = fallbackName?.trim() ?: ""
         if (cleanFallback.isNotEmpty()) {
-            inMemorySubjectCache[cleanFallback.lowercase()]?.let { return it.name }
+            val fallbackKey = cleanFallback.lowercase()
+            inMemorySubjectCache[fallbackKey]?.let { return it.name }
+
+            val match = inMemorySubjectCache.values.firstOrNull {
+                it.name.equals(cleanFallback, ignoreCase = true) ||
+                it.shortName.equals(cleanFallback, ignoreCase = true) ||
+                it.id.equals(cleanFallback, ignoreCase = true)
+            }
+            if (match != null) return match.name
             return cleanFallback
         }
         return cleanId.uppercase()
@@ -156,21 +196,60 @@ class SubjectCatalogRepository(
                 return@withContext Result.failure(Exception("subject_catalog document does not exist in Firestore"))
             }
 
-            val rawCatalog = snapshot.data ?: return@withContext Result.failure(Exception("Catalog data is null"))
-            val entitiesToPersist = mutableListOf<SubjectCatalogEntity>()
-            val now = System.currentTimeMillis()
+            parseAndSaveCatalog(snapshot.data!!)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync subject catalog from Firestore", e)
+            Result.failure(e)
+        }
+    }
 
-            for ((collegeKey, collegeValue) in rawCatalog) {
-                val collegeId = collegeKey.lowercase().trim()
-                val collegeMap = collegeValue as? Map<*, *> ?: continue
+    suspend fun parseAndSaveCatalog(rawCatalog: Map<String, Any>) = withContext(Dispatchers.IO) {
+        val entitiesToPersist = mutableListOf<SubjectCatalogEntity>()
+        val now = System.currentTimeMillis()
 
-                for ((branchKey, branchValue) in collegeMap) {
-                    val branchStr = branchKey.toString().trim()
+        for ((collegeKey, collegeValue) in rawCatalog) {
+            val collegeId = collegeKey.lowercase().trim()
+            val collegeMap = collegeValue as? Map<*, *> ?: continue
 
-                    // Handle first-year groups: GROUP_A, GROUP_B
-                    if (branchStr.startsWith("GROUP_", ignoreCase = true)) {
-                        val groupKey = branchStr.uppercase()
-                        val subjectsList = branchValue as? List<*> ?: continue
+            for ((branchKey, branchValue) in collegeMap) {
+                val branchStr = branchKey.toString().trim()
+
+                // Handle first-year groups: GROUP_A, GROUP_B
+                if (branchStr.startsWith("GROUP_", ignoreCase = true)) {
+                    val groupKey = branchStr.uppercase()
+                    val subjectsList = branchValue as? List<*> ?: continue
+                    for (item in subjectsList) {
+                        val subjectMap = item as? Map<*, *> ?: continue
+                        val subId = subjectMap["id"]?.toString()?.trim()?.lowercase() ?: continue
+                        val subName = subjectMap["name"]?.toString()?.trim() ?: subId
+                        val subShortName = subjectMap["shortName"]?.toString()?.trim() ?: subName
+                        val isActive = subjectMap["active"] as? Boolean ?: true
+
+                        val entity = SubjectCatalogEntity(
+                            collegeId = collegeId,
+                            branchId = groupKey,
+                            semester = if (groupKey == "GROUP_A") "Semester 1" else "Semester 2",
+                            subjectId = subId,
+                            displayName = subName,
+                            shortName = subShortName,
+                            active = isActive,
+                            lastSyncedAtMs = now
+                        )
+                        entitiesToPersist.add(entity)
+                        inMemorySubjectCache[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
+                    }
+                } else {
+                    // Branch level: cse, it, etc.
+                    val branchId = branchStr.lowercase()
+                    val semestersMap = branchValue as? Map<*, *> ?: continue
+
+                    for ((semKey, semValue) in semestersMap) {
+                        val semDigits = semKey.toString().filter { it.isDigit() }
+                        val semNumber = semDigits.ifEmpty { semKey.toString() }
+                        val semName = "Semester $semNumber"
+
+                        val subjectsList = semValue as? List<*> ?: continue
                         for (item in subjectsList) {
                             val subjectMap = item as? Map<*, *> ?: continue
                             val subId = subjectMap["id"]?.toString()?.trim()?.lowercase() ?: continue
@@ -180,8 +259,8 @@ class SubjectCatalogRepository(
 
                             val entity = SubjectCatalogEntity(
                                 collegeId = collegeId,
-                                branchId = groupKey,
-                                semester = if (groupKey == "GROUP_A") "Semester 1" else "Semester 2",
+                                branchId = branchId,
+                                semester = semName,
                                 subjectId = subId,
                                 displayName = subName,
                                 shortName = subShortName,
@@ -191,52 +270,15 @@ class SubjectCatalogRepository(
                             entitiesToPersist.add(entity)
                             inMemorySubjectCache[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
                         }
-                    } else {
-                        // Branch level: cse, it, etc.
-                        val branchId = branchStr.lowercase()
-                        val semestersMap = branchValue as? Map<*, *> ?: continue
-
-                        for ((semKey, semValue) in semestersMap) {
-                            val semDigits = semKey.toString().filter { it.isDigit() }
-                            val semNumber = semDigits.ifEmpty { semKey.toString() }
-                            val semName = "Semester $semNumber"
-
-                            val subjectsList = semValue as? List<*> ?: continue
-                            for (item in subjectsList) {
-                                val subjectMap = item as? Map<*, *> ?: continue
-                                val subId = subjectMap["id"]?.toString()?.trim()?.lowercase() ?: continue
-                                val subName = subjectMap["name"]?.toString()?.trim() ?: subId
-                                val subShortName = subjectMap["shortName"]?.toString()?.trim() ?: subName
-                                val isActive = subjectMap["active"] as? Boolean ?: true
-
-                                val entity = SubjectCatalogEntity(
-                                    collegeId = collegeId,
-                                    branchId = branchId,
-                                    semester = semName,
-                                    subjectId = subId,
-                                    displayName = subName,
-                                    shortName = subShortName,
-                                    active = isActive,
-                                    lastSyncedAtMs = now
-                                )
-                                entitiesToPersist.add(entity)
-                                inMemorySubjectCache[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
-                            }
-                        }
                     }
                 }
             }
+        }
 
-            if (entitiesToPersist.isNotEmpty()) {
-                subjectDao.clearAll()
-                subjectDao.upsertSubjects(entitiesToPersist)
-                Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room")
-            }
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync subject catalog from Firestore", e)
-            Result.failure(e)
+        if (entitiesToPersist.isNotEmpty()) {
+            subjectDao.clearAll()
+            subjectDao.upsertSubjects(entitiesToPersist)
+            Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache")
         }
     }
 }

@@ -129,35 +129,35 @@ fun getSubjectColor(normalizedSubject: String): Color {
  */
 fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String): String {
     return when (normalizedSubject) {
-        "ds" -> " DS"
-        "dbms" -> " DBMS"
-        "os" -> " OS"
-        "cn" -> " CN"
-        "afl" -> " AFL"
-        "coa" -> " COA"
-        "oop" -> " OOPJ"
-        "daa" -> " DAA"
-        "se" -> " Software Engineering"
-        "ai" -> " AI"
-        "ml" -> " ML"
+        "ds" -> "DS"
+        "dbms" -> "DBMS"
+        "os" -> "OS"
+        "cn" -> "CN"
+        "afl" -> "AFL"
+        "coa" -> "COA"
+        "oop" -> "OOPJ"
+        "daa" -> "DAA"
+        "se" -> "SE"
+        "ai" -> "AI"
+        "ml" -> "ML"
         "dl" -> "DL"
-        "physics" -> "Physics"
-        "chemistry" -> "Chemistry"
+        "physics" -> "PHY"
+        "chemistry" -> "CHEM"
         "mathematics" -> "Maths"
         "dm" -> "DM"
-        "statistics" -> "Statistics"
-        "evs" -> " EVS"
-        "scls" -> " SCLS"
-        "java" -> " Java"
+        "statistics" -> "Stats"
+        "evs" -> "EVS"
+        "scls" -> "SCLS"
+        "java" -> "Java"
         "python" -> "Python"
         "c programming" -> "C Prog"
-        "c++" -> " C++"
+        "c++" -> "C++"
         "web development" -> "Web Dev"
         "android development" -> "Android Dev"
-        "cloud computing" -> "Cloud Computing"
-        "cyber security" -> "Cyber Security"
+        "cloud computing" -> "Cloud"
+        "cyber security" -> "Security"
         "STW" -> "STW"
-        else -> originalSubject
+        else -> originalSubject.trim()
     }
 }
 
@@ -203,19 +203,20 @@ fun SubjectBadge(
 
     val shortBadgeName = remember(subject, subjectId, normalized, disableNormalization, catalogRepo) {
         if (disableNormalization) {
-            subject
+            subject.trim()
         } else {
             val fromCatalog = catalogRepo?.resolveShortName(subjectId ?: subject, subject)
-            if (!fromCatalog.isNullOrBlank() && fromCatalog != subject && fromCatalog != subjectId) {
-                fromCatalog
+            if (!fromCatalog.isNullOrBlank()) {
+                fromCatalog.trim()
             } else {
-                getSubjectDisplayName(subject, normalized)
+                getSubjectDisplayName(subject, normalized).trim()
             }
         }
     }
 
     val fullDisplayName = remember(subject, subjectId, catalogRepo) {
-        catalogRepo?.resolveDisplayName(subjectId ?: subject, subject)?.ifBlank { subject } ?: subject
+        val resolved = catalogRepo?.resolveDisplayName(subjectId ?: subject, subject)
+        if (!resolved.isNullOrBlank()) resolved.trim() else subject.trim()
     }
 
     val displayWithSem = remember(shortBadgeName, semester) {
