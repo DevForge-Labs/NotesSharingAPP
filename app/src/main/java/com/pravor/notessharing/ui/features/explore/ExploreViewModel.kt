@@ -67,7 +67,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val rawCollege = profile?.college?.takeIf { it.isNotBlank() } ?: return@launch
                 val collegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(rawCollege)
                 val branchId = profile?.branch?.let { com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveBranchId(it) } ?: "cse"
-                val semester = profile?.semester ?: "Semester 4"
+                val semester = profile?.semester?.takeIf { it.isNotBlank() && it != "Not Set" } ?: return@launch
 
                 val firestoreQueryStartTime = System.currentTimeMillis()
                 android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=app_config/subject_catalog thread=${Thread.currentThread().name}")

@@ -43,6 +43,7 @@ data class ExploreItemEntity(
     val sectionDisplay: String?,
     val examYear: String?,
     val examType: String?,
+    val semester: String? = null,
     val cachedAtMs: Long = System.currentTimeMillis(),
     val uploadedAtMs: Long = 0L
 )

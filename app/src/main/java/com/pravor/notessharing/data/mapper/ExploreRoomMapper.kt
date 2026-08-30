@@ -79,7 +79,7 @@ fun ExploreItemEntity.toTrendingNote(): TrendingNote {
         bookmarks = bookmarksCount,
         examYear = examYear,
         examType = examType,
-        semester = "",
+        semester = semester ?: "",
         isUpvoted = false,
         branch = "",
         trendingScore = 0.0,
@@ -144,6 +144,7 @@ fun FeedItem.toExploreEntity(collegeId: String, sectionCategory: String): Explor
         sectionDisplay = sectionDisplay,
         examYear = examYear,
         examType = examType,
+        semester = null,
         uploadedAtMs = uploadedMs
     )
 }
@@ -184,6 +185,7 @@ fun TrendingNote.toExploreEntity(collegeId: String, sectionCategory: String): Ex
         sectionDisplay = sectionDisplay,
         examYear = examYear,
         examType = examType,
+        semester = semester,
         uploadedAtMs = uploadedAt
     )
 }
@@ -235,6 +237,7 @@ fun DiscoverFeedItem.toExploreEntity(collegeId: String, sectionCategory: String)
         sectionDisplay = null,
         examYear = null,
         examType = null,
+        semester = null,
         uploadedAtMs = 0L
     )
 }

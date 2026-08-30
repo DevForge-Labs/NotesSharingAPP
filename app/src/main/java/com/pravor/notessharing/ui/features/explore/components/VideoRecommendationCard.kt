@@ -185,7 +185,13 @@ fun VideoRecommendationCard(
                 )
 
                 // Row 1: Resource Type & Semester
-                val semesterText = remember(video.semester) { video.semester.replace("Semester ", "Sem ") }
+                val semesterText = remember(video.semester) {
+                    if (video.semester.isNotBlank()) {
+                        video.semester.replace("Semester ", "Sem ")
+                    } else {
+                        ""
+                    }
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -207,18 +213,20 @@ fun VideoRecommendationCard(
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(BadgeShape)
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = semesterText,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            fontWeight = FontWeight.Bold
-                        )
+                    if (semesterText.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(BadgeShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = semesterText,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 

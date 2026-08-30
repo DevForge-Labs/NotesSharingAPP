@@ -63,7 +63,7 @@ data class TrendingNote(
             thumbnailUrl = thumbnailUrl,
             youtubeThumbnailUrl = youtubeThumbnailUrl,
             documentType = documentType,
-            semester = semester.ifBlank { "Semester 4" },
+            semester = semester,
             youtubeUrl = youtubeUrl,
             isUpvoted = isUpvoted,
             isBookmarked = isBookmarked
@@ -84,7 +84,7 @@ data class VideoRecommendation(
     val thumbnailUrl: String? = null,
     val youtubeThumbnailUrl: String? = null,
     val documentType: String = "",
-    val semester: String = "Semester 4",
+    val semester: String = "",
     val youtubeUrl: String = "",
     val isUpvoted: Boolean = false,
     val isBookmarked: Boolean = false
