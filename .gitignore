@@ -16,3 +16,17 @@
 local.properties
 # Android App Bundles
 *.aab
+
+# Logs, Kotlin compiler daemon and errors
+*.log
+*.error
+.kotlin/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# CSV analysis files, temp files & scratch scripts
+*.csv
+*.tmp
+*.bak
+powershell.cmd
