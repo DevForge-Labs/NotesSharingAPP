@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +60,8 @@ fun SmartBannerSlot(
     modifier: Modifier = Modifier,
     state: SmartBannerState = SmartBannerState.GreetingMode,
     unreadCount: Int = 0,
+    shouldPlayWave: Boolean = false,
+    onWaveCompleted: () -> Unit = {},
     onBellClick: () -> Unit = {}
 ) {
     when (state) {
@@ -66,6 +69,8 @@ fun SmartBannerSlot(
             PremiumGreetingBlock(
                 modifier = modifier,
                 unreadCount = unreadCount,
+                shouldPlayWave = shouldPlayWave,
+                onWaveCompleted = onWaveCompleted,
                 onBellClick = onBellClick
             )
         }
@@ -76,6 +81,8 @@ fun SmartBannerSlot(
 private fun PremiumGreetingBlock(
     modifier: Modifier = Modifier,
     unreadCount: Int = 0,
+    shouldPlayWave: Boolean = false,
+    onWaveCompleted: () -> Unit = {},
     onBellClick: () -> Unit = {}
 ) {
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -166,113 +173,168 @@ private fun PremiumGreetingBlock(
         color = Color.Transparent,
         shadowElevation = 4.dp
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(horizontal = 20.dp, vertical = 22.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. User Avatar with Electric Blue Accent Stroke
-            HomeUserAvatar(
-                photoUrl = currentUser?.photoUrl?.toString(),
-                displayName = displayName ?: currentUser?.email
-            )
-
-            // 2. Greeting & Daily Supporting Message
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+            // Top Section: Avatar | Time Salutation + Name Wave | Notification Bell
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = greeting,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.5.sp,
-                        letterSpacing = 0.2.sp,
-                        lineHeight = 24.sp
-                    ),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                // 1. User Avatar with Electric Blue Accent Stroke
+                HomeUserAvatar(
+                    photoUrl = currentUser?.photoUrl?.toString(),
+                    displayName = displayName ?: currentUser?.email
                 )
 
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
-                    ),
-                    color = Color(0xFF94A3B8),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = subtitleAlpha.value
-                        translationY = with(density) { subtitleOffsetY.value.dp.toPx() }
-                    }
-                )
-            }
+                // 2. Salutation & Name with Waving Hand
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = baseGreeting,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.5.sp,
+                            letterSpacing = 0.2.sp,
+                            lineHeight = 17.sp
+                        ),
+                        color = Color(0xFF94A3B8),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
-            // 3. Notification Bell with Badge & Glass Surface
-            val bellRotation = remember { Animatable(0f) }
-            LaunchedEffect(unreadCount) {
-                if (unreadCount > 0) {
-                    while (true) {
-                        bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
-                        delay(8000)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Text(
+                            text = displayName ?: "Scholar",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.5.sp,
+                                letterSpacing = 0.2.sp,
+                                lineHeight = 23.sp
+                            ),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        Spacer(Modifier.width(5.dp))
+
+                        WavingHandEmoji(
+                            shouldAnimate = shouldPlayWave,
+                            onAnimationEnd = onWaveCompleted
+                        )
                     }
-                } else {
-                    bellRotation.snapTo(0f)
+                }
+
+                // 3. Notification Bell with Badge & Glass Surface
+                val bellRotation = remember { Animatable(0f) }
+                LaunchedEffect(unreadCount) {
+                    if (unreadCount > 0) {
+                        while (true) {
+                            bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
+                            delay(8000)
+                        }
+                    } else {
+                        bellRotation.snapTo(0f)
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = ElectricBlue.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.30f)),
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    IconButton(
+                        onClick = onBellClick,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadCount > 0) {
+                                    val badgeText = if (unreadCount > 99) "99+" else unreadCount.toString()
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ) {
+                                        Text(
+                                            text = badgeText,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = ElectricBlue,
+                                modifier = Modifier
+                                    .size(21.dp)
+                                    .graphicsLayer {
+                                        rotationZ = bellRotation.value
+                                        transformOrigin = TransformOrigin(0.5f, 0.0f)
+                                    }
+                            )
+                        }
+                    }
                 }
             }
 
+            // Bottom Section: Independent Actual Greeting / Motivational Quote
             Surface(
-                shape = CircleShape,
-                color = ElectricBlue.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.30f)),
-                modifier = Modifier.size(42.dp)
-            ) {
-                IconButton(
-                    onClick = onBellClick,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    BadgedBox(
-                        badge = {
-                            if (unreadCount > 0) {
-                                val badgeText = if (unreadCount > 99) "99+" else unreadCount.toString()
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                ) {
-                                    Text(
-                                        text = badgeText,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = ElectricBlue,
-                            modifier = Modifier
-                                .size(21.dp)
-                                .graphicsLayer {
-                                    rotationZ = bellRotation.value
-                                    transformOrigin = TransformOrigin(0.5f, 0.0f)
-                                }
-                        )
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF0F172A).copy(alpha = 0.50f),
+                border = BorderStroke(0.75.dp, ElectricBlue.copy(alpha = 0.18f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = subtitleAlpha.value
+                        translationY = with(density) { subtitleOffsetY.value.dp.toPx() }
                     }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .background(ElectricBlue.copy(alpha = 0.85f), CircleShape)
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.5.sp,
+                            lineHeight = 17.sp,
+                            letterSpacing = 0.1.sp
+                        ),
+                        color = Color(0xFFCBD5E1),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -341,6 +403,58 @@ private fun HomeUserAvatar(
             }
         }
     }
+}
+
+@Composable
+private fun WavingHandEmoji(
+    modifier: Modifier = Modifier,
+    shouldAnimate: Boolean = true,
+    onAnimationEnd: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val areAnimationsEnabled = remember(context) {
+        try {
+            val scale = android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            )
+            scale > 0f
+        } catch (e: Exception) {
+            true
+        }
+    }
+
+    val handRotation = remember { Animatable(0f) }
+
+    LaunchedEffect(shouldAnimate, areAnimationsEnabled) {
+        if (shouldAnimate && areAnimationsEnabled) {
+            // Wave 1
+            handRotation.animateTo(14f, tween(130, easing = FastOutSlowInEasing))
+            handRotation.animateTo(-10f, tween(130, easing = FastOutSlowInEasing))
+            // Wave 2
+            handRotation.animateTo(14f, tween(130, easing = FastOutSlowInEasing))
+            handRotation.animateTo(-8f, tween(130, easing = FastOutSlowInEasing))
+            // Wave 3
+            handRotation.animateTo(10f, tween(120, easing = FastOutSlowInEasing))
+            handRotation.animateTo(0f, tween(140, easing = FastOutSlowInEasing))
+            onAnimationEnd()
+        } else {
+            handRotation.snapTo(0f)
+        }
+    }
+
+    Text(
+        text = "👋",
+        style = MaterialTheme.typography.titleMedium.copy(
+            fontSize = 17.sp,
+            lineHeight = 22.sp
+        ),
+        modifier = modifier.graphicsLayer {
+            rotationZ = handRotation.value
+            transformOrigin = TransformOrigin(0.7f, 0.9f)
+        }
+    )
 }
 
 

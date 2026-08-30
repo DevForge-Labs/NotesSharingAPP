@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -273,6 +274,15 @@ private fun ForYouCardInfo(
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val catalogRepo = remember {
+        try {
+            com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val catalogVersion by (catalogRepo?.catalogVersionFlow ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0L) }).collectAsState()
+
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = item.title,
@@ -293,9 +303,12 @@ private fun ForYouCardInfo(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            val subjText = item.subject?.trim()?.ifBlank { null } ?: "General"
+            val rawSubj = item.subject?.trim()?.ifBlank { null } ?: "General"
+            val subjText = remember(item.id, item.subject, item.subjectId, catalogVersion) {
+                catalogRepo?.resolveShortName(item.subjectId ?: rawSubj, rawSubj) ?: rawSubj
+            }
             Box(
                 modifier = Modifier
                     .weight(1f, fill = false)
@@ -324,14 +337,14 @@ private fun ForYouCardInfo(
                 Box(
                     modifier = Modifier
                         .clip(BadgeShape)
-                        .background(Color.White.copy(alpha = 0.06f))
-                        .border(BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)), BadgeShape)
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                        .background(accentColor.copy(alpha = 0.08f))
+                        .border(BorderStroke(0.5.dp, accentColor.copy(alpha = 0.22f)), BadgeShape)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = metaText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = Color(0xFFCBD5E1),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                        color = accentColor,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )

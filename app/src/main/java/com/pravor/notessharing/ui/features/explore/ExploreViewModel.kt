@@ -69,87 +69,11 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val branchId = profile?.branch?.let { com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveBranchId(it) } ?: "cse"
                 val semester = profile?.semester?.takeIf { it.isNotBlank() && it != "Not Set" } ?: return@launch
 
-                val firestoreQueryStartTime = System.currentTimeMillis()
-                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=app_config/subject_catalog thread=${Thread.currentThread().name}")
-                val snapshot = firestore.collection("app_config")
-                    .document("subject_catalog")
-                    .get()
-                    .await()
-                val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
-                android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=app_config/subject_catalog duration=${firestoreQueryDuration}ms docs=${if (snapshot.exists()) 1 else 0} thread=${Thread.currentThread().name}")
-                
-                if (snapshot.exists()) {
-                    val collegeCatalog = snapshot.data?.get(collegeId) as? Map<*, *>
-                    
-                    val isFirstYear = semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 1") || 
-                                     semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 1") || 
-                                     semester.trim() == "1" || 
-                                     semester.trim().lowercase(java.util.Locale.ROOT).startsWith("1st") ||
-                                     semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 2") || 
-                                     semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 2") || 
-                                     semester.trim() == "2" || 
-                                     semester.trim().lowercase(java.util.Locale.ROOT).startsWith("2nd")
-                                     
-                    val catalogData = if (isFirstYear) {
-                        val groupKey = when {
-                            semester.trim().lowercase(java.util.Locale.ROOT).contains("semester 1") || semester.trim().lowercase(java.util.Locale.ROOT).contains("sem 1") || semester.trim() == "1" || semester.trim().lowercase(java.util.Locale.ROOT).startsWith("1st") -> "GROUP_A"
-                            else -> "GROUP_B"
-                        }
-                        collegeCatalog?.entries?.firstOrNull {
-                            it.key.toString().equals(groupKey, ignoreCase = true)
-                        }?.value
-                    } else {
-                        val branchCatalog = collegeCatalog?.entries?.firstOrNull {
-                            it.key.toString().equals(branchId, ignoreCase = true)
-                        }?.value as? Map<*, *>
-                        
-                        val semNum = semester.filter { it.isDigit() }
-                        var semesterData = branchCatalog?.entries?.firstOrNull {
-                            it.key.toString().equals(semester, ignoreCase = true)
-                        }?.value
-                        
-                        if (semesterData == null && semNum.isNotEmpty()) {
-                            semesterData = branchCatalog?.entries?.firstOrNull {
-                                it.key.toString() == semNum
-                            }?.value
-                        }
-                        semesterData
+                val catalogRepo = com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance()
+                catalogRepo.observeSubjectsForScope(collegeId, branchId, semester).collect { subjects ->
+                    if (subjects.isNotEmpty()) {
+                        _allowedSubjects.value = subjects.filter { it.active }.map { CatalogSubject(it.id, it.name) }
                     }
-
-                    val resolvedSubjects = mutableListOf<CatalogSubject>()
-                    if (catalogData != null) {
-                        if (catalogData is Map<*, *>) {
-                            for ((subId, subVal) in catalogData) {
-                                val id = subId.toString()
-                                val name = when (subVal) {
-                                    is Map<*, *> -> subVal["name"]?.toString() ?: id
-                                    is String -> subVal
-                                    else -> id
-                                }
-                                resolvedSubjects.add(CatalogSubject(id, name))
-                            }
-                        } else if (catalogData is List<*>) {
-                            for (item in catalogData) {
-                                when (item) {
-                                    is Map<*, *> -> {
-                                        val id = item["subjectId"]?.toString() ?: item["id"]?.toString() ?: ""
-                                        val name = item["name"]?.toString() ?: item["subject"]?.toString() ?: id
-                                        if (id.isNotEmpty()) {
-                                            resolvedSubjects.add(CatalogSubject(id, name))
-                                        }
-                                    }
-                                    is String -> {
-                                        if (item.isNotEmpty()) {
-                                            resolvedSubjects.add(CatalogSubject(item, item))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Preserves exact ordering from firestore catalog document mapping
-                    _allowedSubjects.value = resolvedSubjects
                 }
             } catch (e: Exception) {
                 // Ignore and keep defaults

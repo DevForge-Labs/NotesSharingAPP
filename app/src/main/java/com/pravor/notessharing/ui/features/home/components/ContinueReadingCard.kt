@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -251,10 +252,20 @@ fun ContinueReadingCard(
     val theme = remember(badgeText, item.id) { getStudyResourceTheme(badgeText, item.id) }
     val accentColor = theme.accentColor
 
+    val catalogRepo = remember {
+        try {
+            com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val catalogVersion by (catalogRepo?.catalogVersionFlow ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0L) }).collectAsState()
+
     val actionText = if (isVideo) "Continue Watching" else "Continue Reading"
     val lastOpenedText = remember(item.uploadDate, isVideo) { formatRelativeTime(item.uploadDate, isVideo = isVideo) }
-    val subtitleText = remember(item.id, item.subject, item.examYear, item.sectionDisplay, item.section, isVideo, badgeText) {
-        val subj = item.subject?.trim()?.ifBlank { null } ?: "General"
+    val subtitleText = remember(item.id, item.subject, item.subjectId, item.examYear, item.sectionDisplay, item.section, isVideo, badgeText, catalogVersion) {
+        val rawSubj = item.subject?.trim()?.ifBlank { null } ?: "General"
+        val subj = catalogRepo?.resolveShortName(item.subjectId ?: rawSubj, rawSubj) ?: rawSubj
         when {
             isVideo || isNotes || isCheatSheet -> subj
             isPyq -> {

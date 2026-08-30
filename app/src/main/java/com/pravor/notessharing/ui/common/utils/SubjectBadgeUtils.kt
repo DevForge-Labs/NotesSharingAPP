@@ -1,11 +1,5 @@
 package com.pravor.notessharing.ui.common.utils
 
-import com.pravor.notessharing.ui.common.navigation.*
-
-import com.pravor.notessharing.ui.common.loading.*
-
-import com.pravor.notessharing.ui.common.*
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,146 +18,81 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.pravor.notessharing.data.repository.SubjectCatalogRepository
+import java.util.Locale
+import kotlin.math.abs
 
 /**
- * Normalizes subject names by:
- * 1. Converting to lowercase.
- * 2. Trimming leading/trailing whitespace.
- * 3. Replacing multiple internal spaces with a single space.
- * 4. Resolving common subject aliases.
+ * Rich, vibrant color palette for dynamic hash-based subject badge colors.
+ * Ensures consistent, high-contrast, beautiful styling across light and dark modes.
  */
-private val MultipleSpacesRegex = Regex("\\s+")
-
-fun normalizeSubject(subject: String): String {
-    val normalized = subject.lowercase()
-        .trim()
-        .replace(MultipleSpacesRegex, " ")
-
-    return when (normalized) {
-        "ds", "data structure", "data structures" -> "ds"
-        "dbms", "database management system", "database management systems" -> "dbms"
-        "os", "operating system", "operating systems" -> "os"
-        "cn", "computer network", "computer networks" -> "cn"
-        "afl", "automata and formal languages", "automata" -> "afl"
-        "coa", "computer organization and architecture", "computer organization" -> "coa"
-        "oop", "object oriented programming", "object oriented programming using java", "object oriented programming with java" -> "oop"
-        "daa", "design and analysis of algorithms", "design & analysis of algorithms" -> "daa"
-        "se", "software engineering" -> "se"
-        "ai", "artificial intelligence" -> "ai"
-        "ml", "machine learning" -> "ml"
-        "dl", "deep learning" -> "dl"
-        "physics", "phy" -> "physics"
-        "chemistry", "chem" -> "chemistry"
-        "mathematics", "maths", "math" -> "mathematics"
-        "discrete mathematics", "discrete maths", "dm" -> "dm"
-        "statistics", "stats" -> "statistics"
-        "evs", "environmental studies" -> "evs"
-        "scls" -> "scls"
-        "java" -> "java"
-        "python" -> "python"
-        "c programming", "c language", "c" -> "c programming"
-        "c++", "cpp" -> "c++"
-        "web development", "web dev", "web technology", "web tech" -> "web development"
-        "android development", "android dev" -> "android development"
-        "cloud computing", "cloud" -> "cloud computing"
-        "cyber security", "cybersecurity", "security" -> "cyber security"
-        "STW", "stw" ,"Stw"-> "STW"
-        else -> normalized
-    }
-}
-
-private val FallbackColors = listOf(
-    Color(0xFF1E88E5), // Blue
-    Color(0xFF43A047), // Green
-    Color(0xFFFB8C00), // Orange
-    Color(0xFF8E24AA), // Purple
-    Color(0xFF00ACC1), // Cyan
-    Color(0xFFD81B60), // Pink
-    Color(0xFF3949AB), // Indigo
-    Color(0xFF7C4DFF), // Violet
-    Color(0xFF00897B), // Emerald / Teal-Green
-    Color(0xFF00C853), // Bright Green
-    Color(0xFFE65100), // Dark Orange
-    Color(0xFF0277BD), // Light Blue
-    Color(0xFF0097A7), // Cyan/Teal
-    Color(0xFF009688), // Teal
-    Color(0xFF558B2F), // Light Green
-    Color(0xFF1565C0), // Dark Blue
-    Color(0xFFC62828)  // Red
+val SubjectBadgePalette = listOf(
+    Color(0xFF2563EB), // Blue 600
+    Color(0xFF7C3AED), // Violet 600
+    Color(0xFF059669), // Emerald 600
+    Color(0xFFD97706), // Amber 600
+    Color(0xFFDC2626), // Red 600
+    Color(0xFFDB2777), // Pink 600
+    Color(0xFF4F46E5), // Indigo 600
+    Color(0xFF0891B2), // Cyan 600
+    Color(0xFF0D9488), // Teal 600
+    Color(0xFFEA580C), // Orange 600
+    Color(0xFF9333EA), // Purple 600
+    Color(0xFF65A30D), // Lime 600
+    Color(0xFF0284C7), // Sky 600
+    Color(0xFFE11D48), // Rose 600
+    Color(0xFF475569), // Slate 600
+    Color(0xFF4338CA), // Deep Indigo
+    Color(0xFF047857), // Deep Emerald
+    Color(0xFFB45309), // Deep Amber
+    Color(0xFFBE185D), // Deep Pink
+    Color(0xFF16A34A), // Green 600
+    Color(0xFFC026D3), // Fuchsia 600
+    Color(0xFF0E7490), // Deep Cyan
+    Color(0xFFB91C1C), // Deep Red
+    Color(0xFF6D28D9)  // Deep Violet
 )
 
+private val MultipleSpacesRegex = Regex("\\s+")
+
 /**
- * Maps normalized subject names to fixed colors.
- * Fallback color is a neutral Slate/Gray.
+ * Normalizes subject string for hashing and comparison.
  */
-fun getSubjectColor(normalizedSubject: String): Color {
-    return when (normalizedSubject) {
-        "ds" -> Color(0xFF1E88E5)           // Blue
-        "dbms" -> Color(0xFF43A047)         // Green
-        "os" -> Color(0xFFFB8C00)           // Orange
-        "cn" -> Color(0xFF8E24AA)           // Purple
-        "physics" -> Color(0xFF00ACC1)      // Cyan
-        "chemistry" -> Color(0xFFD81B60)    // Pink
-        "mathematics" -> Color(0xFF3949AB)  // Indigo
-        "ai" -> Color(0xFF7C4DFF)           // Violet
-        "ml" -> Color(0xFF00897B)           // Emerald / Teal-Green
-        // Maps for other known subjects to have standard/consistent colors
-        "dl" -> Color(0xFF00C853)           // Bright Green
-        "java" -> Color(0xFFE65100)         // Dark Orange
-        "python" -> Color(0xFF0277BD)       // Light Blue
-        "c programming", "c++" -> Color(0xFF0097A7) // Cyan/Teal
-        "web development" -> Color(0xFF009688) // Teal
-        "android development" -> Color(0xFF558B2F) // Light Green
-        "cloud computing" -> Color(0xFF1565C0) // Dark Blue
-        "cyber security" -> Color(0xFFC62828) // Red
-        "STW" -> Color(0xFFFFF334)
-        else -> {
-            val index = java.lang.Math.abs(normalizedSubject.hashCode()) % FallbackColors.size
-            FallbackColors[index]
+fun normalizeSubject(subject: String): String {
+    return subject.lowercase(Locale.ROOT)
+        .trim()
+        .replace(MultipleSpacesRegex, " ")
+}
+
+/**
+ * Deterministically computes a unique, vibrant color for each subject using hashing.
+ */
+fun getSubjectColor(subject: String): Color {
+    val clean = normalizeSubject(subject)
+    if (clean.isBlank()) return Color(0xFF64748B)
+    val hash = abs(clean.hashCode())
+    return SubjectBadgePalette[hash % SubjectBadgePalette.size]
+}
+
+/**
+ * Returns canonical short name from catalog or normalized fallback.
+ */
+fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String = ""): String {
+    if (originalSubject.isBlank()) return ""
+    try {
+        val repo = SubjectCatalogRepository.getInstance()
+        val shortName = repo.resolveShortName(originalSubject, originalSubject)
+        if (shortName.isNotBlank()) {
+            return shortName.trim()
         }
+    } catch (e: Exception) {
+        // Fallback below
     }
+    return originalSubject.trim()
 }
 
 /**
- * Returns standardized display name for predefined subjects, or capitalized original for others.
- */
-fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String): String {
-    return when (normalizedSubject) {
-        "ds" -> " DS"
-        "dbms" -> " DBMS"
-        "os" -> " OS"
-        "cn" -> " CN"
-        "afl" -> " AFL"
-        "coa" -> " COA"
-        "oop" -> " OOPJ"
-        "daa" -> " DAA"
-        "se" -> " Software Engineering"
-        "ai" -> " AI"
-        "ml" -> " ML"
-        "dl" -> "DL"
-        "physics" -> "Physics"
-        "chemistry" -> "Chemistry"
-        "mathematics" -> "Maths"
-        "dm" -> "DM"
-        "statistics" -> "Statistics"
-        "evs" -> " EVS"
-        "scls" -> " SCLS"
-        "java" -> " Java"
-        "python" -> "Python"
-        "c programming" -> "C Prog"
-        "c++" -> " C++"
-        "web development" -> "Web Dev"
-        "android development" -> "Android Dev"
-        "cloud computing" -> "Cloud Computing"
-        "cyber security" -> "Cyber Security"
-        "STW" -> "STW"
-        else -> originalSubject
-    }
-}
-
-/**
- * A pill-styled Composable displaying the resource subject.
- * Tapping it reveals a popup with the full name of the subject.
+ * Formats semester string into compact format (e.g. "Semester 5" -> "Sem-5").
  */
 fun formatSemesterForSubject(semesterStr: String): String {
     val digits = semesterStr.filter { it.isDigit() }
@@ -179,30 +108,64 @@ fun formatSemesterForSubject(semesterStr: String): String {
     }
 }
 
+/**
+ * Authoritative pill-styled Composable displaying the resource subject badge.
+ * - Shows actual canonical short name (e.g. "DAA", "SE", "CN", "OS") from SubjectCatalogRepository.
+ * - Uses dynamic hash-based coloring.
+ * - Tapping reveals a tooltip with the full subject display name.
+ */
 @Composable
 fun SubjectBadge(
     subject: String,
     modifier: Modifier = Modifier,
     isLarge: Boolean = false,
     semester: String? = null,
-    disableNormalization: Boolean = false
+    disableNormalization: Boolean = false,
+    subjectId: String? = null
 ) {
     if (subject.isBlank()) return
 
-    val normalized = remember(subject) { normalizeSubject(subject) }
-    val color = remember(normalized) { getSubjectColor(normalized) }
-    val displayName = remember(subject, normalized, disableNormalization) {
-        if (disableNormalization) {
-            subject
-        } else {
-            getSubjectDisplayName(subject, normalized)
+    val catalogRepo = remember {
+        try {
+            SubjectCatalogRepository.getInstance()
+        } catch (e: Exception) {
+            null
         }
     }
-    val displayWithSem = remember(displayName, semester) {
-        if (!semester.isNullOrBlank()) {
-            "$displayName  |  ${formatSemesterForSubject(semester)}"
+
+    val catalogVersion by (catalogRepo?.catalogVersionFlow ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0L) }).collectAsState()
+
+    // Dynamic hash-based color derived from canonical subject identifier
+    val color = remember(subjectId, subject, catalogVersion) {
+        val key = subjectId?.takeIf { it.isNotBlank() } ?: subject
+        getSubjectColor(key)
+    }
+
+    // Canonical short badge name (e.g. "DAA", "SE", "CN") from the catalog
+    val shortBadgeName = remember(subject, subjectId, disableNormalization, catalogVersion) {
+        if (disableNormalization) {
+            subject.trim()
         } else {
-            displayName
+            val fromCatalog = catalogRepo?.resolveShortName(subjectId ?: subject, subject)
+            if (!fromCatalog.isNullOrBlank()) {
+                fromCatalog.trim()
+            } else {
+                subject.trim().uppercase(Locale.ROOT)
+            }
+        }
+    }
+
+    // Full human-readable display name for the tooltip
+    val fullDisplayName = remember(subject, subjectId, catalogVersion) {
+        val resolved = catalogRepo?.resolveDisplayName(subjectId ?: subject, subject)
+        if (!resolved.isNullOrBlank()) resolved.trim() else subject.trim()
+    }
+
+    val displayWithSem = remember(shortBadgeName, semester) {
+        if (!semester.isNullOrBlank()) {
+            "$shortBadgeName  |  ${formatSemesterForSubject(semester)}"
+        } else {
+            shortBadgeName
         }
     }
 
@@ -213,8 +176,8 @@ fun SubjectBadge(
     ) {
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = color.copy(alpha = 0.08f),
-            border = BorderStroke(1.dp, color.copy(alpha = 0.4f)),
+            color = color.copy(alpha = 0.10f),
+            border = BorderStroke(1.dp, color.copy(alpha = 0.45f)),
             modifier = Modifier
                 .clickable { showTooltip = true }
         ) {
@@ -261,7 +224,7 @@ fun SubjectBadge(
                         .widthIn(max = 240.dp)
                 ) {
                     Text(
-                        text = subject,
+                        text = fullDisplayName,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

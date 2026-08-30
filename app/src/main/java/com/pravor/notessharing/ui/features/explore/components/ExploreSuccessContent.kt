@@ -125,12 +125,12 @@ fun ExploreSuccessContent(
 
     // 5. Subject Section resources grouping (semester-aware and catalog-driven)
     val resourcesBySubject = remember(content.notes, content.examPrep, content.assignments, content.videos, allowedSubjects) {
+        val allItems = content.notes + content.examPrep + content.assignments + content.videos
         allowedSubjects.map { catalogSubject ->
             val matchingResources = mutableListOf<Any>()
             val normalizedCatId = com.pravor.notessharing.ui.common.utils.normalizeSubject(catalogSubject.id)
             val normalizedCatName = com.pravor.notessharing.ui.common.utils.normalizeSubject(catalogSubject.name)
 
-            val allItems = content.notes + content.examPrep + content.assignments + content.videos
             allItems.forEach { note ->
                 if (note.subject.isNotBlank()) {
                     val normalizedRes = com.pravor.notessharing.ui.common.utils.normalizeSubject(note.subject)
@@ -141,7 +141,10 @@ fun ExploreSuccessContent(
             }
 
             Pair(catalogSubject, matchingResources)
-        }
+        }.sortedWith(
+            compareByDescending<Pair<com.pravor.notessharing.ui.features.upload.CatalogSubject, List<Any>>> { it.second.isNotEmpty() }
+                .thenByDescending { it.second.size }
+        )
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -450,7 +453,9 @@ fun SubjectHeroCard(
 ) {
     val normalized = remember(subjectId) { com.pravor.notessharing.ui.common.utils.normalizeSubject(subjectId) }
     val accentColor = remember(normalized) { com.pravor.notessharing.ui.common.utils.getSubjectColor(normalized) }
-    val displayName = remember(subjectName, normalized) { com.pravor.notessharing.ui.common.utils.getSubjectDisplayName(subjectName, normalized) }
+    val displayName = remember(subjectId, subjectName) {
+        com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(subjectId, subjectName)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

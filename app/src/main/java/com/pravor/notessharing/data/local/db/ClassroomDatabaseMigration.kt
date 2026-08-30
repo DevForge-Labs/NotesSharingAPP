@@ -208,3 +208,25 @@ class ExploreDatabaseMigration9To10 : Migration(9, 10) {
     }
 }
 
+class SubjectDatabaseMigration10To11 : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `subject_catalog` (
+                `collegeId` TEXT NOT NULL,
+                `branchId` TEXT NOT NULL,
+                `semester` TEXT NOT NULL,
+                `subjectId` TEXT NOT NULL,
+                `displayName` TEXT NOT NULL,
+                `shortName` TEXT NOT NULL,
+                `active` INTEGER NOT NULL DEFAULT 1,
+                `lastSyncedAtMs` INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(`collegeId`, `branchId`, `semester`, `subjectId`)
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_subject_catalog_collegeId` ON `subject_catalog` (`collegeId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_subject_catalog_collegeId_branchId_semester` ON `subject_catalog` (`collegeId`, `branchId`, `semester`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_subject_catalog_subjectId` ON `subject_catalog` (`subjectId`)")
+    }
+}
+
+

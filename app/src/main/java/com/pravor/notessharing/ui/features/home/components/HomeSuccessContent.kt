@@ -85,6 +85,9 @@ fun HomeSuccessContent(
     bookmarksCount: Int,
     activeDownloadsCount: Int,
     unreadNotificationsCount: Int = 0,
+    isGreetingVisible: Boolean = true,
+    shouldPlayGreetingWave: Boolean = false,
+    onGreetingWaveCompleted: () -> Unit = {},
     onBellClick: () -> Unit = {},
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
@@ -110,10 +113,20 @@ fun HomeSuccessContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item(key = "home-greeting", contentType = "greeting") {
-                SmartBannerSlot(
-                    unreadCount = unreadNotificationsCount,
-                    onBellClick = onBellClick
-                )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isGreetingVisible,
+                    enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) + 
+                            androidx.compose.animation.expandVertically(animationSpec = androidx.compose.animation.core.tween(400)),
+                    exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
+                           androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                ) {
+                    SmartBannerSlot(
+                        unreadCount = unreadNotificationsCount,
+                        shouldPlayWave = shouldPlayGreetingWave,
+                        onWaveCompleted = onGreetingWaveCompleted,
+                        onBellClick = onBellClick
+                    )
+                }
             }
             if (content.recentlyOpened != null) {
                 item(key = "continue-title", contentType = "section") {
