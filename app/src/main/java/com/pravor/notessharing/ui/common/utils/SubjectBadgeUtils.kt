@@ -133,14 +133,16 @@ fun SubjectBadge(
         }
     }
 
+    val catalogVersion by (catalogRepo?.catalogVersionFlow ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0L) }).collectAsState()
+
     // Dynamic hash-based color derived from canonical subject identifier
-    val color = remember(subjectId, subject) {
+    val color = remember(subjectId, subject, catalogVersion) {
         val key = subjectId?.takeIf { it.isNotBlank() } ?: subject
         getSubjectColor(key)
     }
 
     // Canonical short badge name (e.g. "DAA", "SE", "CN") from the catalog
-    val shortBadgeName = remember(subject, subjectId, disableNormalization, catalogRepo) {
+    val shortBadgeName = remember(subject, subjectId, disableNormalization, catalogVersion) {
         if (disableNormalization) {
             subject.trim()
         } else {
@@ -154,7 +156,7 @@ fun SubjectBadge(
     }
 
     // Full human-readable display name for the tooltip
-    val fullDisplayName = remember(subject, subjectId, catalogRepo) {
+    val fullDisplayName = remember(subject, subjectId, catalogVersion) {
         val resolved = catalogRepo?.resolveDisplayName(subjectId ?: subject, subject)
         if (!resolved.isNullOrBlank()) resolved.trim() else subject.trim()
     }

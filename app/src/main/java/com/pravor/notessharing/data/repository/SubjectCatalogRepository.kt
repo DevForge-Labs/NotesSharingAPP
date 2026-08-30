@@ -46,7 +46,10 @@ class SubjectCatalogRepository(
 
         // Fast global memory cache mapping canonical subjectId (lowercase) -> SubjectMetadata
         private val inMemorySubjectCache = ConcurrentHashMap<String, SubjectMetadata>()
+        val catalogVersionFlow = kotlinx.coroutines.flow.MutableStateFlow<Long>(1L)
     }
+
+    val catalogVersionFlow get() = SubjectCatalogRepository.catalogVersionFlow
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -62,6 +65,10 @@ class SubjectCatalogRepository(
                         shortName = entity.shortName,
                         active = entity.active
                     )
+                }
+                if (cached.isNotEmpty()) {
+                    catalogVersionFlow.value = System.currentTimeMillis()
+                    Log.d(TAG, "Primed ${cached.size} subjects from Room into memory cache")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Error priming subject cache from Room", e)
@@ -281,7 +288,8 @@ class SubjectCatalogRepository(
             subjectDao.upsertSubjects(entitiesToPersist)
             inMemorySubjectCache.clear()
             inMemorySubjectCache.putAll(newCacheMap)
-            Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache")
+            catalogVersionFlow.value = System.currentTimeMillis()
+            Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache. Version=${catalogVersionFlow.value}")
         }
     }
 }

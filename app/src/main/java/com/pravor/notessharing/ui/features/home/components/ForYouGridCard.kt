@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -273,6 +274,15 @@ private fun ForYouCardInfo(
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val catalogRepo = remember {
+        try {
+            com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val catalogVersion by (catalogRepo?.catalogVersionFlow ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0L) }).collectAsState()
+
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = item.title,
@@ -296,10 +306,8 @@ private fun ForYouCardInfo(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val rawSubj = item.subject?.trim()?.ifBlank { null } ?: "General"
-            val subjText = try {
-                com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveShortName(item.subjectId ?: rawSubj, rawSubj)
-            } catch (e: Exception) {
-                rawSubj
+            val subjText = remember(item.id, item.subject, item.subjectId, catalogVersion) {
+                catalogRepo?.resolveShortName(item.subjectId ?: rawSubj, rawSubj) ?: rawSubj
             }
             Box(
                 modifier = Modifier
