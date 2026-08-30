@@ -135,6 +135,7 @@ fun HomeRoute(
 
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadNotificationsCount by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
+    val isGreetingVisible by viewModel.isGreetingVisible.collectAsStateWithLifecycle()
 
     HomeScreen(
         uiState = uiState,
@@ -149,6 +150,7 @@ fun HomeRoute(
         activeDownloadsCount = activeDownloadsCount,
         notifications = notifications,
         unreadNotificationsCount = unreadNotificationsCount,
+        isGreetingVisible = isGreetingVisible,
         onMarkNotificationRead = viewModel::markNotificationAsRead,
         onMarkAllNotificationsRead = viewModel::markAllNotificationsAsRead,
         onDeleteNotification = viewModel::deleteNotification,
@@ -179,6 +181,7 @@ fun HomeScreen(
     activeDownloadsCount: Int,
     notifications: List<Notification>,
     unreadNotificationsCount: Int,
+    isGreetingVisible: Boolean = true,
     onMarkNotificationRead: (String) -> Unit,
     onMarkAllNotificationsRead: () -> Unit,
     onDeleteNotification: (String) -> Unit,
@@ -301,6 +304,7 @@ fun HomeScreen(
                         bookmarksCount = bookmarksCount,
                         activeDownloadsCount = activeDownloadsCount,
                         unreadNotificationsCount = unreadNotificationsCount,
+                        isGreetingVisible = isGreetingVisible,
                         onBellClick = { showBottomSheet = true },
                         onUpvoteClick = { itemId ->
                             val isCurrentlyUpvoted = UpvoteRepository.upvotesFlow.value[itemId] == true

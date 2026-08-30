@@ -25,6 +25,7 @@ import com.pravor.notessharing.domain.model.FileType
 import com.pravor.notessharing.ui.common.HomeContent
 import com.pravor.notessharing.ui.common.HomeUiState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,6 +69,31 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uploadsCount = MutableStateFlow(0)
     val uploadsCount: StateFlow<Int> = _uploadsCount.asStateFlow()
+
+    private val _isGreetingVisible = MutableStateFlow(true)
+    val isGreetingVisible: StateFlow<Boolean> = _isGreetingVisible.asStateFlow()
+
+    private val greetingDurationMs = 10_000L
+    private var greetingStartTime: Long? = null
+    private var greetingTimerJob: kotlinx.coroutines.Job? = null
+
+    fun startGreetingTimerIfNeeded() {
+        if (greetingStartTime == null) {
+            greetingStartTime = android.os.SystemClock.elapsedRealtime()
+        }
+        val elapsed = android.os.SystemClock.elapsedRealtime() - (greetingStartTime ?: 0L)
+        val remaining = greetingDurationMs - elapsed
+        if (remaining <= 0) {
+            _isGreetingVisible.value = false
+            return
+        }
+        if (greetingTimerJob?.isActive != true && _isGreetingVisible.value) {
+            greetingTimerJob = viewModelScope.launch {
+                delay(remaining)
+                _isGreetingVisible.value = false
+            }
+        }
+    }
  
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
@@ -133,6 +159,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         android.util.Log.d("PERF", "[PERF] Home startup START thread=${Thread.currentThread().name}")
+        startGreetingTimerIfNeeded()
         loadCachedRoomFeedFirst()
         observeUserProfileState()
         refreshRecentlyOpened()

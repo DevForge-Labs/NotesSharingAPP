@@ -170,9 +170,9 @@ private fun PremiumGreetingBlock(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(horizontal = 20.dp, vertical = 22.dp),
+                .padding(horizontal = 18.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // 1. User Avatar with Electric Blue Accent Stroke
             HomeUserAvatar(
@@ -183,15 +183,15 @@ private fun PremiumGreetingBlock(
             // 2. Greeting & Daily Supporting Message
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = greeting,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.5.sp,
-                        letterSpacing = 0.2.sp,
-                        lineHeight = 24.sp
+                        fontSize = 17.5.sp,
+                        letterSpacing = 0.15.sp,
+                        lineHeight = 22.sp
                     ),
                     color = Color.White,
                     maxLines = 1,
@@ -202,8 +202,8 @@ private fun PremiumGreetingBlock(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
+                        fontSize = 12.5.sp,
+                        lineHeight = 17.sp
                     ),
                     color = Color(0xFF94A3B8),
                     maxLines = 1,
