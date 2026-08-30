@@ -177,7 +177,7 @@ private fun PremiumGreetingBlock(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(horizontal = 18.dp, vertical = 20.dp),
+                .padding(horizontal = 18.dp, vertical = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -187,22 +187,37 @@ private fun PremiumGreetingBlock(
                 displayName = displayName ?: currentUser?.email
             )
 
-            // 2. Greeting & Daily Supporting Message
+            // 2. Greeting & Daily Supporting Message (3-Line Layout)
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
+                // Line 1: Time Salutation
+                Text(
+                    text = baseGreeting,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 13.5.sp,
+                        letterSpacing = 0.2.sp,
+                        lineHeight = 17.sp
+                    ),
+                    color = Color(0xFF94A3B8),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Line 2: User First Name + Waving Hand Emoji
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
                     Text(
-                        text = greeting,
+                        text = displayName ?: "Scholar",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 17.5.sp,
-                            letterSpacing = 0.15.sp,
-                            lineHeight = 22.sp
+                            fontSize = 18.5.sp,
+                            letterSpacing = 0.2.sp,
+                            lineHeight = 23.sp
                         ),
                         color = Color.White,
                         maxLines = 1,
@@ -218,14 +233,15 @@ private fun PremiumGreetingBlock(
                     )
                 }
 
+                // Line 3: Actual Greeting / Daily Motivational Quote
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 12.5.sp,
-                        lineHeight = 17.sp
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     ),
-                    color = Color(0xFF94A3B8),
+                    color = Color(0xFF64748B),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.graphicsLayer {
