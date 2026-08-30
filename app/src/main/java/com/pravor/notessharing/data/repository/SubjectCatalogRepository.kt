@@ -100,21 +100,44 @@ class SubjectCatalogRepository(
     }
 
     /**
-     * Resolves the compact badge / short name for a subject (e.g. "daa" -> "DAA", "Software Engineering" -> "SE").
-     * Uses in-memory cache first, then searches catalog entries, then falls back to fallbackName.
+     * Resolves the compact badge / short name for a subject (e.g. "daa" -> "DAA", "se" -> "hard").
+     * Uses in-memory cache first (scoped + global), then searches catalog entries, then falls back to fallbackName.
      */
-    fun resolveShortName(subjectId: String?, fallbackName: String? = null): String {
+    fun resolveShortName(
+        subjectId: String?,
+        fallbackName: String? = null,
+        branchId: String? = null,
+        semester: String? = null,
+        collegeId: String? = null
+    ): String {
         if (subjectId.isNullOrBlank() && fallbackName.isNullOrBlank()) return ""
         val cleanId = subjectId?.trim()?.lowercase() ?: ""
+        val cleanFallback = fallbackName?.trim() ?: ""
+        val targetLookupKey = cleanId.ifEmpty { cleanFallback.lowercase() }
+        val cleanBranch = branchId?.trim()?.lowercase() ?: ""
+        val semNum = semester?.filter { it.isDigit() }?.ifEmpty { semester?.trim() } ?: ""
+
+        // 1. Try precise branch + semester scoped lookup
+        if (cleanBranch.isNotEmpty() && semNum.isNotEmpty()) {
+            val key = "${cleanBranch}::${semNum}::${targetLookupKey}"
+            inMemorySubjectCache[key]?.let { return it.shortName }
+        }
+        if (cleanBranch.isNotEmpty()) {
+            val key = "${cleanBranch}::${targetLookupKey}"
+            inMemorySubjectCache[key]?.let { return it.shortName }
+        }
+
+        // 2. Try direct subjectId in cache
         if (cleanId.isNotEmpty()) {
             inMemorySubjectCache[cleanId]?.let { return it.shortName }
         }
-        val cleanFallback = fallbackName?.trim() ?: ""
+
+        // 3. Try fallbackName in cache
         if (cleanFallback.isNotEmpty()) {
             val fallbackKey = cleanFallback.lowercase()
             inMemorySubjectCache[fallbackKey]?.let { return it.shortName }
 
-            // Search by full display name or short name in catalog
+            // Search by full display name, short name, or id in catalog
             val match = inMemorySubjectCache.values.firstOrNull {
                 it.name.equals(cleanFallback, ignoreCase = true) ||
                 it.shortName.equals(cleanFallback, ignoreCase = true) ||
@@ -127,15 +150,38 @@ class SubjectCatalogRepository(
     }
 
     /**
-     * Resolves the full human-readable display name for a subject (e.g. "daa" -> "Design and Analysis of Algorithms").
+     * Resolves the full human-readable display name for a subject (e.g. "daa" -> "Design and Analysis of Algorithms", "se" -> "Soft").
      */
-    fun resolveDisplayName(subjectId: String?, fallbackName: String? = null): String {
+    fun resolveDisplayName(
+        subjectId: String?,
+        fallbackName: String? = null,
+        branchId: String? = null,
+        semester: String? = null,
+        collegeId: String? = null
+    ): String {
         if (subjectId.isNullOrBlank() && fallbackName.isNullOrBlank()) return ""
         val cleanId = subjectId?.trim()?.lowercase() ?: ""
+        val cleanFallback = fallbackName?.trim() ?: ""
+        val targetLookupKey = cleanId.ifEmpty { cleanFallback.lowercase() }
+        val cleanBranch = branchId?.trim()?.lowercase() ?: ""
+        val semNum = semester?.filter { it.isDigit() }?.ifEmpty { semester?.trim() } ?: ""
+
+        // 1. Try precise branch + semester scoped lookup
+        if (cleanBranch.isNotEmpty() && semNum.isNotEmpty()) {
+            val key = "${cleanBranch}::${semNum}::${targetLookupKey}"
+            inMemorySubjectCache[key]?.let { return it.name }
+        }
+        if (cleanBranch.isNotEmpty()) {
+            val key = "${cleanBranch}::${targetLookupKey}"
+            inMemorySubjectCache[key]?.let { return it.name }
+        }
+
+        // 2. Try direct subjectId in cache
         if (cleanId.isNotEmpty()) {
             inMemorySubjectCache[cleanId]?.let { return it.name }
         }
-        val cleanFallback = fallbackName?.trim() ?: ""
+
+        // 3. Try fallbackName in cache
         if (cleanFallback.isNotEmpty()) {
             val fallbackKey = cleanFallback.lowercase()
             inMemorySubjectCache[fallbackKey]?.let { return it.name }
@@ -245,7 +291,23 @@ class SubjectCatalogRepository(
                             lastSyncedAtMs = now
                         )
                         entitiesToPersist.add(entity)
-                        newCacheMap[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
+
+                        val metadata = SubjectMetadata(subId, subName, subShortName, isActive)
+                        val semNum = if (groupKey == "GROUP_A") "1" else "2"
+                        newCacheMap["${collegeId}::${groupKey.lowercase()}::${semNum}::${subId}"] = metadata
+                        newCacheMap["${groupKey.lowercase()}::${semNum}::${subId}"] = metadata
+                        newCacheMap["${groupKey.lowercase()}::${subId}"] = metadata
+                        if (subName.isNotBlank() && !subName.equals(subId, ignoreCase = true)) {
+                            newCacheMap[subName.lowercase()] = metadata
+                        }
+                        if (subShortName.isNotBlank() && !subShortName.equals(subId, ignoreCase = true)) {
+                            newCacheMap[subShortName.lowercase()] = metadata
+                        }
+
+                        val existing = newCacheMap[subId]
+                        if (existing == null || (!subShortName.equals(subId, ignoreCase = true) && !subName.equals(subId, ignoreCase = true))) {
+                            newCacheMap[subId] = metadata
+                        }
                     }
                 } else {
                     // Branch level: cse, it, etc.
@@ -276,7 +338,24 @@ class SubjectCatalogRepository(
                                 lastSyncedAtMs = now
                             )
                             entitiesToPersist.add(entity)
-                            newCacheMap[subId] = SubjectMetadata(subId, subName, subShortName, isActive)
+
+                            val metadata = SubjectMetadata(subId, subName, subShortName, isActive)
+                            newCacheMap["${collegeId}::${branchId}::${semNumber}::${subId}"] = metadata
+                            newCacheMap["${branchId}::${semNumber}::${subId}"] = metadata
+                            newCacheMap["${branchId}::${subId}"] = metadata
+                            if (subName.isNotBlank() && !subName.equals(subId, ignoreCase = true)) {
+                                newCacheMap[subName.lowercase()] = metadata
+                            }
+                            if (subShortName.isNotBlank() && !subShortName.equals(subId, ignoreCase = true)) {
+                                newCacheMap[subShortName.lowercase()] = metadata
+                            }
+
+                            val existing = newCacheMap[subId]
+                            // Do not let a default/unedited subject override an explicitly customized shortName/name
+                            val isCustomized = !subShortName.equals(subId, ignoreCase = true) || !subName.equals(subId, ignoreCase = true)
+                            if (existing == null || isCustomized) {
+                                newCacheMap[subId] = metadata
+                            }
                         }
                     }
                 }
@@ -289,7 +368,7 @@ class SubjectCatalogRepository(
             inMemorySubjectCache.clear()
             inMemorySubjectCache.putAll(newCacheMap)
             catalogVersionFlow.value = System.currentTimeMillis()
-            Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache. Version=${catalogVersionFlow.value}")
+            Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache. Version=${catalogVersionFlow.value}. Sample 'se' -> ${inMemorySubjectCache["se"]}")
         }
     }
 }
