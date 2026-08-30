@@ -303,7 +303,7 @@ private fun ForYouCardInfo(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             val rawSubj = item.subject?.trim()?.ifBlank { null } ?: "General"
             val subjText = remember(item.id, item.subject, item.subjectId, catalogVersion) {
