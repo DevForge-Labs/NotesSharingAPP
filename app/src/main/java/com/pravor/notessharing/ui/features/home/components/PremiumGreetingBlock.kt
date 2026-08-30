@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +60,8 @@ fun SmartBannerSlot(
     modifier: Modifier = Modifier,
     state: SmartBannerState = SmartBannerState.GreetingMode,
     unreadCount: Int = 0,
+    shouldPlayWave: Boolean = false,
+    onWaveCompleted: () -> Unit = {},
     onBellClick: () -> Unit = {}
 ) {
     when (state) {
@@ -66,6 +69,8 @@ fun SmartBannerSlot(
             PremiumGreetingBlock(
                 modifier = modifier,
                 unreadCount = unreadCount,
+                shouldPlayWave = shouldPlayWave,
+                onWaveCompleted = onWaveCompleted,
                 onBellClick = onBellClick
             )
         }
@@ -76,6 +81,8 @@ fun SmartBannerSlot(
 private fun PremiumGreetingBlock(
     modifier: Modifier = Modifier,
     unreadCount: Int = 0,
+    shouldPlayWave: Boolean = false,
+    onWaveCompleted: () -> Unit = {},
     onBellClick: () -> Unit = {}
 ) {
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -185,18 +192,31 @@ private fun PremiumGreetingBlock(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = greeting,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.5.sp,
-                        letterSpacing = 0.15.sp,
-                        lineHeight = 22.sp
-                    ),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text(
+                        text = greeting,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.5.sp,
+                            letterSpacing = 0.15.sp,
+                            lineHeight = 22.sp
+                        ),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    Spacer(Modifier.width(5.dp))
+
+                    WavingHandEmoji(
+                        shouldAnimate = shouldPlayWave,
+                        onAnimationEnd = onWaveCompleted
+                    )
+                }
 
                 Text(
                     text = subtitle,
@@ -341,6 +361,58 @@ private fun HomeUserAvatar(
             }
         }
     }
+}
+
+@Composable
+private fun WavingHandEmoji(
+    modifier: Modifier = Modifier,
+    shouldAnimate: Boolean = true,
+    onAnimationEnd: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val areAnimationsEnabled = remember(context) {
+        try {
+            val scale = android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            )
+            scale > 0f
+        } catch (e: Exception) {
+            true
+        }
+    }
+
+    val handRotation = remember { Animatable(0f) }
+
+    LaunchedEffect(shouldAnimate, areAnimationsEnabled) {
+        if (shouldAnimate && areAnimationsEnabled) {
+            // Wave 1
+            handRotation.animateTo(14f, tween(130, easing = FastOutSlowInEasing))
+            handRotation.animateTo(-10f, tween(130, easing = FastOutSlowInEasing))
+            // Wave 2
+            handRotation.animateTo(14f, tween(130, easing = FastOutSlowInEasing))
+            handRotation.animateTo(-8f, tween(130, easing = FastOutSlowInEasing))
+            // Wave 3
+            handRotation.animateTo(10f, tween(120, easing = FastOutSlowInEasing))
+            handRotation.animateTo(0f, tween(140, easing = FastOutSlowInEasing))
+            onAnimationEnd()
+        } else {
+            handRotation.snapTo(0f)
+        }
+    }
+
+    Text(
+        text = "👋",
+        style = MaterialTheme.typography.titleMedium.copy(
+            fontSize = 17.sp,
+            lineHeight = 22.sp
+        ),
+        modifier = modifier.graphicsLayer {
+            rotationZ = handRotation.value
+            transformOrigin = TransformOrigin(0.7f, 0.9f)
+        }
+    )
 }
 
 

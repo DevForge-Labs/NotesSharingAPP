@@ -136,6 +136,7 @@ fun HomeRoute(
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadNotificationsCount by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
     val isGreetingVisible by viewModel.isGreetingVisible.collectAsStateWithLifecycle()
+    val shouldPlayGreetingWave by viewModel.shouldPlayGreetingWave.collectAsStateWithLifecycle()
 
     HomeScreen(
         uiState = uiState,
@@ -151,6 +152,8 @@ fun HomeRoute(
         notifications = notifications,
         unreadNotificationsCount = unreadNotificationsCount,
         isGreetingVisible = isGreetingVisible,
+        shouldPlayGreetingWave = shouldPlayGreetingWave,
+        onGreetingWaveCompleted = viewModel::onGreetingWaveCompleted,
         onMarkNotificationRead = viewModel::markNotificationAsRead,
         onMarkAllNotificationsRead = viewModel::markAllNotificationsAsRead,
         onDeleteNotification = viewModel::deleteNotification,
@@ -182,6 +185,8 @@ fun HomeScreen(
     notifications: List<Notification>,
     unreadNotificationsCount: Int,
     isGreetingVisible: Boolean = true,
+    shouldPlayGreetingWave: Boolean = false,
+    onGreetingWaveCompleted: () -> Unit = {},
     onMarkNotificationRead: (String) -> Unit,
     onMarkAllNotificationsRead: () -> Unit,
     onDeleteNotification: (String) -> Unit,
@@ -305,6 +310,8 @@ fun HomeScreen(
                         activeDownloadsCount = activeDownloadsCount,
                         unreadNotificationsCount = unreadNotificationsCount,
                         isGreetingVisible = isGreetingVisible,
+                        shouldPlayGreetingWave = shouldPlayGreetingWave,
+                        onGreetingWaveCompleted = onGreetingWaveCompleted,
                         onBellClick = { showBottomSheet = true },
                         onUpvoteClick = { itemId ->
                             val isCurrentlyUpvoted = UpvoteRepository.upvotesFlow.value[itemId] == true

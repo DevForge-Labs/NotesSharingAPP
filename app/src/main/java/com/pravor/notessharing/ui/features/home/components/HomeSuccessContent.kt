@@ -86,6 +86,8 @@ fun HomeSuccessContent(
     activeDownloadsCount: Int,
     unreadNotificationsCount: Int = 0,
     isGreetingVisible: Boolean = true,
+    shouldPlayGreetingWave: Boolean = false,
+    onGreetingWaveCompleted: () -> Unit = {},
     onBellClick: () -> Unit = {},
     onUpvoteClick: (String) -> Unit,
     onBookmarkClick: (String) -> Unit,
@@ -120,6 +122,8 @@ fun HomeSuccessContent(
                 ) {
                     SmartBannerSlot(
                         unreadCount = unreadNotificationsCount,
+                        shouldPlayWave = shouldPlayGreetingWave,
+                        onWaveCompleted = onGreetingWaveCompleted,
                         onBellClick = onBellClick
                     )
                 }

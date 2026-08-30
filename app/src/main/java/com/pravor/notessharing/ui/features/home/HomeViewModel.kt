@@ -73,6 +73,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGreetingVisible = MutableStateFlow(true)
     val isGreetingVisible: StateFlow<Boolean> = _isGreetingVisible.asStateFlow()
 
+    private val _shouldPlayGreetingWave = MutableStateFlow(true)
+    val shouldPlayGreetingWave: StateFlow<Boolean> = _shouldPlayGreetingWave.asStateFlow()
+
+    fun onGreetingWaveCompleted() {
+        _shouldPlayGreetingWave.value = false
+    }
+
     private val greetingDurationMs = 10_000L
     private var greetingStartTime: Long? = null
     private var greetingTimerJob: kotlinx.coroutines.Job? = null
