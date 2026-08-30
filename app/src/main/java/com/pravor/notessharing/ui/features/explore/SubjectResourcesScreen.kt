@@ -254,7 +254,9 @@ fun SubjectResourcesScreen(
 
     val normalized = remember(subjectName) { normalizeSubject(subjectName) }
     val accentColor = remember(normalized) { getSubjectColor(normalized) }
-    val displayName = remember(subjectName, normalized) { getSubjectDisplayName(subjectName, normalized) }
+    val displayName = remember(subjectName) {
+        com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(subjectName, subjectName)
+    }
 
     var selectedFilter by remember { mutableStateOf(ResourceFilter.All) }
 

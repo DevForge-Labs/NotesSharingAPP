@@ -127,8 +127,20 @@ fun getSubjectColor(normalizedSubject: String): Color {
 /**
  * Returns standardized display name for predefined subjects, or capitalized original for others.
  */
-fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String): String {
-    return when (normalizedSubject) {
+fun getSubjectDisplayName(originalSubject: String, normalizedSubject: String = ""): String {
+    if (originalSubject.isBlank()) return ""
+    try {
+        val repo = com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance()
+        val fromRepo = repo.resolveShortName(originalSubject, originalSubject)
+        if (fromRepo.isNotBlank() && !fromRepo.equals(originalSubject, ignoreCase = true)) {
+            return fromRepo.trim()
+        }
+    } catch (e: Exception) {
+        // Fallback to static mapping
+    }
+
+    val norm = if (normalizedSubject.isNotBlank()) normalizedSubject else normalizeSubject(originalSubject)
+    return when (norm) {
         "ds" -> "DS"
         "dbms" -> "DBMS"
         "os" -> "OS"

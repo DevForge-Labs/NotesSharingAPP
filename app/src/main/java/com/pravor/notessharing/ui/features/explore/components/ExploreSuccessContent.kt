@@ -450,7 +450,9 @@ fun SubjectHeroCard(
 ) {
     val normalized = remember(subjectId) { com.pravor.notessharing.ui.common.utils.normalizeSubject(subjectId) }
     val accentColor = remember(normalized) { com.pravor.notessharing.ui.common.utils.getSubjectColor(normalized) }
-    val displayName = remember(subjectName, normalized) { com.pravor.notessharing.ui.common.utils.getSubjectDisplayName(subjectName, normalized) }
+    val displayName = remember(subjectId, subjectName) {
+        com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveDisplayName(subjectId, subjectName)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
