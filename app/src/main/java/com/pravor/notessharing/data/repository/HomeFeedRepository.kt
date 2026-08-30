@@ -3,6 +3,7 @@ package com.pravor.notessharing.data.repository
 import com.pravor.notessharing.core.util.*
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.pravor.notessharing.NotesSharingApplication
 import com.pravor.notessharing.data.local.db.AppDatabase
 import com.pravor.notessharing.data.local.dao.HomeFeedDao
@@ -17,7 +18,8 @@ import kotlinx.coroutines.withContext
 
 class HomeFeedRepository(
     context: Context = NotesSharingApplication.appContext,
-    private val homeFeedDao: HomeFeedDao = AppDatabase.getDatabase(context).homeFeedDao()
+    private val database: AppDatabase = AppDatabase.getDatabase(context),
+    private val homeFeedDao: HomeFeedDao = database.homeFeedDao()
 ) {
     /**
      * Observes Home Feed items directly from Room Database, excluding any video/playlist resources.
@@ -52,7 +54,12 @@ class HomeFeedRepository(
         if (scopeKey.isBlank()) return@withContext
         val eligibleItems = items.filter { item -> isEligibleHomeFeedItem(item) }
         val entities = eligibleItems.map { it.toEntity(collegeId = scopeKey) }
-        homeFeedDao.upsertFeedItems(entities)
+        database.withTransaction {
+            homeFeedDao.clearHomeFeed(scopeKey)
+            if (entities.isNotEmpty()) {
+                homeFeedDao.upsertFeedItems(entities)
+            }
+        }
     }
 
     private fun isEligibleHomeFeedItem(item: FeedItem): Boolean {
