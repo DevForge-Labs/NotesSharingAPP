@@ -173,142 +173,168 @@ private fun PremiumGreetingBlock(
         color = Color.Transparent,
         shadowElevation = 4.dp
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(cardBrush)
-                .padding(horizontal = 18.dp, vertical = 22.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. User Avatar with Electric Blue Accent Stroke
-            HomeUserAvatar(
-                photoUrl = currentUser?.photoUrl?.toString(),
-                displayName = displayName ?: currentUser?.email
-            )
-
-            // 2. Greeting & Daily Supporting Message (3-Line Layout)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+            // Top Section: Avatar | Time Salutation + Name Wave | Notification Bell
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Line 1: Time Salutation
-                Text(
-                    text = baseGreeting,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.5.sp,
-                        letterSpacing = 0.2.sp,
-                        lineHeight = 17.sp
-                    ),
-                    color = Color(0xFF94A3B8),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                // 1. User Avatar with Electric Blue Accent Stroke
+                HomeUserAvatar(
+                    photoUrl = currentUser?.photoUrl?.toString(),
+                    displayName = displayName ?: currentUser?.email
                 )
 
-                // Line 2: User First Name + Waving Hand Emoji
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                // 2. Salutation & Name with Waving Hand
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = displayName ?: "Scholar",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.5.sp,
+                        text = baseGreeting,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.5.sp,
                             letterSpacing = 0.2.sp,
-                            lineHeight = 23.sp
+                            lineHeight = 17.sp
                         ),
-                        color = Color.White,
+                        color = Color(0xFF94A3B8),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(Modifier.width(5.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Text(
+                            text = displayName ?: "Scholar",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.5.sp,
+                                letterSpacing = 0.2.sp,
+                                lineHeight = 23.sp
+                            ),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
 
-                    WavingHandEmoji(
-                        shouldAnimate = shouldPlayWave,
-                        onAnimationEnd = onWaveCompleted
-                    )
+                        Spacer(Modifier.width(5.dp))
+
+                        WavingHandEmoji(
+                            shouldAnimate = shouldPlayWave,
+                            onAnimationEnd = onWaveCompleted
+                        )
+                    }
                 }
 
-                // Line 3: Actual Greeting / Daily Motivational Quote
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    ),
-                    color = Color(0xFF64748B),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.graphicsLayer {
+                // 3. Notification Bell with Badge & Glass Surface
+                val bellRotation = remember { Animatable(0f) }
+                LaunchedEffect(unreadCount) {
+                    if (unreadCount > 0) {
+                        while (true) {
+                            bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
+                            bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
+                            delay(8000)
+                        }
+                    } else {
+                        bellRotation.snapTo(0f)
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = ElectricBlue.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.30f)),
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    IconButton(
+                        onClick = onBellClick,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadCount > 0) {
+                                    val badgeText = if (unreadCount > 99) "99+" else unreadCount.toString()
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ) {
+                                        Text(
+                                            text = badgeText,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = ElectricBlue,
+                                modifier = Modifier
+                                    .size(21.dp)
+                                    .graphicsLayer {
+                                        rotationZ = bellRotation.value
+                                        transformOrigin = TransformOrigin(0.5f, 0.0f)
+                                    }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Bottom Section: Independent Actual Greeting / Motivational Quote
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF0F172A).copy(alpha = 0.50f),
+                border = BorderStroke(0.75.dp, ElectricBlue.copy(alpha = 0.18f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
                         alpha = subtitleAlpha.value
                         translationY = with(density) { subtitleOffsetY.value.dp.toPx() }
                     }
-                )
-            }
-
-            // 3. Notification Bell with Badge & Glass Surface
-            val bellRotation = remember { Animatable(0f) }
-            LaunchedEffect(unreadCount) {
-                if (unreadCount > 0) {
-                    while (true) {
-                        bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                        bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
-                        delay(8000)
-                    }
-                } else {
-                    bellRotation.snapTo(0f)
-                }
-            }
-
-            Surface(
-                shape = CircleShape,
-                color = ElectricBlue.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.30f)),
-                modifier = Modifier.size(42.dp)
             ) {
-                IconButton(
-                    onClick = onBellClick,
-                    modifier = Modifier.fillMaxSize()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    BadgedBox(
-                        badge = {
-                            if (unreadCount > 0) {
-                                val badgeText = if (unreadCount > 99) "99+" else unreadCount.toString()
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                ) {
-                                    Text(
-                                        text = badgeText,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = ElectricBlue,
-                            modifier = Modifier
-                                .size(21.dp)
-                                .graphicsLayer {
-                                    rotationZ = bellRotation.value
-                                    transformOrigin = TransformOrigin(0.5f, 0.0f)
-                                }
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .background(ElectricBlue.copy(alpha = 0.85f), CircleShape)
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.5.sp,
+                            lineHeight = 17.sp,
+                            letterSpacing = 0.1.sp
+                        ),
+                        color = Color(0xFFCBD5E1),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
