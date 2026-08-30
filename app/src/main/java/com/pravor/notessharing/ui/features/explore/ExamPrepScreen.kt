@@ -128,8 +128,9 @@ fun ExamPrepScreen(
                 val normSelected = if (selectedSubject.isNotBlank()) com.pravor.notessharing.ui.common.utils.normalizeSubject(selectedSubject) else ""
 
                 allTrendingNotes.filter { note ->
-                    val isPyq = note.resourceType == ResourceType.PYQ
-                    val isCheatSheet = note.resourceType == ResourceType.CHEAT_SHEET
+                    val docType = (note.documentType.ifBlank { note.type ?: "" }).trim().lowercase(java.util.Locale.ROOT)
+                    val isPyq = note.resourceType == ResourceType.PYQ || docType in listOf("pyq", "pyqs")
+                    val isCheatSheet = note.resourceType == ResourceType.CHEAT_SHEET || docType in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet")
 
                     // Apply selective type filtering
                     if (selectedType == "PYQ" && !isPyq) return@filter false
