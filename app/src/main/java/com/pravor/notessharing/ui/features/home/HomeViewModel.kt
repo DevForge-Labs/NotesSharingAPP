@@ -726,7 +726,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         subjectIds = subjectIds
                     )
 
-                    if (currentAcademicScope.isCollegeValid && finalFeedItems.isNotEmpty()) {
+                    if (currentAcademicScope.isCollegeValid) {
                         homeFeedRepository.saveHomeFeed(currentAcademicScope.scopeKey, finalFeedItems)
                     }
 

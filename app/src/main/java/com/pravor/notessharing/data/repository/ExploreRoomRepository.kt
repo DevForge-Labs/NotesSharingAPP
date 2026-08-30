@@ -3,6 +3,7 @@ package com.pravor.notessharing.data.repository
 import com.pravor.notessharing.core.util.*
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.pravor.notessharing.NotesSharingApplication
 import com.pravor.notessharing.data.local.db.AppDatabase
 import com.pravor.notessharing.data.local.dao.ExploreDao
@@ -19,7 +20,8 @@ import kotlinx.coroutines.withContext
 
 class ExploreRoomRepository(
     context: Context = NotesSharingApplication.appContext,
-    private val exploreDao: ExploreDao = AppDatabase.getDatabase(context).exploreDao()
+    private val database: AppDatabase = AppDatabase.getDatabase(context),
+    private val exploreDao: ExploreDao = database.exploreDao()
 ) {
     fun observeExploreContent(scopeKey: String): Flow<ExploreContent?> {
         if (scopeKey.isBlank()) return kotlinx.coroutines.flow.flowOf(null)
@@ -47,7 +49,12 @@ class ExploreRoomRepository(
         content.videos.forEach { entities.add(it.toExploreEntity(scopeKey, "VIDEOS")) }
         content.discoverItems.forEach { entities.add(it.toExploreEntity(scopeKey, "DISCOVER")) }
 
-        exploreDao.upsertExploreItems(entities)
+        database.withTransaction {
+            exploreDao.clearExploreItems(scopeKey)
+            if (entities.isNotEmpty()) {
+                exploreDao.upsertExploreItems(entities)
+            }
+        }
     }
 
     private fun assembleExploreContent(entities: List<ExploreItemEntity>): ExploreContent {

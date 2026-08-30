@@ -33,3 +33,4 @@ interface HomeFeedDao {
     @Query("DELETE FROM home_feed_items")
     suspend fun clearAllHomeFeed(): Int
 }
+
