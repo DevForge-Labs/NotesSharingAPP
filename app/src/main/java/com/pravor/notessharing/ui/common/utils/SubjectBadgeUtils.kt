@@ -185,24 +185,44 @@ fun SubjectBadge(
     modifier: Modifier = Modifier,
     isLarge: Boolean = false,
     semester: String? = null,
-    disableNormalization: Boolean = false
+    disableNormalization: Boolean = false,
+    subjectId: String? = null
 ) {
     if (subject.isBlank()) return
 
+    val catalogRepo = remember {
+        try {
+            com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     val normalized = remember(subject) { normalizeSubject(subject) }
     val color = remember(normalized) { getSubjectColor(normalized) }
-    val displayName = remember(subject, normalized, disableNormalization) {
+
+    val shortBadgeName = remember(subject, subjectId, normalized, disableNormalization, catalogRepo) {
         if (disableNormalization) {
             subject
         } else {
-            getSubjectDisplayName(subject, normalized)
+            val fromCatalog = catalogRepo?.resolveShortName(subjectId ?: subject, subject)
+            if (!fromCatalog.isNullOrBlank() && fromCatalog != subject && fromCatalog != subjectId) {
+                fromCatalog
+            } else {
+                getSubjectDisplayName(subject, normalized)
+            }
         }
     }
-    val displayWithSem = remember(displayName, semester) {
+
+    val fullDisplayName = remember(subject, subjectId, catalogRepo) {
+        catalogRepo?.resolveDisplayName(subjectId ?: subject, subject)?.ifBlank { subject } ?: subject
+    }
+
+    val displayWithSem = remember(shortBadgeName, semester) {
         if (!semester.isNullOrBlank()) {
-            "$displayName  |  ${formatSemesterForSubject(semester)}"
+            "$shortBadgeName  |  ${formatSemesterForSubject(semester)}"
         } else {
-            displayName
+            shortBadgeName
         }
     }
 
@@ -261,7 +281,7 @@ fun SubjectBadge(
                         .widthIn(max = 240.dp)
                 ) {
                     Text(
-                        text = subject,
+                        text = fullDisplayName,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

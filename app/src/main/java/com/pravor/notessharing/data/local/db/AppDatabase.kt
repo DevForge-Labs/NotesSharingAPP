@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import com.pravor.notessharing.data.local.dao.ClassroomDao
 import com.pravor.notessharing.data.local.dao.ExploreDao
 import com.pravor.notessharing.data.local.dao.HomeFeedDao
+import com.pravor.notessharing.data.local.dao.SubjectCatalogDao
 import com.pravor.notessharing.data.local.dao.UserProfileDao
 import com.pravor.notessharing.data.local.entity.ClassroomAnnouncementEntity
 import com.pravor.notessharing.data.local.entity.ClassroomAttachmentEntity
@@ -19,6 +20,7 @@ import com.pravor.notessharing.data.local.entity.ClassroomSubmissionEntity
 import com.pravor.notessharing.data.local.entity.ClassroomManualCompletionEntity
 import com.pravor.notessharing.data.local.entity.ExploreItemEntity
 import com.pravor.notessharing.data.local.entity.HomeFeedItemEntity
+import com.pravor.notessharing.data.local.entity.SubjectCatalogEntity
 import com.pravor.notessharing.data.local.entity.UserProfileEntity
 
 @Database(
@@ -34,9 +36,10 @@ import com.pravor.notessharing.data.local.entity.UserProfileEntity
         ClassroomFileEntity::class,
         ClassroomHiddenCourseEntity::class,
         ClassroomSubmissionEntity::class,
-        ClassroomManualCompletionEntity::class
+        ClassroomManualCompletionEntity::class,
+        SubjectCatalogEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -44,6 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun homeFeedDao(): HomeFeedDao
     abstract fun exploreDao(): ExploreDao
     abstract fun classroomDao(): ClassroomDao
+    abstract fun subjectCatalogDao(): SubjectCatalogDao
 
     companion object {
         @Volatile
@@ -63,7 +67,8 @@ abstract class AppDatabase : RoomDatabase() {
                     ClassroomDatabaseMigration6To7(),
                     ClassroomDatabaseMigration7To8(),
                     ClassroomDatabaseMigration8To9(),
-                    ExploreDatabaseMigration9To10()
+                    ExploreDatabaseMigration9To10(),
+                    SubjectDatabaseMigration10To11()
                 )
                 .fallbackToDestructiveMigration()
                 .build()

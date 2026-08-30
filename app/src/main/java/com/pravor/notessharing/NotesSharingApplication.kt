@@ -5,6 +5,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import kotlinx.coroutines.launch
 
 class NotesSharingApplication : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader {
@@ -35,6 +36,15 @@ class NotesSharingApplication : Application(), ImageLoaderFactory {
             com.pravor.notessharing.data.classroom.reminder.ClassroomReminderScheduler.reconcileReminders(this)
         } catch (e: Exception) {
             android.util.Log.e("Application", "Failed to initialize Classroom reminder services", e)
+        }
+
+        // Synchronize Centralized Subject Catalog in background
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance(applicationContext).syncCatalog()
+            } catch (e: Exception) {
+                android.util.Log.w("Application", "Background subject catalog sync skipped/failed", e)
+            }
         }
     }
 
