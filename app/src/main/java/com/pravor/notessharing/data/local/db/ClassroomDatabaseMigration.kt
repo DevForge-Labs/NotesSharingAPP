@@ -229,4 +229,38 @@ class SubjectDatabaseMigration10To11 : Migration(10, 11) {
     }
 }
 
+class ExploreDatabaseMigration11To12 : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val existingColumns = mutableSetOf<String>()
+        db.query("PRAGMA table_info(`explore_items`)").use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) {
+                if (nameIndex != -1) {
+                    existingColumns.add(cursor.getString(nameIndex))
+                }
+            }
+        }
+
+        if (!existingColumns.contains("trendingScore")) {
+            db.execSQL("ALTER TABLE `explore_items` ADD COLUMN `trendingScore` REAL NOT NULL DEFAULT 0.0")
+        }
+        if (!existingColumns.contains("displaySubject")) {
+            db.execSQL("ALTER TABLE `explore_items` ADD COLUMN `displaySubject` TEXT")
+        }
+        if (!existingColumns.contains("branch")) {
+            db.execSQL("ALTER TABLE `explore_items` ADD COLUMN `branch` TEXT NOT NULL DEFAULT ''")
+        }
+        if (!existingColumns.contains("uploaderPhotoUrl")) {
+            db.execSQL("ALTER TABLE `explore_items` ADD COLUMN `uploaderPhotoUrl` TEXT NOT NULL DEFAULT ''")
+        }
+        if (!existingColumns.contains("contributorLevel")) {
+            db.execSQL("ALTER TABLE `explore_items` ADD COLUMN `contributorLevel` TEXT NOT NULL DEFAULT 'Bronze Contributor'")
+        }
+        if (!existingColumns.contains("rating")) {
+            db.execSQL("ALTER TABLE `explore_items` ADD COLUMN `rating` REAL NOT NULL DEFAULT 4.5")
+        }
+    }
+}
+
+
 

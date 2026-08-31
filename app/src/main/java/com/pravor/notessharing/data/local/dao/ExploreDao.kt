@@ -9,14 +9,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExploreDao {
-    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId ORDER BY upvotes DESC, uploadedAtMs DESC")
+    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId ORDER BY trendingScore DESC, uploadedAtMs DESC")
     fun observeExploreItems(collegeId: String): Flow<List<ExploreItemEntity>>
 
-    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId AND sectionCategory = :sectionCategory ORDER BY upvotes DESC, uploadedAtMs DESC")
+    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId AND sectionCategory = :sectionCategory ORDER BY trendingScore DESC, uploadedAtMs DESC")
     fun observeSectionItems(collegeId: String, sectionCategory: String): Flow<List<ExploreItemEntity>>
 
-    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId ORDER BY upvotes DESC, uploadedAtMs DESC")
+    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId ORDER BY trendingScore DESC, uploadedAtMs DESC")
     suspend fun getCachedExploreItems(collegeId: String): List<ExploreItemEntity>
+
+    @Query("SELECT * FROM explore_items WHERE collegeId = :collegeId AND sectionCategory = :sectionCategory ORDER BY trendingScore DESC, uploadedAtMs DESC")
+    suspend fun getCachedSectionItems(collegeId: String, sectionCategory: String): List<ExploreItemEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertExploreItems(items: List<ExploreItemEntity>): List<Long>

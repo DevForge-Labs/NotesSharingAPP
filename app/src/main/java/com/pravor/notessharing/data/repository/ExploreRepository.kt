@@ -38,7 +38,7 @@ class ExploreRepository(private val context: Context) {
 
     suspend fun getCachedContent(scopeKey: String): ExploreContent? {
         if (scopeKey.isBlank()) return null
-        val cache = memoryCaches.getOrPut(scopeKey) { TimedValueCache(5 * 60 * 1000L) }
+        val cache = memoryCaches.getOrPut(scopeKey) { TimedValueCache(30 * 1000L) }
         val inMemory = cache.getExpiredButAvailable()
         if (inMemory != null) return inMemory
         
@@ -163,7 +163,7 @@ class ExploreRepository(private val context: Context) {
         )
 
         // Sync with timed in-memory cache and Room DB persistence scoped to exact academic context
-        memoryCaches.getOrPut(scope.scopeKey) { TimedValueCache(5 * 60 * 1000L) }.put(freshContent)
+        memoryCaches.getOrPut(scope.scopeKey) { TimedValueCache(30 * 1000L) }.put(freshContent)
         roomRepository.saveExploreContent(scope.scopeKey, freshContent)
 
         freshContent

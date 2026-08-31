@@ -44,6 +44,12 @@ data class ExploreItemEntity(
     val examYear: String?,
     val examType: String?,
     val semester: String? = null,
+    val trendingScore: Double = 0.0,
+    val displaySubject: String? = null,
+    val branch: String = "",
+    val uploaderPhotoUrl: String = "",
+    val contributorLevel: String = "Bronze Contributor",
+    val rating: Double = 4.5,
     val cachedAtMs: Long = System.currentTimeMillis(),
     val uploadedAtMs: Long = 0L
 )

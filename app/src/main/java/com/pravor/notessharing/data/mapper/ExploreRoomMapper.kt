@@ -72,7 +72,7 @@ fun ExploreItemEntity.toTrendingNote(): TrendingNote {
         title = title,
         subject = subject,
         downloadsCount = downloadsCount,
-        rating = 4.5,
+        rating = rating,
         upvotes = upvotes,
         isBookmarked = false,
         thumbnailUrl = thumbnailUrl,
@@ -80,8 +80,8 @@ fun ExploreItemEntity.toTrendingNote(): TrendingNote {
         thumbnailType = thumbnailType,
         description = description,
         uploaderName = uploaderName,
-        uploaderPhotoUrl = "",
-        contributorLevel = "Bronze Contributor",
+        uploaderPhotoUrl = uploaderPhotoUrl,
+        contributorLevel = contributorLevel,
         documentType = documentType ?: type ?: "notes",
         type = type ?: "notes",
         bookmarks = bookmarksCount,
@@ -89,9 +89,9 @@ fun ExploreItemEntity.toTrendingNote(): TrendingNote {
         examType = examType,
         semester = semester ?: "",
         isUpvoted = false,
-        branch = "",
-        trendingScore = 0.0,
-        displaySubject = null,
+        branch = branch,
+        trendingScore = trendingScore,
+        displaySubject = displaySubject,
         sectionDisplay = sectionDisplay,
         uploadedAt = uploadedAtMs,
         resourceType = resolvedResourceType,
@@ -154,6 +154,12 @@ fun FeedItem.toExploreEntity(collegeId: String, sectionCategory: String): Explor
         examYear = examYear,
         examType = examType,
         semester = null,
+        trendingScore = 0.0,
+        displaySubject = null,
+        branch = "",
+        uploaderPhotoUrl = "",
+        contributorLevel = "Bronze Contributor",
+        rating = 4.5,
         uploadedAtMs = uploadedMs
     )
 }
@@ -195,6 +201,12 @@ fun TrendingNote.toExploreEntity(collegeId: String, sectionCategory: String): Ex
         examYear = examYear,
         examType = examType,
         semester = semester,
+        trendingScore = trendingScore,
+        displaySubject = displaySubject,
+        branch = branch,
+        uploaderPhotoUrl = uploaderPhotoUrl,
+        contributorLevel = contributorLevel,
+        rating = rating,
         uploadedAtMs = uploadedAt
     )
 }

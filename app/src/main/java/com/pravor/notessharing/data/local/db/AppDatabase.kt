@@ -39,7 +39,7 @@ import com.pravor.notessharing.data.local.entity.UserProfileEntity
         ClassroomManualCompletionEntity::class,
         SubjectCatalogEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -68,7 +68,8 @@ abstract class AppDatabase : RoomDatabase() {
                     ClassroomDatabaseMigration7To8(),
                     ClassroomDatabaseMigration8To9(),
                     ExploreDatabaseMigration9To10(),
-                    SubjectDatabaseMigration10To11()
+                    SubjectDatabaseMigration10To11(),
+                    ExploreDatabaseMigration11To12()
                 )
                 .fallbackToDestructiveMigration()
                 .build()

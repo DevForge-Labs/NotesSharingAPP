@@ -93,19 +93,8 @@ open class SearchRepository(
         selectedDocumentTypes: Set<String>
     ): List<SearchResultModel> {
         val filterParts = mutableListOf<String>()
-        filterParts.add("college:${scope.canonicalCollegeId}")
-
-        if (scope.hasBranch) {
-            filterParts.add("(branch:${scope.canonicalBranchId} OR branch:common OR branch:all)")
-        }
-
-        if (scope.hasSemester) {
-            val semDigits = scope.semester!!.filter { it.isDigit() }
-            if (semDigits.isNotEmpty()) {
-                filterParts.add("(semester:'${scope.semester}' OR semester:'$semDigits' OR semester:'Semester $semDigits')")
-            } else {
-                filterParts.add("semester:'${scope.semester}'")
-            }
+        if (scope.isCollegeValid) {
+            filterParts.add("college:${scope.canonicalCollegeId}")
         }
 
         if (selectedDocumentTypes.isNotEmpty()) {
@@ -119,7 +108,7 @@ open class SearchRepository(
 
         val params = SearchParamsObject(
             query = query,
-            filters = filterExpression
+            filters = filterExpression.ifBlank { null }
         )
 
         val response = client.searchSingleIndex(
@@ -142,14 +131,11 @@ open class SearchRepository(
             val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
             val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
 
-            if (scope != null && scope.isCollegeValid) {
-                val isPermitted = scope.isDocumentPermitted(
-                    docCollege = college,
-                    docBranch = branch,
-                    docSemester = semester,
-                    docSubjectId = null
-                )
-                if (!isPermitted) return@mapNotNull null
+            if (scope.isCollegeValid && college.isNotBlank()) {
+                val docCanonicalCollege = LegacyAcademicCompatibilityResolver.resolveCollegeId(college)
+                if (docCanonicalCollege != scope.canonicalCollegeId) {
+                    return@mapNotNull null
+                }
             }
 
             SearchResultModel(

@@ -165,12 +165,17 @@ class SubjectResourcesViewModel(
                 val filtered = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     val docSubject = data["subject"] as? String ?: ""
+                    val docDisplaySubject = data["displaySubject"] as? String ?: ""
                     val docSubjectNorm = com.pravor.notessharing.ui.common.utils.normalizeSubject(docSubject)
+                    val docDisplaySubjectNorm = com.pravor.notessharing.ui.common.utils.normalizeSubject(docDisplaySubject)
                     val docSubjectId = data["subjectId"] as? String
 
-                    // Match by normalized subject name or ID
+                    // Match by normalized subject name, display subject, or subject ID
                     val matchesSubject = (docSubjectNorm == targetNormalized) ||
-                            (!docSubjectId.isNullOrBlank() && targetNormalized.contains(docSubjectId.lowercase(java.util.Locale.ROOT)))
+                            (docDisplaySubjectNorm == targetNormalized) ||
+                            (!docSubjectId.isNullOrBlank() && (targetNormalized.contains(docSubjectId.lowercase(java.util.Locale.ROOT)) || docSubjectId.lowercase(java.util.Locale.ROOT).contains(targetNormalized))) ||
+                            (docSubjectNorm.isNotBlank() && targetNormalized.contains(docSubjectNorm)) ||
+                            (targetNormalized.isNotBlank() && docSubjectNorm.contains(targetNormalized))
 
                     if (!matchesSubject) {
                         return@mapNotNull null

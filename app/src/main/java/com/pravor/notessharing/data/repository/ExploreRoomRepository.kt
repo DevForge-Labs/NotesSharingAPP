@@ -12,6 +12,7 @@ import com.pravor.notessharing.data.mapper.toDiscoverNote
 import com.pravor.notessharing.data.mapper.toExploreEntity
 import com.pravor.notessharing.data.mapper.toFeedItem
 import com.pravor.notessharing.data.mapper.toTrendingNote
+import com.pravor.notessharing.domain.model.TrendingNote
 import com.pravor.notessharing.ui.common.ExploreContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -55,6 +56,25 @@ class ExploreRoomRepository(
                 exploreDao.upsertExploreItems(entities)
             }
         }
+    }
+
+    fun observeTrendingNotes(scopeKey: String): Flow<List<TrendingNote>> {
+        if (scopeKey.isBlank()) return kotlinx.coroutines.flow.flowOf(emptyList())
+        return exploreDao.observeSectionItems(scopeKey, "NOTES").map { entities ->
+            entities.map { it.toTrendingNote() }
+        }
+    }
+
+    suspend fun getCachedTrendingNotes(scopeKey: String): List<TrendingNote> = withContext(Dispatchers.IO) {
+        if (scopeKey.isBlank()) return@withContext emptyList()
+        val entities = exploreDao.getCachedSectionItems(scopeKey, "NOTES")
+        entities.map { it.toTrendingNote() }
+    }
+
+    suspend fun saveTrendingNotes(scopeKey: String, notes: List<TrendingNote>) = withContext(Dispatchers.IO) {
+        if (scopeKey.isBlank() || notes.isEmpty()) return@withContext
+        val entities = notes.map { it.toExploreEntity(scopeKey, "NOTES") }
+        exploreDao.upsertExploreItems(entities)
     }
 
     private fun assembleExploreContent(entities: List<ExploreItemEntity>): ExploreContent {

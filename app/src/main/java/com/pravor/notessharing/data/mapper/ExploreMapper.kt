@@ -35,7 +35,8 @@ object ExploreMapper {
         val processingStatus = data["processingStatus"] as? String
         if (processingStatus == "PROCESSING" || processingStatus == "FAILED") return null
 
-        val id = data["documentId"] as? String ?: ""
+        val id = (data["documentId"] as? String)?.takeIf { it.isNotBlank() } 
+            ?: (data["id"] as? String)?.takeIf { it.isNotBlank() } ?: ""
         val title = (data["title"] as? String ?: "").removeFileExtension()
         val uploaderId = data["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
@@ -108,7 +109,9 @@ object ExploreMapper {
         val processingStatus = data["processingStatus"] as? String
         if (processingStatus == "PROCESSING" || processingStatus == "FAILED") return null
 
-        val id = data["documentId"] as? String ?: ""
+        val id = (data["documentId"] as? String)?.takeIf { it.isNotBlank() } 
+            ?: (data["id"] as? String)?.takeIf { it.isNotBlank() } 
+            ?: doc.id
         val title = (data["title"] as? String ?: data["videoTitle"] as? String ?: "").removeFileExtension()
         val uploaderId = data["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
@@ -208,7 +211,8 @@ object ExploreMapper {
         val processingStatus = doc["processingStatus"] as? String
         if (processingStatus == "PROCESSING" || processingStatus == "FAILED") return null
 
-        val id = doc["documentId"] as? String ?: ""
+        val id = (doc["documentId"] as? String)?.takeIf { it.isNotBlank() } 
+            ?: (doc["id"] as? String)?.takeIf { it.isNotBlank() } ?: ""
         val title = (doc["title"] as? String ?: "").removeFileExtension()
         val uploaderId = doc["uploaderId"] as? String
         if (id.isBlank() || title.isBlank() || uploaderId == "dummy-uid") return null
