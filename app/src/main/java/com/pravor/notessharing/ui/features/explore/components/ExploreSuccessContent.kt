@@ -101,7 +101,9 @@ fun ExploreSuccessContent(
     val subjectsColor = if (isDark) Color(0xFF73E0B1) else Color(0xFF167356)
 
     // 1. Trending Notes (Preview takes 7)
-    val filteredTrending = content.notes
+    val filteredTrending = remember(content.notes) {
+        content.notes.filter { it.resourceType == ResourceType.NOTE }
+    }
     val visibleTrendingNotes = remember(filteredTrending) {
         filteredTrending.take(7)
     }

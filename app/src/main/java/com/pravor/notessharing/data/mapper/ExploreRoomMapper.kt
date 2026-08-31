@@ -59,11 +59,26 @@ fun ExploreItemEntity.toFeedItem(): FeedItem {
 }
 
 fun ExploreItemEntity.toTrendingNote(): TrendingNote {
+    val docTypeLower = documentType?.trim()?.lowercase(java.util.Locale.US) ?: ""
+    val typeLower = type?.trim()?.lowercase(java.util.Locale.US) ?: ""
+    val isVideo = docTypeLower in listOf("video", "videos", "youtube resource", "playlist", "playlists") ||
+            (!youtubeVideoId.isNullOrBlank()) || (!youtubeUrl.isNullOrBlank())
+    val isPyq = docTypeLower in listOf("pyq", "pyqs", "past paper", "past papers", "question paper", "question papers", "exam prep", "previous year question", "previous year questions", "exam paper", "exam papers", "midsem", "endsem", "mid sem", "end sem") ||
+            typeLower in listOf("pyq", "pyqs", "past paper", "past papers", "question paper", "question papers", "exam prep", "previous year question", "previous year questions", "exam paper", "exam papers", "midsem", "endsem", "mid sem", "end sem") ||
+            docTypeLower.contains("pyq") || typeLower.contains("pyq") ||
+            !examYear.isNullOrBlank() || !examType.isNullOrBlank()
+    val isCheatSheet = docTypeLower in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet", "formula sheet", "formula sheets", "formulasheet") ||
+            typeLower in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet", "formula sheet", "formula sheets", "formulasheet") ||
+            docTypeLower.contains("cheat") || typeLower.contains("cheat")
+    val isAssignment = docTypeLower in listOf("assignment", "assignments", "homework", "lab assignment", "lab report") ||
+            typeLower in listOf("assignment", "assignments", "homework", "lab assignment", "lab report") ||
+            docTypeLower.contains("assignment") || typeLower.contains("assignment")
+
     val resolvedResourceType = when {
-        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("pyq", "pyqs") || type?.trim()?.lowercase(java.util.Locale.US) in listOf("pyq", "pyqs") -> com.pravor.notessharing.domain.model.ResourceType.PYQ
-        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet") || type?.trim()?.lowercase(java.util.Locale.US) in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet") -> com.pravor.notessharing.domain.model.ResourceType.CHEAT_SHEET
-        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("assignment", "assignments") || type?.trim()?.lowercase(java.util.Locale.US) in listOf("assignment", "assignments") -> com.pravor.notessharing.domain.model.ResourceType.ASSIGNMENT
-        documentType?.trim()?.lowercase(java.util.Locale.US) in listOf("video", "videos", "youtube resource", "playlist", "playlists") || (!youtubeVideoId.isNullOrBlank()) || (!youtubeUrl.isNullOrBlank()) -> com.pravor.notessharing.domain.model.ResourceType.VIDEO
+        isVideo -> com.pravor.notessharing.domain.model.ResourceType.VIDEO
+        isPyq -> com.pravor.notessharing.domain.model.ResourceType.PYQ
+        isCheatSheet -> com.pravor.notessharing.domain.model.ResourceType.CHEAT_SHEET
+        isAssignment -> com.pravor.notessharing.domain.model.ResourceType.ASSIGNMENT
         else -> com.pravor.notessharing.domain.model.ResourceType.NOTE
     }
 

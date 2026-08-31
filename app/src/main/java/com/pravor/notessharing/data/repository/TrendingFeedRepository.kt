@@ -60,9 +60,8 @@ class TrendingFeedRepository(private val context: Context) {
         try {
             val freshNotes = fetchAllTrendingFromFirestore(scope)
             allScoredCandidates = freshNotes
-            displayedCount = PAGE_SIZE.coerceAtMost(freshNotes.size)
-            val pageItems = freshNotes.take(displayedCount)
-            _trendingNotes.value = pageItems
+            _trendingNotes.value = freshNotes
+            displayedCount = freshNotes.size
             roomRepository.saveTrendingNotes(scope.scopeKey, freshNotes)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -73,13 +72,12 @@ class TrendingFeedRepository(private val context: Context) {
 
     suspend fun loadMore(scope: AcademicScope) {
         if (!scope.isCollegeValid || _isLoadingMore.value) return
-        if (displayedCount >= allScoredCandidates.size) return
+        if (_trendingNotes.value.size >= allScoredCandidates.size) return
 
         _isLoadingMore.value = true
         try {
-            displayedCount = (displayedCount + PAGE_SIZE).coerceAtMost(allScoredCandidates.size)
-            val updated = allScoredCandidates.take(displayedCount)
-            _trendingNotes.value = updated
+            _trendingNotes.value = allScoredCandidates
+            displayedCount = allScoredCandidates.size
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
@@ -88,28 +86,20 @@ class TrendingFeedRepository(private val context: Context) {
     }
 
     private suspend fun fetchAllTrendingFromFirestore(scope: AcademicScope): List<TrendingNote> = withContext(Dispatchers.IO) {
-        val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
         val canonicalCollegeId = scope.canonicalCollegeId
 
-        val allDocs = coroutineScope {
-            val deferreds = collections.map { col ->
-                async {
-                    try {
-                        firestore.collection(col)
-                            .whereEqualTo("college", canonicalCollegeId)
-                            .get()
-                            .await()
-                            .documents
-                    } catch (e: Exception) {
-                        try {
-                            firestore.collection(col).get().await().documents
-                        } catch (e2: Exception) {
-                            emptyList()
-                        }
-                    }
-                }
+        val allDocs = try {
+            firestore.collection("notes")
+                .whereEqualTo("college", canonicalCollegeId)
+                .get()
+                .await()
+                .documents
+        } catch (e: Exception) {
+            try {
+                firestore.collection("notes").get().await().documents
+            } catch (e2: Exception) {
+                emptyList()
             }
-            deferreds.awaitAll().flatten()
         }
 
         val nonVideoDocs = allDocs.filter { doc ->
@@ -124,7 +114,9 @@ class TrendingFeedRepository(private val context: Context) {
             val isTitleBlank = title.isNullOrBlank()
             val isDummyUploader = uploaderId == "dummy-uid"
 
-            !ExploreMapper.isVideoResource(data) && !isIdBlank && !isTitleBlank && !isDummyUploader
+            val isGenuineNote = ExploreMapper.determineResourceType(data, "notes") == ResourceType.NOTE
+
+            isGenuineNote && !isIdBlank && !isTitleBlank && !isDummyUploader
         }
 
         // Filter by scope
@@ -169,7 +161,7 @@ class TrendingFeedRepository(private val context: Context) {
 
         val mappedNotes = sortedDocs.mapNotNull { doc ->
             ExploreMapper.documentToTrendingNote(doc, bookmarkedIds, resolvedLevels)
-        }
+        }.filter { it.resourceType == ResourceType.NOTE }
 
         mappedNotes
     }

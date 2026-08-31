@@ -61,25 +61,27 @@ class ExploreRoomRepository(
     fun observeTrendingNotes(scopeKey: String): Flow<List<TrendingNote>> {
         if (scopeKey.isBlank()) return kotlinx.coroutines.flow.flowOf(emptyList())
         return exploreDao.observeSectionItems(scopeKey, "NOTES").map { entities ->
-            entities.map { it.toTrendingNote() }
+            entities.map { it.toTrendingNote() }.filter { it.resourceType == com.pravor.notessharing.domain.model.ResourceType.NOTE }
         }
     }
 
     suspend fun getCachedTrendingNotes(scopeKey: String): List<TrendingNote> = withContext(Dispatchers.IO) {
         if (scopeKey.isBlank()) return@withContext emptyList()
         val entities = exploreDao.getCachedSectionItems(scopeKey, "NOTES")
-        entities.map { it.toTrendingNote() }
+        entities.map { it.toTrendingNote() }.filter { it.resourceType == com.pravor.notessharing.domain.model.ResourceType.NOTE }
     }
 
     suspend fun saveTrendingNotes(scopeKey: String, notes: List<TrendingNote>) = withContext(Dispatchers.IO) {
         if (scopeKey.isBlank() || notes.isEmpty()) return@withContext
-        val entities = notes.map { it.toExploreEntity(scopeKey, "NOTES") }
+        val filtered = notes.filter { it.resourceType == com.pravor.notessharing.domain.model.ResourceType.NOTE }
+        if (filtered.isEmpty()) return@withContext
+        val entities = filtered.map { it.toExploreEntity(scopeKey, "NOTES") }
         exploreDao.upsertExploreItems(entities)
     }
 
     private fun assembleExploreContent(entities: List<ExploreItemEntity>): ExploreContent {
         val popular = entities.filter { it.sectionCategory == "POPULAR" }.map { it.toFeedItem() }
-        val notes = entities.filter { it.sectionCategory == "NOTES" }.map { it.toTrendingNote() }
+        val notes = entities.filter { it.sectionCategory == "NOTES" }.map { it.toTrendingNote() }.filter { it.resourceType == com.pravor.notessharing.domain.model.ResourceType.NOTE }
         val examPrep = entities.filter { it.sectionCategory == "EXAM_PREP" }.map { it.toTrendingNote() }
         val assignments = entities.filter { it.sectionCategory == "ASSIGNMENTS" }.map { it.toTrendingNote() }
         val videos = entities.filter { it.sectionCategory == "VIDEOS" }.map { it.toTrendingNote() }
