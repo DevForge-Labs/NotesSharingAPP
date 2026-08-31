@@ -264,33 +264,19 @@ fun SubjectResourcesScreen(
         when (selectedFilter) {
             ResourceFilter.All -> resources
             ResourceFilter.Notes -> resources.filter { res ->
-                if (res is TrendingNote) {
-                    val docType = res.documentType.ifBlank { res.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                    val isValid = docType == "notes" || docType == "note" || docType == "documents" || docType == "document" || docType == "pdf" || docType.isBlank()
-                    val isExcluded = docType == "pyq" || docType == "pyqs" || docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet" || docType == "assignment" || docType == "assignments" || docType == "video" || docType == "videos"
-                    isValid && !isExcluded
-                } else false
+                res is TrendingNote && res.resourceType == com.pravor.notessharing.domain.model.ResourceType.NOTE
             }
             ResourceFilter.PYQs -> resources.filter { res ->
-                if (res is TrendingNote) {
-                    val docType = res.documentType.ifBlank { res.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                    docType == "pyq" || docType == "pyqs"
-                } else false
+                res is TrendingNote && res.resourceType == com.pravor.notessharing.domain.model.ResourceType.PYQ
             }
             ResourceFilter.CheatSheets -> resources.filter { res ->
-                if (res is TrendingNote) {
-                    val docType = res.documentType.ifBlank { res.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                    docType == "cheatsheet" || docType == "cheatsheets" || docType == "cheat sheet"
-                } else false
+                res is TrendingNote && res.resourceType == com.pravor.notessharing.domain.model.ResourceType.CHEAT_SHEET
             }
             ResourceFilter.Assignments -> resources.filter { res ->
-                if (res is TrendingNote) {
-                    val docType = res.documentType.ifBlank { res.type ?: "" }.lowercase(java.util.Locale.ROOT).trim()
-                    docType == "assignment" || docType == "assignments"
-                } else false
+                res is TrendingNote && res.resourceType == com.pravor.notessharing.domain.model.ResourceType.ASSIGNMENT
             }
             ResourceFilter.Videos -> resources.filter { res ->
-                res is VideoRecommendation
+                res is VideoRecommendation || (res is TrendingNote && (res.resourceType == com.pravor.notessharing.domain.model.ResourceType.VIDEO || res.resourceType == com.pravor.notessharing.domain.model.ResourceType.PLAYLIST))
             }
         }
     }

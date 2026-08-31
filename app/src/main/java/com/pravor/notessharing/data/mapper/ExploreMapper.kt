@@ -65,6 +65,9 @@ object ExploreMapper {
         val youtubeVideoId = (data["youtubeVideoId"] as? String ?: "").trim()
         val resourceTypeField = (data["resourceType"] as? String ?: "").trim()
         val source = (data["source"] as? String ?: "").trim()
+        val examType = (data["examType"] as? String ?: "").trim()
+        val examYear = (data["examYear"] ?: data["year"])?.toString()?.trim() ?: ""
+        val category = (data["category"] as? String ?: "").trim()
 
         val isVideo = collectionName.equals("videos", ignoreCase = true) ||
                 docType.equals("VIDEO", ignoreCase = true) ||
@@ -85,19 +88,37 @@ object ExploreMapper {
             return if (isPlaylist) ResourceType.PLAYLIST else ResourceType.VIDEO
         }
 
-        return when (collectionName.lowercase(Locale.US)) {
-            "pyqs" -> ResourceType.PYQ
-            "cheatsheets" -> ResourceType.CHEAT_SHEET
-            "assignments" -> ResourceType.ASSIGNMENT
-            else -> {
-                when (docType.lowercase(Locale.US)) {
-                    "pyq", "pyqs" -> ResourceType.PYQ
-                    "cheat sheet", "cheatsheet", "cheatsheets" -> ResourceType.CHEAT_SHEET
-                    "assignment", "assignments" -> ResourceType.ASSIGNMENT
-                    else -> ResourceType.NOTE
-                }
-            }
-        }
+        val docTypeLower = docType.lowercase(Locale.US)
+        val resourceTypeLower = resourceTypeField.lowercase(Locale.US)
+        val categoryLower = category.lowercase(Locale.US)
+        val colLower = collectionName.lowercase(Locale.US)
+
+        val isPyq = colLower == "pyqs" ||
+                docTypeLower in listOf("pyq", "pyqs", "past paper", "past papers", "question paper", "question papers", "exam prep", "previous year question", "previous year questions", "exam paper", "exam papers", "midsem", "endsem", "mid sem", "end sem") ||
+                docTypeLower.contains("pyq") ||
+                resourceTypeLower.contains("pyq") ||
+                categoryLower.contains("pyq") ||
+                (examType.isNotBlank() || examYear.isNotBlank())
+
+        if (isPyq) return ResourceType.PYQ
+
+        val isCheatSheet = colLower == "cheatsheets" ||
+                docTypeLower in listOf("cheat sheet", "cheatsheet", "cheatsheets", "cheat_sheet", "formula sheet", "formula sheets", "formulasheet") ||
+                docTypeLower.contains("cheat") ||
+                resourceTypeLower.contains("cheat") ||
+                categoryLower.contains("cheat")
+
+        if (isCheatSheet) return ResourceType.CHEAT_SHEET
+
+        val isAssignment = colLower == "assignments" ||
+                docTypeLower in listOf("assignment", "assignments", "homework", "lab assignment", "lab report") ||
+                docTypeLower.contains("assignment") ||
+                resourceTypeLower.contains("assignment") ||
+                categoryLower.contains("assignment")
+
+        if (isAssignment) return ResourceType.ASSIGNMENT
+
+        return ResourceType.NOTE
     }
 
     fun documentToTrendingNote(

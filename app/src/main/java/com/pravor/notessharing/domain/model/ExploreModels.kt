@@ -47,7 +47,7 @@ data class TrendingNote(
     val youtubeUrl: String = ""
 ) {
     fun isTrendingNote(): Boolean {
-        return resourceType != ResourceType.VIDEO && resourceType != ResourceType.PLAYLIST
+        return resourceType == ResourceType.NOTE
     }
 
     fun toVideoRecommendation(): VideoRecommendation {
