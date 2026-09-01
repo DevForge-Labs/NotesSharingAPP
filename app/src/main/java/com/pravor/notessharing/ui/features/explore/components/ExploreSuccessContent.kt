@@ -149,6 +149,22 @@ fun ExploreSuccessContent(
         )
     }
 
+    AutoRetractCarouselOnIdle(
+        state = trendingRowState,
+        hasSeeMoreItem = filteredTrending.size > visibleTrendingNotes.size,
+        itemCount = visibleTrendingNotes.size + 1
+    )
+    AutoRetractCarouselOnIdle(
+        state = examPrepRowState,
+        hasSeeMoreItem = filteredExamPrep.size > visibleExamPrep.size,
+        itemCount = visibleExamPrep.size + 1
+    )
+    AutoRetractCarouselOnIdle(
+        state = assignmentsRowState,
+        hasSeeMoreItem = filteredAssignments.size > visibleAssignments.size,
+        itemCount = visibleAssignments.size + 1
+    )
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
@@ -183,7 +199,7 @@ fun ExploreSuccessContent(
                 item(key = "trending-carousel", contentType = "carousel") {
                     ScrollableRowWithIndicator(
                         state = trendingRowState,
-                        onSeeMoreClick = if (filteredTrending.size > visibleTrendingNotes.size) onTrendingSeeMoreClick else null,
+                        onSeeMoreClick = null,
                         accentColor = trendingColor,
                         onScrollableChanged = { isTrendingScrollable = it }
                     ) {
@@ -207,6 +223,15 @@ fun ExploreSuccessContent(
                                 onClick = onClickRemembered,
                                 onUpvoteClick = onUpvoteClickRemembered
                             )
+                        }
+
+                        if (filteredTrending.size > visibleTrendingNotes.size) {
+                            item(key = "trending-see-more-edge", contentType = "see-more") {
+                                CarouselSeeMoreCard(
+                                    onClick = onTrendingSeeMoreClick,
+                                    accentColor = trendingColor
+                                )
+                            }
                         }
                     }
                 }
@@ -258,8 +283,6 @@ fun ExploreSuccessContent(
                         shape = RoundedCornerShape(20.dp),
                         color = Color(0xFF141922).copy(alpha = 0.74f),
                         border = BorderStroke(1.dp, videosColor.copy(alpha = 0.28f)),
-                        tonalElevation = 0.dp,
-                        shadowElevation = 0.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -288,7 +311,7 @@ fun ExploreSuccessContent(
                                     )
                                 }
                             }
-                            
+
                             if (content.videos.size > 3) {
                                 FilledTonalButton(
                                     onClick = onRecommendedVideosSeeMoreClick,
@@ -326,7 +349,7 @@ fun ExploreSuccessContent(
                 item(key = "examprep-carousel", contentType = "carousel") {
                     ScrollableRowWithIndicator(
                         state = examPrepRowState,
-                        onSeeMoreClick = if (filteredExamPrep.size > visibleExamPrep.size) onExamPrepSeeMoreClick else null,
+                        onSeeMoreClick = null,
                         accentColor = examPrepColor,
                         onScrollableChanged = { isExamPrepScrollable = it }
                     ) {
@@ -350,6 +373,15 @@ fun ExploreSuccessContent(
                                 onClick = onClickRemembered,
                                 onUpvoteClick = onUpvoteClickRemembered
                             )
+                        }
+
+                        if (filteredExamPrep.size > visibleExamPrep.size) {
+                            item(key = "examprep-see-more-edge", contentType = "see-more") {
+                                CarouselSeeMoreCard(
+                                    onClick = onExamPrepSeeMoreClick,
+                                    accentColor = examPrepColor
+                                )
+                            }
                         }
                     }
                 }
@@ -376,7 +408,7 @@ fun ExploreSuccessContent(
                 item(key = "assignments-carousel", contentType = "carousel") {
                     ScrollableRowWithIndicator(
                         state = assignmentsRowState,
-                        onSeeMoreClick = if (filteredAssignments.size > visibleAssignments.size) onAssignmentsSeeMoreClick else null,
+                        onSeeMoreClick = null,
                         accentColor = assignmentsColor,
                         onScrollableChanged = { isAssignmentsScrollable = it }
                     ) {
@@ -400,6 +432,15 @@ fun ExploreSuccessContent(
                                 onClick = onClickRemembered,
                                 onUpvoteClick = onUpvoteClickRemembered
                             )
+                        }
+
+                        if (filteredAssignments.size > visibleAssignments.size) {
+                            item(key = "assignments-see-more-edge", contentType = "see-more") {
+                                CarouselSeeMoreCard(
+                                    onClick = onAssignmentsSeeMoreClick,
+                                    accentColor = assignmentsColor
+                                )
+                            }
                         }
                     }
                 }
@@ -596,3 +637,34 @@ fun SubjectHeroCard(
         }
     }
 }
+
+@Composable
+private fun AutoRetractCarouselOnIdle(
+    state: LazyListState,
+    hasSeeMoreItem: Boolean,
+    itemCount: Int,
+    idleDelayMs: Long = 3500L
+) {
+    if (!hasSeeMoreItem || itemCount <= 1) return
+
+    val isAtEnd by remember(state, itemCount) {
+        derivedStateOf {
+            val visible = state.layoutInfo.visibleItemsInfo
+            if (visible.isEmpty()) false
+            else {
+                val lastVisible = visible.last()
+                lastVisible.index >= itemCount - 1
+            }
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(isAtEnd, state.isScrollInProgress) {
+        if (isAtEnd && !state.isScrollInProgress) {
+            kotlinx.coroutines.delay(idleDelayMs)
+            if (isAtEnd && !state.isScrollInProgress) {
+                state.animateScrollToItem((itemCount - 2).coerceAtLeast(0))
+            }
+        }
+    }
+}
+

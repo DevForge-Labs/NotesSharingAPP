@@ -17,6 +17,7 @@ enum class ClassroomContentFilter(val label: String) {
 @Immutable
 data class ClassroomCourseUiState(
     val course: ClassroomCourse? = null,
+    val courseTheme: com.pravor.notessharing.ui.features.classroom.components.CourseCardTheme = com.pravor.notessharing.ui.features.classroom.components.CoursePalettes[0],
     val materials: List<ClassroomMaterial> = emptyList(),
     val announcements: List<ClassroomAnnouncement> = emptyList(),
     val coursework: List<ClassroomCourseWork> = emptyList(),

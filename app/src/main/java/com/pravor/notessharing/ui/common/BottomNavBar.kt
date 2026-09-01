@@ -38,8 +38,7 @@ private data class ResponsiveNavTokens(
     val boxPadding: Dp,
     val itemHorizontalPadding: Dp,
     val iconLabelSpacer: Dp,
-    val textStyle: TextStyle,
-    val useShortClassroomLabel: Boolean
+    val textStyle: TextStyle
 )
 
 @Composable
@@ -81,8 +80,7 @@ fun BottomNavBar(
                         boxPadding = 5.dp,
                         itemHorizontalPadding = 6.dp,
                         iconLabelSpacer = 5.dp,
-                        textStyle = labelMediumStyle,
-                        useShortClassroomLabel = false
+                        textStyle = labelMediumStyle
                     )
                 }
                 availableWidth >= 365.dp -> {
@@ -91,8 +89,7 @@ fun BottomNavBar(
                         boxPadding = 4.dp,
                         itemHorizontalPadding = 4.dp,
                         iconLabelSpacer = 4.dp,
-                        textStyle = labelSmallStyle.copy(fontSize = 11.5.sp),
-                        useShortClassroomLabel = false
+                        textStyle = labelSmallStyle.copy(fontSize = 11.5.sp)
                     )
                 }
                 else -> {
@@ -101,8 +98,7 @@ fun BottomNavBar(
                         boxPadding = 3.dp,
                         itemHorizontalPadding = 3.dp,
                         iconLabelSpacer = 3.dp,
-                        textStyle = labelSmallStyle.copy(fontSize = 11.sp),
-                        useShortClassroomLabel = true
+                        textStyle = labelSmallStyle.copy(fontSize = 11.sp)
                     )
                 }
             }
@@ -152,11 +148,7 @@ fun BottomNavBar(
                             label = "bottom-nav-border"
                         )
 
-                        val labelText = if (tokens.useShortClassroomLabel && destination == AppDestination.Classroom) {
-                            "Class"
-                        } else {
-                            destination.label
-                        }
+                        val labelText = destination.label
 
                         Surface(
                             onClick = { onDestinationClick(destination) },

@@ -18,12 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,19 +53,15 @@ sealed interface SmartBannerState {
 fun SmartBannerSlot(
     modifier: Modifier = Modifier,
     state: SmartBannerState = SmartBannerState.GreetingMode,
-    unreadCount: Int = 0,
     shouldPlayWave: Boolean = false,
-    onWaveCompleted: () -> Unit = {},
-    onBellClick: () -> Unit = {}
+    onWaveCompleted: () -> Unit = {}
 ) {
     when (state) {
         is SmartBannerState.GreetingMode -> {
             PremiumGreetingBlock(
                 modifier = modifier,
-                unreadCount = unreadCount,
                 shouldPlayWave = shouldPlayWave,
-                onWaveCompleted = onWaveCompleted,
-                onBellClick = onBellClick
+                onWaveCompleted = onWaveCompleted
             )
         }
     }
@@ -80,10 +70,8 @@ fun SmartBannerSlot(
 @Composable
 private fun PremiumGreetingBlock(
     modifier: Modifier = Modifier,
-    unreadCount: Int = 0,
     shouldPlayWave: Boolean = false,
-    onWaveCompleted: () -> Unit = {},
-    onBellClick: () -> Unit = {}
+    onWaveCompleted: () -> Unit = {}
 ) {
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val baseGreeting = when (currentHour) {
@@ -180,7 +168,7 @@ private fun PremiumGreetingBlock(
                 .padding(horizontal = 18.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Top Section: Avatar | Time Salutation + Name Wave | Notification Bell
+            // Top Section: Avatar | Time Salutation + Name Wave
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -234,67 +222,6 @@ private fun PremiumGreetingBlock(
                             shouldAnimate = shouldPlayWave,
                             onAnimationEnd = onWaveCompleted
                         )
-                    }
-                }
-
-                // 3. Notification Bell with Badge & Glass Surface
-                val bellRotation = remember { Animatable(0f) }
-                LaunchedEffect(unreadCount) {
-                    if (unreadCount > 0) {
-                        while (true) {
-                            bellRotation.animateTo(-4f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(4f, animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(-3f, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(3f, animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing))
-                            bellRotation.animateTo(0f, animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing))
-                            delay(8000)
-                        }
-                    } else {
-                        bellRotation.snapTo(0f)
-                    }
-                }
-
-                Surface(
-                    shape = CircleShape,
-                    color = ElectricBlue.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.30f)),
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    IconButton(
-                        onClick = onBellClick,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                if (unreadCount > 0) {
-                                    val badgeText = if (unreadCount > 99) "99+" else unreadCount.toString()
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError
-                                    ) {
-                                        Text(
-                                            text = badgeText,
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 9.sp
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Notifications",
-                                tint = ElectricBlue,
-                                modifier = Modifier
-                                    .size(21.dp)
-                                    .graphicsLayer {
-                                        rotationZ = bellRotation.value
-                                        transformOrigin = TransformOrigin(0.5f, 0.0f)
-                                    }
-                            )
-                        }
                     }
                 }
             }

@@ -20,6 +20,9 @@ import com.pravor.notessharing.domain.model.classroom.ClassroomCourse
 import com.pravor.notessharing.domain.model.classroom.ClassroomCourseWork
 import com.pravor.notessharing.domain.model.classroom.ClassroomMaterial
 import com.pravor.notessharing.domain.model.classroom.ClassroomStudentSubmission
+import com.pravor.notessharing.ui.features.classroom.components.CourseCardTheme
+import com.pravor.notessharing.ui.features.classroom.components.CoursePalettes
+import com.pravor.notessharing.ui.features.classroom.components.getCourseTheme
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +60,16 @@ class ClassroomCourseViewModel(
     private val _selectedFilter = MutableStateFlow(ClassroomContentFilter.ALL)
     private val _markingDoneIds = MutableStateFlow<Set<String>>(emptySet())
 
+    private val courseAndIndexFlow = combine(
+        repository.observeCourses(),
+        repository.observeHiddenCourseIds()
+    ) { courses, hiddenIds ->
+        val visible = courses.filter { it.id !in hiddenIds }
+        val index = visible.indexOfFirst { it.id == courseId }
+        val course = visible.find { it.id == courseId } ?: courses.find { it.id == courseId }
+        Pair(course, index)
+    }
+
     private val resourcesFlow = combine(
         repository.observeMaterials(courseId),
         repository.observeAnnouncements(courseId),
@@ -69,18 +82,26 @@ class ClassroomCourseViewModel(
 
     val uiState: StateFlow<ClassroomCourseUiState> = combine(
         _course,
+        courseAndIndexFlow,
         resourcesFlow,
         combine(_markingDoneIds, _selectedFilter) { markingIds, filter -> Pair(markingIds, filter) },
         combine(_isLoading, _isRefreshing, _errorMessage) { loading, refreshing, error ->
             Triple(loading, refreshing, error)
         }
-    ) { course, resources, controlState, status ->
+    ) { directCourse, (observedCourse, courseIndex), resources, controlState, status ->
+        val finalCourse = directCourse ?: observedCourse
+        val theme = if (finalCourse != null) {
+            getCourseTheme(finalCourse, courseIndex)
+        } else {
+            CoursePalettes[0]
+        }
         val (materials, announcements, coursework, submissions, manualCompletions) = resources
         val (markingDoneIds, filter) = controlState
         val (isLoading, isRefreshing, error) = status
 
         ClassroomCourseUiState(
-            course = course,
+            course = finalCourse,
+            courseTheme = theme,
             materials = materials,
             announcements = announcements,
             coursework = coursework,
@@ -88,7 +109,7 @@ class ClassroomCourseViewModel(
             manualCompletions = manualCompletions,
             markingDoneIds = markingDoneIds,
             selectedFilter = filter,
-            isLoading = isLoading && materials.isEmpty() && announcements.isEmpty() && coursework.isEmpty() && course == null,
+            isLoading = isLoading && materials.isEmpty() && announcements.isEmpty() && coursework.isEmpty() && finalCourse == null,
             isRefreshing = isRefreshing,
             errorMessage = error
         )
