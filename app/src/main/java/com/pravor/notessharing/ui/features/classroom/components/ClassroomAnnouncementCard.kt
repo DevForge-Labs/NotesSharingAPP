@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.ui.features.classroom.components
+package com.pravor.notessharing.ui.features.classroom.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -33,12 +33,13 @@ import com.pravor.notessharing.ui.theme.Mint
 fun ClassroomAnnouncementCard(
     announcement: ClassroomAnnouncement,
     onAttachmentClick: (ClassroomAttachment) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = Mint
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.20f)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -47,7 +48,7 @@ fun ClassroomAnnouncementCard(
                 .fillMaxWidth()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color(0xFF141920), Color(0xFF0E1217))
+                        colors = listOf(Color(0xD9141923), Color(0xD40E1217))
                     )
                 )
                 .padding(20.dp),
@@ -60,15 +61,15 @@ fun ClassroomAnnouncementCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Mint.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, Mint.copy(alpha = 0.25f)),
+                    color = accentColor.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f)),
                     modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Campaign,
                             contentDescription = null,
-                            tint = Mint,
+                            tint = accentColor,
                             modifier = Modifier.size(18.dp)
                         )
                     }

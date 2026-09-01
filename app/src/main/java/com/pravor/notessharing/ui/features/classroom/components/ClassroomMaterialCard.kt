@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.ui.features.classroom.components
+package com.pravor.notessharing.ui.features.classroom.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -37,12 +37,13 @@ import com.pravor.notessharing.ui.theme.ElectricBlue
 fun ClassroomMaterialCard(
     material: ClassroomMaterial,
     onAttachmentClick: (ClassroomAttachment) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = ElectricBlue
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.20f)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -51,7 +52,7 @@ fun ClassroomMaterialCard(
                 .fillMaxWidth()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color(0xFF141920), Color(0xFF0E1217))
+                        colors = listOf(Color(0xD9141923), Color(0xD40E1217))
                     )
                 )
                 .padding(20.dp),
@@ -65,15 +66,15 @@ fun ClassroomMaterialCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = ElectricBlue.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.3f)),
+                    color = accentColor.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
                     modifier = Modifier.size(36.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.MenuBook,
                             contentDescription = null,
-                            tint = ElectricBlue,
+                            tint = accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }

@@ -64,7 +64,8 @@ fun ClassroomCourseWorkCard(
     onOpenExternalTaskClick: ((ClassroomCourseWork, String) -> Unit)? = null,
     onMarkAsDoneClick: ((ClassroomCourseWork) -> Unit)? = null,
     onDoneStatusClick: ((ClassroomCourseWork) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = ElectricBlue
 ) {
     val isRealSubmitted = submissionState == SubmissionState.TURNED_IN ||
             submissionState == SubmissionState.RETURNED
@@ -79,7 +80,7 @@ fun ClassroomCourseWorkCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.20f)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -88,7 +89,7 @@ fun ClassroomCourseWorkCard(
                 .fillMaxWidth()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color(0xFF141920), Color(0xFF0E1217))
+                        colors = listOf(Color(0xD9141923), Color(0xD40E1217))
                     )
                 )
                 .padding(20.dp),
@@ -135,7 +136,7 @@ fun ClassroomCourseWorkCard(
                             text = courseName,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = ElectricBlue,
+                            color = accentColor,
                             fontSize = 12.sp
                         )
                     }
@@ -272,7 +273,7 @@ fun ClassroomCourseWorkCard(
                         onClick = { onOpenExternalTaskClick?.invoke(courseWork, externalUrl) },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ElectricBlue,
+                            containerColor = accentColor,
                             contentColor = Color(0xFF07121E)
                         ),
                         modifier = Modifier
@@ -312,7 +313,7 @@ fun ClassroomCourseWorkCard(
                     ) {
                         if (isMarkingDone) {
                             CircularProgressIndicator(
-                                color = ElectricBlue,
+                                color = accentColor,
                                 strokeWidth = 2.dp,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -343,9 +344,9 @@ fun ClassroomCourseWorkCard(
                 OutlinedButton(
                     onClick = { onSubmitClick(courseWork) },
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.5f)),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = ElectricBlue
+                        contentColor = accentColor
                     ),
                     modifier = Modifier
                         .fillMaxWidth()

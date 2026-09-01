@@ -81,7 +81,8 @@ fun ClassroomSubmissionBottomSheet(
     onDismiss: () -> Unit,
     onAttachmentClick: (ClassroomAttachment) -> Unit,
     onSubmissionSuccess: ((ClassroomStudentSubmission) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = ElectricBlue
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -295,7 +296,7 @@ fun ClassroomSubmissionBottomSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        color = ElectricBlue,
+                        color = accentColor,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(32.dp)
                     )
@@ -384,8 +385,8 @@ fun ClassroomSubmissionBottomSheet(
                         OutlinedButton(
                             onClick = { filePickerLauncher.launch("*/*") },
                             shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, ElectricBlue.copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ElectricBlue),
+                            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor),
                             modifier = Modifier.fillMaxWidth().height(52.dp)
                         ) {
                             Icon(
@@ -420,7 +421,7 @@ fun ClassroomSubmissionBottomSheet(
                                     Icon(
                                         imageVector = Icons.Default.Description,
                                         contentDescription = null,
-                                        tint = ElectricBlue,
+                                        tint = accentColor,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Column {
@@ -557,7 +558,7 @@ fun ClassroomSubmissionBottomSheet(
                                             },
                                             shape = RoundedCornerShape(12.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = ElectricBlue,
+                                                containerColor = accentColor,
                                                 contentColor = Color(0xFF07121E)
                                             ),
                                             modifier = Modifier
@@ -643,8 +644,8 @@ fun ClassroomSubmissionBottomSheet(
                             enabled = selectedFile != null && !isSubmitting,
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ElectricBlue,
-                                disabledContainerColor = ElectricBlue.copy(alpha = 0.3f)
+                                containerColor = accentColor,
+                                disabledContainerColor = accentColor.copy(alpha = 0.3f)
                             ),
                             modifier = Modifier.fillMaxWidth().height(50.dp)
                         ) {

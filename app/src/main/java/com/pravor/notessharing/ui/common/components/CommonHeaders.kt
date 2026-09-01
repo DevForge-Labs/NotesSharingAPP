@@ -42,9 +42,11 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
-    onSeeMoreClick: (() -> Unit)? = null
+    accentColor: Color? = null,
+    onSeeMoreClick: (() -> Unit)? = null,
+    trailingContent: @Composable (() -> Unit)? = null
 ) {
-    val accentColor = when {
+    val resolvedAccentColor = accentColor ?: when {
         title.contains("Continue Reading", ignoreCase = true) -> Color(0xFF58D6D1)
         title.contains("For You", ignoreCase = true) -> Color(0xFFC7A6FF)
         title.contains("Study Hub", ignoreCase = true) -> Color(0xFFFFB45C)
@@ -66,7 +68,7 @@ fun SectionHeader(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f, fill = false)
         ) {
             if (icon != null) {
                 Surface(
@@ -87,7 +89,7 @@ fun SectionHeader(
             } else {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = accentColor.copy(alpha = 0.85f),
+                    color = resolvedAccentColor.copy(alpha = 0.85f),
                     modifier = Modifier
                         .width(4.dp)
                         .height(18.dp)
@@ -107,25 +109,31 @@ fun SectionHeader(
             )
         }
 
-        if (onSeeMoreClick != null) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onSeeMoreClick)
-            ) {
-                Text(
-                    text = "See All",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (onSeeMoreClick != null) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(onClick = onSeeMoreClick)
+                ) {
+                    Text(
+                        text = "See All",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
             }
+            trailingContent?.invoke()
         }
     }
 }

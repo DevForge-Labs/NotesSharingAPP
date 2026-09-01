@@ -118,19 +118,25 @@ fun HomeSuccessContent(
                     enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) + 
                             androidx.compose.animation.expandVertically(animationSpec = androidx.compose.animation.core.tween(400)),
                     exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + 
-                           androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                            androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                 ) {
                     SmartBannerSlot(
-                        unreadCount = unreadNotificationsCount,
                         shouldPlayWave = shouldPlayGreetingWave,
-                        onWaveCompleted = onGreetingWaveCompleted,
-                        onBellClick = onBellClick
+                        onWaveCompleted = onGreetingWaveCompleted
                     )
                 }
             }
             if (content.recentlyOpened != null) {
                 item(key = "continue-title", contentType = "section") {
-                    SectionHeader("Continue Reading")
+                    SectionHeader(
+                        title = "Continue Reading",
+                        trailingContent = {
+                            HomeNotificationBell(
+                                unreadCount = unreadNotificationsCount,
+                                onBellClick = onBellClick
+                            )
+                        }
+                    )
                 }
                 item(key = "continue-card", contentType = "continue-reading") {
                     val roId = content.recentlyOpened.id
@@ -140,9 +146,22 @@ fun HomeSuccessContent(
                         onClick = onContinueClick
                     )
                 }
-            }
-            item(key = "for-you-title", contentType = "section") {
-                SectionHeader("For You", onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null)
+                item(key = "for-you-title", contentType = "section") {
+                    SectionHeader("For You", onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null)
+                }
+            } else {
+                item(key = "for-you-title", contentType = "section") {
+                    SectionHeader(
+                        title = "For You",
+                        onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null,
+                        trailingContent = {
+                            HomeNotificationBell(
+                                unreadCount = unreadNotificationsCount,
+                                onBellClick = onBellClick
+                            )
+                        }
+                    )
+                }
             }
             if (content.isLoadingFeed && visibleFeedItems.isEmpty()) {
                 (0 until 3).forEach { rowIndex ->
