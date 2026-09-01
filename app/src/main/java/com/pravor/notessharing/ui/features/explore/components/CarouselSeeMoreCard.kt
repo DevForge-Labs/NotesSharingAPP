@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,11 +40,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
+ * Standard height for all Explore carousel cards to ensure 100% pixel-perfect height alignment.
+ */
+val CAROUSEL_CARD_HEIGHT = 280.dp
+
+/**
  * Edge-attached "See More" final card for Explore horizontal carousels.
  *
  * Features:
  * - Rounded left corners (drawer/tab aesthetic) and flush flat right edge (0dp).
- * - Matches the height of the respective carousel content cards.
+ * - Exactly matches the 280dp carousel content card height.
  * - Vertical stacked "SEE MORE" typography with directional arrow hint.
  * - Thematic gradient matching the section's accent color.
  * - Smooth interactive press feedback.
@@ -53,7 +59,7 @@ fun CarouselSeeMoreCard(
     onClick: () -> Unit,
     accentColor: Color,
     modifier: Modifier = Modifier,
-    height: Dp = 250.dp,
+    height: Dp = CAROUSEL_CARD_HEIGHT,
     width: Dp = 64.dp
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -66,8 +72,8 @@ fun CarouselSeeMoreCard(
     )
 
     val cardShape = RoundedCornerShape(
-        topStart = 22.dp,
-        bottomStart = 22.dp,
+        topStart = 26.dp,
+        bottomStart = 26.dp,
         topEnd = 0.dp,
         bottomEnd = 0.dp
     )
@@ -88,15 +94,15 @@ fun CarouselSeeMoreCard(
             ),
         shape = cardShape,
         color = Color.Transparent,
-        border = BorderStroke(1.2.dp, accentColor.copy(alpha = 0.35f))
+        border = BorderStroke(1.5.dp, accentColor.copy(alpha = 0.38f))
     ) {
         Box(
             modifier = Modifier
-                .fillMaxHeight()
+                .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
                         listOf(
-                            accentColor.copy(alpha = 0.14f),
+                            accentColor.copy(alpha = 0.16f),
                             Color(0xD9141923),
                             Color(0xFA0E1218)
                         )
@@ -109,37 +115,38 @@ fun CarouselSeeMoreCard(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .padding(vertical = 16.dp, horizontal = 6.dp)
+                    .padding(vertical = 18.dp, horizontal = 6.dp)
             ) {
                 // Directional Continuation Arrow
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
                     color = accentColor.copy(alpha = 0.18f),
-                    modifier = Modifier.size(28.dp)
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.30f)),
+                    modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                             contentDescription = "See More",
                             tint = accentColor,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(18.dp))
 
                 // Vertical "SEE"
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     listOf("S", "E", "E").forEach { letter ->
                         Text(
                             text = letter,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 letterSpacing = 0.5.sp
                             ),
                             color = accentColor
@@ -147,19 +154,19 @@ fun CarouselSeeMoreCard(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
                 // Vertical "MORE"
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     listOf("M", "O", "R", "E").forEach { letter ->
                         Text(
                             text = letter,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 letterSpacing = 0.5.sp
                             ),
                             color = accentColor

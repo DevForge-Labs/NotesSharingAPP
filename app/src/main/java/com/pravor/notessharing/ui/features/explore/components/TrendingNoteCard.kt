@@ -236,12 +236,13 @@ fun TrendingNoteCard(
     PressScaleSurface(
         modifier = Modifier
             .width(216.dp)
+            .height(CAROUSEL_CARD_HEIGHT)
             .border(BorderStroke(1.5.dp, finalBorderColor), RoundedCornerShape(26.dp)),
         shape = RoundedCornerShape(26.dp),
         brush = cardBrush,
         onClick = onClick
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.fillMaxSize()) {
             // Background Layer: Thumbnail (Image / Fallback / Shimmer)
             Box(
                 modifier = Modifier
@@ -314,7 +315,9 @@ fun TrendingNoteCard(
 
             // Foreground Content Layer
             Column(
-                Modifier.padding(vertical = 14.dp)
+                Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 14.dp)
             ) {
                 // Top placeholder box to preserve exact height and badge positioning
                 Box(
@@ -431,7 +434,7 @@ fun TrendingNoteCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.weight(1f))
 
             // 4. STATS ROW (Anchored bottom footer)
             Row(
