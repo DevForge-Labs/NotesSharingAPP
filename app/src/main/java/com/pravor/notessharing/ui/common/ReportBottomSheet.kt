@@ -71,10 +71,11 @@ fun ReportBottomSheet(
         val uid = currentUser?.uid
         if (uid != null) {
             try {
-                val userSnap = FirebaseFirestore.getInstance().collection("users").document(uid).get().await()
-                if (userSnap.exists()) {
-                    reporterName = userSnap.getString("name") ?: reporterName
-                    reporterEmail = userSnap.getString("email") ?: reporterEmail
+                val profile = com.pravor.notessharing.data.repository.ProfileRepository().getLocalProfile(uid)
+                    ?: com.pravor.notessharing.data.repository.ProfileRepository().getProfile(uid)
+                if (profile != null) {
+                    if (profile.name.isNotBlank()) reporterName = profile.name
+                    if (profile.email.isNotBlank()) reporterEmail = profile.email
                 }
             } catch (e: Exception) {
                 // Ignore, use fallback details

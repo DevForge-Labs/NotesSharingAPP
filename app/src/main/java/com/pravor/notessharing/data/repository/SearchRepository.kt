@@ -93,13 +93,93 @@ open class SearchRepository(
         selectedDocumentTypes: Set<String>
     ): List<SearchResultModel> {
         val filterParts = mutableListOf<String>()
+
+        // 1. College Scoping (Mandatory if college is valid)
         if (scope.isCollegeValid) {
             filterParts.add("college:${scope.canonicalCollegeId}")
         }
 
+        // 2. Semester Scoping (if user has semester configured)
+        if (scope.hasSemester) {
+            val semDigits = scope.semester!!.filter { it.isDigit() }
+            val semVariants = mutableSetOf<String>()
+            val trimmedSem = scope.semester.trim()
+            if (trimmedSem.isNotBlank()) {
+                semVariants.add(trimmedSem)
+            }
+            if (semDigits.isNotBlank()) {
+                semVariants.add("Semester $semDigits")
+                semVariants.add("Sem $semDigits")
+                semVariants.add(semDigits)
+            }
+            semVariants.add("common")
+            semVariants.add("all")
+
+            val semFilterExpr = semVariants.joinToString(separator = " OR ", prefix = "(", postfix = ")") { sem ->
+                "semester:'${sem.replace("'", "\\'")}'"
+            }
+            filterParts.add(semFilterExpr)
+        }
+
+        // 3. Branch Scoping (for 2nd year onwards, if user has branch configured)
+        if (!scope.isFirstYear && scope.hasBranch) {
+            val canonicalBranch = scope.canonicalBranchId!!
+            val branchVariants = mutableSetOf<String>()
+            branchVariants.add(canonicalBranch)
+            branchVariants.add(canonicalBranch.uppercase(java.util.Locale.ROOT))
+
+            val rawBranch = scope.branchId?.trim() ?: ""
+            if (rawBranch.isNotBlank()) {
+                branchVariants.add(rawBranch)
+            }
+
+            when (canonicalBranch.lowercase(java.util.Locale.ROOT)) {
+                "cse" -> {
+                    branchVariants.add("Computer Science")
+                    branchVariants.add("CS")
+                    branchVariants.add("CSE")
+                }
+                "it" -> {
+                    branchVariants.add("Information Technology")
+                    branchVariants.add("IT")
+                }
+                "ece" -> {
+                    branchVariants.add("Electronics")
+                    branchVariants.add("ECE")
+                    branchVariants.add("ETC")
+                }
+                "eee" -> {
+                    branchVariants.add("Electrical")
+                    branchVariants.add("EEE")
+                    branchVariants.add("EE")
+                }
+                "mechanical" -> {
+                    branchVariants.add("Mechanical")
+                    branchVariants.add("Mech")
+                    branchVariants.add("ME")
+                }
+                "civil" -> {
+                    branchVariants.add("Civil")
+                    branchVariants.add("CE")
+                }
+                "biotechnology" -> {
+                    branchVariants.add("Biotech")
+                    branchVariants.add("BT")
+                }
+            }
+            branchVariants.add("common")
+            branchVariants.add("all")
+
+            val branchFilterExpr = branchVariants.joinToString(separator = " OR ", prefix = "(", postfix = ")") { br ->
+                "branch:'${br.replace("'", "\\'")}'"
+            }
+            filterParts.add(branchFilterExpr)
+        }
+
+        // 4. Document-Type Filtering (Preserve existing OR grouping)
         if (selectedDocumentTypes.isNotEmpty()) {
             val typeFilters = selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
-                "documentType:$it"
+                "documentType:'${it.replace("'", "\\'")}'"
             }
             filterParts.add(typeFilters)
         }
@@ -111,10 +191,57 @@ open class SearchRepository(
             filters = filterExpression.ifBlank { null }
         )
 
-        val response = client.searchSingleIndex(
-            indexName = indexName,
-            searchParams = params
-        )
+        val response = try {
+            val primaryResponse = client.searchSingleIndex(
+                indexName = indexName,
+                searchParams = params
+            )
+            // If primary restricted query returned results or had no additional filters, use it
+            if (primaryResponse.hits.isNotEmpty() || filterParts.size <= 1) {
+                primaryResponse
+            } else {
+                // If primary query returned 0 hits (e.g. index contains un-faceted or null-branch legacy records),
+                // query by college and documentType, and allow client-side scope filtering to strictly prune
+                val fallbackFilterParts = mutableListOf<String>()
+                if (scope.isCollegeValid) {
+                    fallbackFilterParts.add("college:${scope.canonicalCollegeId}")
+                }
+                if (selectedDocumentTypes.isNotEmpty()) {
+                    val typeFilters = selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
+                        "documentType:'${it.replace("'", "\\'")}'"
+                    }
+                    fallbackFilterParts.add(typeFilters)
+                }
+                val fallbackParams = SearchParamsObject(
+                    query = query,
+                    filters = fallbackFilterParts.joinToString(" AND ").ifBlank { null }
+                )
+                client.searchSingleIndex(
+                    indexName = indexName,
+                    searchParams = fallbackParams
+                )
+            }
+        } catch (e: Exception) {
+            // If Algolia throws a syntax or facet error, gracefully fall back to college-level query
+            val fallbackFilterParts = mutableListOf<String>()
+            if (scope.isCollegeValid) {
+                fallbackFilterParts.add("college:${scope.canonicalCollegeId}")
+            }
+            if (selectedDocumentTypes.isNotEmpty()) {
+                val typeFilters = selectedDocumentTypes.joinToString(separator = " OR ", prefix = "(", postfix = ")") {
+                    "documentType:'${it.replace("'", "\\'")}'"
+                }
+                fallbackFilterParts.add(typeFilters)
+            }
+            val fallbackParams = SearchParamsObject(
+                query = query,
+                filters = fallbackFilterParts.joinToString(" AND ").ifBlank { null }
+            )
+            client.searchSingleIndex(
+                indexName = indexName,
+                searchParams = fallbackParams
+            )
+        }
         val mapped = response.hits.mapNotNull { hit ->
             val id = hit.objectID
             val title = hit.additionalProperties?.get("title")?.jsonPrimitive?.content ?: ""
@@ -131,9 +258,15 @@ open class SearchRepository(
             val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
             val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
 
-            if (scope.isCollegeValid && college.isNotBlank()) {
-                val docCanonicalCollege = LegacyAcademicCompatibilityResolver.resolveCollegeId(college)
-                if (docCanonicalCollege != scope.canonicalCollegeId) {
+            // Client-Side Defensive Layer: Verify hit against academic scope
+            if (scope.isCollegeValid) {
+                val isPermitted = scope.isDocumentPermitted(
+                    docCollege = college,
+                    docBranch = branch,
+                    docSemester = semester,
+                    docSubjectId = null
+                )
+                if (!isPermitted) {
                     return@mapNotNull null
                 }
             }

@@ -30,21 +30,7 @@ class ViewTrackingRepository {
         }
 
         try {
-            // 2. Perform direct document check in user's viewedResources subcollection
-            val viewedDocRef = firestore.collection("users")
-                .document(currentUid)
-                .collection("viewedResources")
-                .document(resourceId)
-
-            val viewedDoc = viewedDocRef.get().await()
-            if (viewedDoc.exists()) {
-                Log.d("VIEW_TRACKING", "User $currentUid has already viewed resource $resourceId. Adding to session cache.")
-                sessionViewedIds.add(resourceId)
-                return
-            }
-
-            // 3. Resolve the collection and documentType using DocumentDetailRepository
-            // This reads from Firestore (checks local cache first, which is cheap/free)
+            // 2. Resolve collection and documentType using DocumentDetailRepository if needed
             val docDetail = DocumentDetailRepository().getDocument(resourceId)
             if (docDetail == null) {
                 Log.e("VIEW_TRACKING", "Could not resolve document details for resource $resourceId.")
@@ -54,7 +40,7 @@ class ViewTrackingRepository {
             val collection = docDetail.collection
             val resourceType = docDetail.documentType
 
-            // 4. Perform atomic transaction
+            // 3. Perform atomic transaction (internally verifies viewed status safely)
             performAtomicIncrementTransaction(resourceId, collection, resourceType, currentUid)
         } catch (e: Exception) {
             Log.e("VIEW_TRACKING", "Failed to update view tracking for $resourceId: ${e.message}")
@@ -72,20 +58,7 @@ class ViewTrackingRepository {
         }
 
         try {
-            // 2. Perform direct document check in user's viewedResources subcollection
-            val viewedDocRef = firestore.collection("users")
-                .document(currentUid)
-                .collection("viewedResources")
-                .document(resourceId)
-
-            val viewedDoc = viewedDocRef.get().await()
-            if (viewedDoc.exists()) {
-                Log.d("VIEW_TRACKING", "User $currentUid has already viewed resource $resourceId. Adding to session cache.")
-                sessionViewedIds.add(resourceId)
-                return
-            }
-
-            // 3. Perform atomic transaction directly since collection and type are known
+            // 2. Perform atomic transaction directly (internally verifies viewed status safely)
             performAtomicIncrementTransaction(resourceId, collection, resourceType, currentUid)
         } catch (e: Exception) {
             Log.e("VIEW_TRACKING", "Failed to update direct view tracking for $resourceId: ${e.message}")

@@ -18,6 +18,10 @@ class MetadataRepository {
 
         @Volatile
         private var subjectCatalogCache: Map<String, Any>? = null
+
+        fun updateSubjectCatalogCache(data: Map<String, Any>) {
+            subjectCatalogCache = data
+        }
     }
 
     /**

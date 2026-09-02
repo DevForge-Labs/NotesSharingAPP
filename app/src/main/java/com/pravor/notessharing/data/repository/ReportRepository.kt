@@ -102,21 +102,19 @@ class ReportRepository {
                 return Result.failure(Exception("You have already reported this resource."))
             }
 
-            // Fetch current report document if it exists to get the reportCountByUser
-            val doc = reportsCollection.document(docId).get().await()
-            val newUserCount = if (doc.exists()) {
-                (doc.getLong("reportCountByUser") ?: 1L) + 1L
-            } else {
-                1L
-            }
+            val newUserCount = 1L
 
-            // Fetch uploader email from users collection if we have uploaderUid
+            // Fetch uploader email from local cache first, then users collection if needed
             var uploaderEmail: String? = null
             if (uploaderUid.isNotEmpty()) {
                 try {
-                    val uploaderSnap = firestore.collection("users").document(uploaderUid).get().await()
-                    if (uploaderSnap.exists()) {
-                        uploaderEmail = uploaderSnap.getString("email")
+                    val localUploader = com.pravor.notessharing.data.repository.ProfileRepository().getLocalProfile(uploaderUid)
+                    uploaderEmail = localUploader?.email
+                    if (uploaderEmail.isNullOrBlank()) {
+                        val uploaderSnap = firestore.collection("users").document(uploaderUid).get().await()
+                        if (uploaderSnap.exists()) {
+                            uploaderEmail = uploaderSnap.getString("email")
+                        }
                     }
                 } catch (e: Exception) {
                     // Ignore, fallback to null/empty
