@@ -1,4 +1,4 @@
-﻿package com.pravor.notessharing.core.util
+package com.pravor.notessharing.core.util
 
 import com.pravor.notessharing.data.repository.MetadataRepository
 import com.pravor.notessharing.domain.model.Profile
@@ -18,6 +18,11 @@ data class AcademicScope(
     val isCollegeValid: Boolean get() = canonicalCollegeId.isNotBlank()
     val hasSemester: Boolean get() = !semester.isNullOrBlank() && semester != "Not Set"
     val hasBranch: Boolean get() = !canonicalBranchId.isNullOrBlank()
+    val isFirstYear: Boolean
+        get() = semester?.let {
+            val lower = it.lowercase(Locale.ROOT)
+            lower.contains("sem 1") || lower.contains("sem 2") || lower.contains("semester 1") || lower.contains("semester 2") || it.filter { c -> c.isDigit() } in listOf("1", "2")
+        } ?: false
 
     /**
      * Unique key for caching feeds and search results scoped to this exact academic context.

@@ -38,12 +38,12 @@ class NotesSharingApplication : Application(), ImageLoaderFactory {
             android.util.Log.e("Application", "Failed to initialize Classroom reminder services", e)
         }
 
-        // Synchronize Centralized Subject Catalog in background
+        // Initialize Centralized Subject Catalog in background (snapshot listener and Room cache)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             try {
-                com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance(applicationContext).syncCatalog()
+                com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance(applicationContext)
             } catch (e: Exception) {
-                android.util.Log.w("Application", "Background subject catalog sync skipped/failed", e)
+                android.util.Log.w("Application", "Background subject catalog initialization skipped/failed", e)
             }
         }
     }

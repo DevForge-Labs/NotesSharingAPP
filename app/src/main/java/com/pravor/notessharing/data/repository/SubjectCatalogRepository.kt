@@ -367,6 +367,7 @@ class SubjectCatalogRepository(
             subjectDao.upsertSubjects(entitiesToPersist)
             inMemorySubjectCache.clear()
             inMemorySubjectCache.putAll(newCacheMap)
+            MetadataRepository.updateSubjectCatalogCache(rawCatalog)
             catalogVersionFlow.value = System.currentTimeMillis()
             Log.d(TAG, "Successfully synchronized ${entitiesToPersist.size} catalog subjects into Room and cache. Version=${catalogVersionFlow.value}. Sample 'se' -> ${inMemorySubjectCache["se"]}")
         }

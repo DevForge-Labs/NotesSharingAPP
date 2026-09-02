@@ -16,6 +16,10 @@ class VideoDetailRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
 
+    companion object {
+        private val contributorLevelCache = com.pravor.notessharing.data.local.cache.TimedMemoryCache<String, String>(10 * 60 * 1000L)
+    }
+
     suspend fun getVideo(
         videoId: String,
         requestingScope: com.pravor.notessharing.core.util.AcademicScope? = null
@@ -78,6 +82,13 @@ class VideoDetailRepository {
         if (uploaderId == "dummy-uid" || uploaderId.isEmpty()) {
             return "Gold Contributor"
         }
+
+        val cached = contributorLevelCache.get(uploaderId)
+        if (cached != null) {
+            UserFetchDiagnostics.recordFetch(uploaderId, fromCache = true)
+            return cached
+        }
+
         val startTime = System.currentTimeMillis()
         return try {
             android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query START collection=users document=$uploaderId thread=${Thread.currentThread().name}")
@@ -88,12 +99,14 @@ class VideoDetailRepository {
             val fromCache = snapshot.metadata.isFromCache
             UserFetchDiagnostics.recordFetch(uploaderId, fromCache)
 
-            if (snapshot.exists()) {
-                val level = snapshot.getLong("contributorLevel")?.toInt() ?: 1
-                getContributorLevelName(level)
+            val level = if (snapshot.exists()) {
+                val lvl = snapshot.getLong("contributorLevel")?.toInt() ?: 1
+                getContributorLevelName(lvl)
             } else {
                 "Bronze Contributor"
             }
+            contributorLevelCache.put(uploaderId, level)
+            level
         } catch (e: Exception) {
             val duration = System.currentTimeMillis() - startTime
             android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=false thread=${Thread.currentThread().name}")

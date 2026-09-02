@@ -70,6 +70,10 @@ class ProfileRepository(
         return@withContext remoteProfile
     }
 
+    suspend fun saveLocalProfile(profile: Profile) = withContext(Dispatchers.IO) {
+        userProfileDao.upsertProfile(profile.toEntity())
+    }
+
     suspend fun saveProfile(profile: Profile) = withContext(Dispatchers.IO) {
         userProfileDao.upsertProfile(profile.toEntity())
         userService.createUserProfile(profile)

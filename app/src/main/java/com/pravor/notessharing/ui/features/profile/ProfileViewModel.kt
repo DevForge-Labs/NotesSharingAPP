@@ -116,13 +116,15 @@ class ProfileViewModel(
                         try {
                             val bookmarksDeferred = async {
                                 try {
-                                    FirebaseFirestore.getInstance().collection("bookmarks")
+                                    val countSnap = FirebaseFirestore.getInstance().collection("bookmarks")
                                         .whereEqualTo("userId", currentFirebaseUser.uid)
-                                        .get()
+                                        .count()
+                                        .get(com.google.firebase.firestore.AggregateSource.SERVER)
                                         .await()
-                                        .size()
+                                    countSnap.count.toInt()
                                 } catch (e: Exception) {
-                                    baseProfile.bookmarks
+                                    val loadedBookmarks = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value
+                                    if (loadedBookmarks.isNotEmpty()) loadedBookmarks.size else baseProfile.bookmarks
                                 }
                             }
                             
@@ -151,7 +153,7 @@ class ProfileViewModel(
                                     bookmarks = finalBookmarks,
                                     upvotes = finalUpvotes
                                 )
-                                profileRepository.saveProfile(updatedProfile)
+                                profileRepository.saveLocalProfile(updatedProfile)
                             }
                         } catch (e: Exception) {
                             // Ignore background count refresh failure; UI is already successfully displayed

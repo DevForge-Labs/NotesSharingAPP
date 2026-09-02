@@ -139,28 +139,57 @@ class SubjectResourcesViewModel(
                 }
 
                 val canonicalCollegeId = scope.canonicalCollegeId
+                val targetNormalized = com.pravor.notessharing.ui.common.utils.normalizeSubject(subjectName)
+                val cleanSubjectName = subjectName.trim().lowercase(java.util.Locale.ROOT)
+                val candidateSubjectIds = listOfNotNull(
+                    targetNormalized.takeIf { it.isNotBlank() },
+                    cleanSubjectName.takeIf { it.isNotBlank() && it != targetNormalized }
+                ).distinct()
+
                 val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
+                val hasSemester = !scope.semester.isNullOrBlank() && scope.semester != "Not Set"
+
                 val allDocs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val deferreds = collections.map { col ->
                         async {
                             try {
-                                firestore.collection(col)
-                                    .whereEqualTo("college", canonicalCollegeId)
-                                    .get()
-                                    .await()
-                                    .documents
+                                val colRef = firestore.collection(col)
+                                val docsBySubjectId = if (candidateSubjectIds.isNotEmpty()) {
+                                    colRef.whereEqualTo("college", canonicalCollegeId)
+                                        .whereIn("subjectId", candidateSubjectIds.take(30))
+                                        .get()
+                                        .await()
+                                        .documents
+                                } else {
+                                    emptyList()
+                                }
+
+                                // If documents by subjectId were found, use them; otherwise, narrow down by semester or college
+                                if (docsBySubjectId.isNotEmpty()) {
+                                    docsBySubjectId
+                                } else if (hasSemester) {
+                                    colRef.whereEqualTo("college", canonicalCollegeId)
+                                        .whereEqualTo("semester", scope.semester)
+                                        .get()
+                                        .await()
+                                        .documents
+                                } else {
+                                    colRef.whereEqualTo("college", canonicalCollegeId)
+                                        .get()
+                                        .await()
+                                        .documents
+                                }
                             } catch (e: Exception) {
                                 emptyList()
                             }
                         }
                     }
-                    deferreds.awaitAll().flatten()
+                    deferreds.awaitAll().flatten().distinctBy { it.id }
                 }.sortedByDescending { doc ->
                     doc.getLong("uploadedAt") ?: 0L
                 }
 
                 val bookmarkedIds = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.map { it.id }.toSet()
-                val targetNormalized = com.pravor.notessharing.ui.common.utils.normalizeSubject(subjectName)
 
                 val filtered = allDocs.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
