@@ -119,11 +119,13 @@ class DocumentDetailRepository {
 
             // Academic Authorization Scope Validation
             if (result != null && requestingScope != null && requestingScope.isCollegeValid) {
+                val resolvedSubjectId = result.subjectId ?: (foundData?.first?.get("subjectId") as? String)
                 val isPermitted = requestingScope.isDocumentPermitted(
                     docCollege = result.college,
                     docBranch = result.branch,
                     docSemester = result.semester,
-                    docSubjectId = null
+                    docSubjectId = resolvedSubjectId,
+                    docSubjectName = result.subject
                 )
                 if (!isPermitted) {
                     if (BuildConfig.DEBUG) {
@@ -285,7 +287,8 @@ class DocumentDetailRepository {
                         docCollege = mappedDoc.college,
                         docBranch = mappedDoc.branch,
                         docSemester = mappedDoc.semester,
-                        docSubjectId = data["subjectId"] as? String
+                        docSubjectId = mappedDoc.subjectId ?: (data["subjectId"] as? String),
+                        docSubjectName = mappedDoc.subject
                     )
                     if (!isPermitted) continue
                 }

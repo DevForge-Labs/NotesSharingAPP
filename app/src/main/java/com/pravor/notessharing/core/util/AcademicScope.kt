@@ -44,7 +44,8 @@ data class AcademicScope(
         docCollege: String?,
         docBranch: String?,
         docSemester: String?,
-        docSubjectId: String?
+        docSubjectId: String?,
+        docSubjectName: String? = null
     ): Boolean {
         if (!isCollegeValid) return true
 
@@ -63,7 +64,42 @@ data class AcademicScope(
             }
         }
 
-        // 3. Semester verification
+        // 2b. Legacy Document Subject Name resolution (when docSubjectId is absent/blank)
+        if (docSubjectId.isNullOrBlank() && !docSubjectName.isNullOrBlank() && subjectIds.isNotEmpty()) {
+            val cleanDocSubject = docSubjectName.trim().lowercase(Locale.ROOT)
+            val normalizedDocSubject = cleanDocSubject.replace(" ", "").replace("[^a-z0-9]".toRegex(), "")
+            if (normalizedDocSubject.isNotBlank()) {
+                // A. Direct exact normalized match or initials acronym match (e.g. "Computer Networks" -> "cn")
+                val words = cleanDocSubject.split(" ", "_", "-").filter { it.isNotBlank() }
+                val acronym = words.mapNotNull { it.firstOrNull() }.joinToString("")
+
+                val matchesDirectly = subjectIds.any { subId ->
+                    val normSubId = subId.trim().lowercase(Locale.ROOT).replace(" ", "").replace("[^a-z0-9]".toRegex(), "")
+                    normSubId == normalizedDocSubject || (acronym.isNotBlank() && normSubId == acronym)
+                }
+                if (matchesDirectly) {
+                    return true
+                }
+
+                // B. Match via Subject Catalog repository resolver in user's active branch & semester scope
+                try {
+                    val resolvedShortName = com.pravor.notessharing.data.repository.SubjectCatalogRepository.getInstance().resolveShortName(
+                        subjectId = null,
+                        fallbackName = docSubjectName,
+                        branchId = canonicalBranchId,
+                        semester = semester,
+                        collegeId = canonicalCollegeId
+                    )
+                    if (resolvedShortName.isNotBlank() && subjectIds.any { it.equals(resolvedShortName, ignoreCase = true) }) {
+                        return true
+                    }
+                } catch (e: Exception) {
+                    // Ignore and fall through
+                }
+            }
+        }
+
+        // 3. Semester verification (for documents not resolved through Subject Catalog)
         if (hasSemester && !docSemester.isNullOrBlank() && docSemester != "Not Set") {
             val userSemDigits = semester!!.filter { it.isDigit() }
             val docSemDigits = docSemester.filter { it.isDigit() }
@@ -76,7 +112,7 @@ data class AcademicScope(
             }
         }
 
-        // 4. Branch verification (for 2nd year onwards)
+        // 4. Branch verification (for 2nd year onwards fallback)
         val isFirstYear = semester?.let {
             val lower = it.lowercase(Locale.ROOT)
             lower.contains("sem 1") || lower.contains("sem 2") || lower.contains("semester 1") || lower.contains("semester 2") || it.filter { c -> c.isDigit() } in listOf("1", "2")

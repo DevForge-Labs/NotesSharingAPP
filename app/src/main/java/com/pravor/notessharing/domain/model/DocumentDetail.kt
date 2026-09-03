@@ -41,7 +41,8 @@ data class DocumentDetail(
     val displaySubject: String? = null,
     val college: String = "",
     val processingStatus: String? = null,
-    val processingError: String? = null
+    val processingError: String? = null,
+    val subjectId: String? = null
 ) {
     fun toFeedItem(): FeedItem {
         val initials = if (uploaderName.isNotBlank()) {
@@ -146,7 +147,8 @@ fun Map<String, Any>.toDocumentDetail(id: String, collection: String = "notes"):
         displaySubject = this["displaySubject"] as? String,
         college = this["college"] as? String ?: "",
         processingStatus = this["processingStatus"] as? String,
-        processingError = this["processingError"] as? String
+        processingError = this["processingError"] as? String,
+        subjectId = this["subjectId"] as? String
     )
 }
 

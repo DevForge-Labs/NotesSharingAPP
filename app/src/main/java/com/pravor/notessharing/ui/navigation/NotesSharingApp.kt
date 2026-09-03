@@ -41,6 +41,24 @@ import com.pravor.notessharing.ui.common.ThemePreference
 import com.pravor.notessharing.ui.features.auth.AuthViewModel
 import com.pravor.notessharing.ui.features.auth.SessionState
 
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.pravor.notessharing.core.update.InAppUpdateManager
+import com.pravor.notessharing.core.update.InAppUpdateState
+import com.pravor.notessharing.ui.common.components.AppUpdateDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.font.FontWeight
+
 val LocalBottomBarPadding = androidx.compose.runtime.compositionLocalOf { 0.dp }
 
 val LocalSnackbarHostState = androidx.compose.runtime.compositionLocalOf<SnackbarHostState> {
@@ -53,13 +71,22 @@ fun NotesSharingApp(
     appSettings: AppSettingsUiState,
     onDarkModeChange: (Boolean) -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
-    onNotificationsChange: (Boolean) -> Unit
+    onNotificationsChange: (Boolean) -> Unit,
+    onStartUpdate: (AppUpdateInfo, Boolean) -> Unit = { _, _ -> }
 ) {
     val authViewModel: AuthViewModel = viewModel()
     val navController = rememberNavController()
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? androidx.activity.ComponentActivity
+
+    val inAppUpdateManager = remember { InAppUpdateManager.getInstance(context) }
+    val updateState by inAppUpdateManager.updateState.collectAsState()
+
+    // Non-blocking update check on initial UI compose
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        inAppUpdateManager.checkForUpdate(isForced = false)
+    }
 
     androidx.compose.runtime.DisposableEffect(activity) {
         val listener = androidx.core.util.Consumer<android.content.Intent> { intent ->
@@ -348,6 +375,80 @@ fun NotesSharingApp(
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
+                }
+
+                // In-App Update Downloaded Banner
+                if (updateState is InAppUpdateState.Downloaded) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = if (showBottomBar) innerPadding.calculateBottomPadding() + 12.dp else 12.dp
+                            )
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 6.dp,
+                        shadowElevation = 8.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Update downloaded and ready to install.",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Button(
+                                onClick = { inAppUpdateManager.completeUpdate() },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "Restart",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // In-App Update Available Dialog
+                val currentUpdateState = updateState
+                if (currentUpdateState is InAppUpdateState.UpdateAvailable) {
+                    AppUpdateDialog(
+                        isForced = currentUpdateState.isForced,
+                        onUpdateClick = {
+                            onStartUpdate(currentUpdateState.appUpdateInfo, currentUpdateState.isForced)
+                        },
+                        onDismissClick = {
+                            inAppUpdateManager.dismissUpdateForSession()
+                        }
+                    )
                 }
             }
         }

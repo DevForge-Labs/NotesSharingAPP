@@ -257,6 +257,7 @@ open class SearchRepository(
             val college = hit.additionalProperties?.get("college")?.jsonPrimitive?.content ?: ""
             val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
             val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
+            val subjectId = hit.additionalProperties?.get("subjectId")?.jsonPrimitive?.content ?: ""
 
             // Client-Side Defensive Layer: Verify hit against academic scope
             if (scope.isCollegeValid) {
@@ -264,7 +265,8 @@ open class SearchRepository(
                     docCollege = college,
                     docBranch = branch,
                     docSemester = semester,
-                    docSubjectId = null
+                    docSubjectId = subjectId.ifBlank { null },
+                    docSubjectName = displaySubject.ifBlank { null }
                 )
                 if (!isPermitted) {
                     return@mapNotNull null

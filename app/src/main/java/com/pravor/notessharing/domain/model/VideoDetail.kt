@@ -24,7 +24,8 @@ data class VideoDetail(
     val youtubeResourceType: String = "video",
     val youtubePlaylistId: String = "",
     val collection: String = "videos",
-    val college: String = ""
+    val college: String = "",
+    val subjectId: String? = null
 )
 
 fun Map<String, Any>.toVideoDetail(id: String, collection: String = "videos"): VideoDetail {
@@ -58,6 +59,7 @@ fun Map<String, Any>.toVideoDetail(id: String, collection: String = "videos"): V
         youtubeResourceType = youtubeResourceType,
         youtubePlaylistId = youtubePlaylistId,
         collection = collection,
-        college = this["college"] as? String ?: ""
+        college = this["college"] as? String ?: "",
+        subjectId = this["subjectId"] as? String
     )
 }
