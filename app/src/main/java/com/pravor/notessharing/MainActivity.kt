@@ -24,12 +24,35 @@ import com.pravor.notessharing.ui.features.auth.SessionState
 import com.pravor.notessharing.ui.common.*
 import kotlinx.coroutines.launch
 
+import com.pravor.notessharing.core.update.InAppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import androidx.activity.result.IntentSenderRequest
+
 class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "MainActivity requestPermissionLauncher - POST_NOTIFICATIONS permission result: $isGranted")
     }
+
+    val inAppUpdateManager: InAppUpdateManager by lazy {
+        InAppUpdateManager.getInstance(applicationContext)
+    }
+
+    private val updateActivityResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        inAppUpdateManager.onActivityResult(result.resultCode)
+    }
+
+    fun startInAppUpdate(appUpdateInfo: AppUpdateInfo, isForced: Boolean = false) {
+        if (isForced) {
+            inAppUpdateManager.startImmediateUpdate(updateActivityResultLauncher, appUpdateInfo)
+        } else {
+            inAppUpdateManager.startFlexibleUpdate(updateActivityResultLauncher, appUpdateInfo)
+        }
+    }
+
     private val appSettingsViewModel: AppSettingsViewModel by viewModels()
     private val authViewModel: AuthViewModel by viewModels()
 
@@ -106,10 +129,23 @@ class MainActivity : ComponentActivity() {
                             .edit()
                             .putBoolean("notifications_enabled", enabled)
                             .apply()
+                    },
+                    onStartUpdate = { info, isForced ->
+                        startInAppUpdate(info, isForced)
                     }
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        inAppUpdateManager.onResumeCheck(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        inAppUpdateManager.unregisterListener()
     }
 
 

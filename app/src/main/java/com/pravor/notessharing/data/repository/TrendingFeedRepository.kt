@@ -126,7 +126,8 @@ class TrendingFeedRepository(private val context: Context) {
                 docCollege = data["college"] as? String ?: canonicalCollegeId,
                 docBranch = data["branch"] as? String,
                 docSemester = data["semester"] as? String,
-                docSubjectId = data["subjectId"] as? String
+                docSubjectId = data["subjectId"] as? String,
+                docSubjectName = (data["displaySubject"] as? String)?.takeIf { it.isNotBlank() } ?: (data["subject"] as? String)
             )
         }
 

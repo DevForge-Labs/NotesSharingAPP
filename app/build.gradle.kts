@@ -16,8 +16,8 @@ android {
         applicationId = "com.pravor.notessharing"
         minSdk = 24
         targetSdk = 36
-        versionCode = 11
-        versionName = "10.1"
+        versionCode = 12
+        versionName = "10.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -129,4 +129,8 @@ dependencies {
 
     // WorkManager (Background Sync)
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Google Play In-App Updates
+    implementation(libs.play.app.update)
+    implementation(libs.play.app.update.ktx)
 }

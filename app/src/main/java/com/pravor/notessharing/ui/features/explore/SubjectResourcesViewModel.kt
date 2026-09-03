@@ -215,7 +215,8 @@ class SubjectResourcesViewModel(
                         docCollege = data["college"] as? String ?: canonicalCollegeId,
                         docBranch = data["branch"] as? String,
                         docSemester = data["semester"] as? String,
-                        docSubjectId = docSubjectId
+                        docSubjectId = docSubjectId,
+                        docSubjectName = docDisplaySubject.ifBlank { docSubject }
                     )
 
                     if (!matchesScope) {

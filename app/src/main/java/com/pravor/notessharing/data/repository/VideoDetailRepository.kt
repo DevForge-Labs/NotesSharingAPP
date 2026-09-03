@@ -54,11 +54,13 @@ class VideoDetailRepository {
 
             // Academic Authorization Scope Validation
             if (result != null && requestingScope != null && requestingScope.isCollegeValid) {
+                val resolvedSubjectId = result.subjectId ?: (foundData?.first?.get("subjectId") as? String)
                 val isPermitted = requestingScope.isDocumentPermitted(
                     docCollege = result.college,
                     docBranch = result.branch,
                     docSemester = result.semester,
-                    docSubjectId = null
+                    docSubjectId = resolvedSubjectId,
+                    docSubjectName = result.subject
                 )
                 if (!isPermitted) {
                     if (BuildConfig.DEBUG) {
@@ -99,14 +101,15 @@ class VideoDetailRepository {
             val fromCache = snapshot.metadata.isFromCache
             UserFetchDiagnostics.recordFetch(uploaderId, fromCache)
 
-            val level = if (snapshot.exists()) {
-                val lvl = snapshot.getLong("contributorLevel")?.toInt() ?: 1
-                getContributorLevelName(lvl)
+            val resolvedLevel = if (snapshot.exists()) {
+                val level = snapshot.getLong("contributorLevel")?.toInt() ?: 1
+                getContributorLevelName(level)
             } else {
                 "Bronze Contributor"
             }
-            contributorLevelCache.put(uploaderId, level)
-            level
+
+            contributorLevelCache.put(uploaderId, resolvedLevel)
+            resolvedLevel
         } catch (e: Exception) {
             val duration = System.currentTimeMillis() - startTime
             android.util.Log.d("FIRESTORE", "[FIRESTORE] Firestore query END collection=users document=$uploaderId duration=${duration}ms exists=false thread=${Thread.currentThread().name}")
@@ -144,32 +147,42 @@ class VideoDetailRepository {
         val startTime = System.currentTimeMillis()
         android.util.Log.d("PERF", "[PERF] getRelatedVideos START id=${video.id} thread=${Thread.currentThread().name}")
         
-        val collections = listOf("videos")
         if (video.college.isBlank()) {
+            android.util.Log.e("RECOMMENDATIONS", "getRelatedVideos: college is blank for videoId=${video.id}. Returning empty recommendations.")
+            android.util.Log.d("REC_TRACE", "[VIDEO] 1. Candidates fetched: 0 (college is blank)")
+            android.util.Log.d("REC_TRACE", "[VIDEO] 2. Count after type filtering: 0")
+            android.util.Log.d("REC_TRACE", "[VIDEO] 3. Count after current-item exclusion: 0")
+            android.util.Log.d("REC_TRACE", "[VIDEO] 4. Counts after subject partitioning: sameSubject=0, otherSubjects=0")
+            android.util.Log.d("REC_TRACE", "[VIDEO] 5. Final recommendations returned by repo count=0")
             return@coroutineScope emptyList()
         }
         
         try {
             val canonicalCollegeId = com.pravor.notessharing.core.util.LegacyAcademicCompatibilityResolver.resolveCollegeId(video.college)
-            val deferreds = collections.map { col ->
-                async {
-                    try {
-                        firestore.collection(col)
-                            .whereEqualTo("college", canonicalCollegeId)
-                            .get()
-                            .await()
-                            .documents
-                    } catch (e: Exception) {
-                        emptyList()
+            val collections = listOf("videos")
+            
+            val candidates = coroutineScope {
+                val deferreds = collections.map { col ->
+                    async {
+                        try {
+                            val firestoreQueryStartTime = System.currentTimeMillis()
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] getRelatedVideos START collection=$col thread=${Thread.currentThread().name}")
+                            val snap = firestore.collection(col)
+                                .whereEqualTo("college", canonicalCollegeId)
+                                .get()
+                                .await()
+                            val firestoreQueryDuration = System.currentTimeMillis() - firestoreQueryStartTime
+                            android.util.Log.d("FIRESTORE", "[FIRESTORE] getRelatedVideos END collection=$col duration=${firestoreQueryDuration}ms docs=${snap.documents.size} thread=${Thread.currentThread().name}")
+                            snap.documents
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
                     }
                 }
-            }
+                deferreds.awaitAll().flatten()
+            }.sortedWith(ExploreRankingUtils.documentSnapshotComparator).take(100)
             
-            val results = deferreds.awaitAll()
-            val candidates = results.flatten()
-                .sortedWith(ExploreRankingUtils.documentSnapshotComparator)
-                .take(100)
-            android.util.Log.d("REC_TRACE", "[VIDEO] 1. Candidates fetched from collections=$collections count=${candidates.size}")
+            android.util.Log.d("REC_TRACE", "[VIDEO] 1. Candidates fetched from collection=videos count=${candidates.size}")
             
             val currentNormalizedSubject = normalizeSubject(video.subject)
             
@@ -199,7 +212,8 @@ class VideoDetailRepository {
                         docCollege = mappedVideo.college,
                         docBranch = mappedVideo.branch,
                         docSemester = mappedVideo.semester,
-                        docSubjectId = null
+                        docSubjectId = mappedVideo.subjectId ?: (data["subjectId"] as? String),
+                        docSubjectName = mappedVideo.subject
                     )
                     if (!isPermitted) continue
                 }

@@ -75,12 +75,15 @@ class RecentlyOpenedRepository(context: Context) {
             val docSemester = json.optString("semester").ifBlank { null }
             val docSubjectId = json.optString("subjectId").ifBlank { null }
 
+            val docSubject = json.optString("subject").ifBlank { null }
+
             if (requestingScope != null && requestingScope.isCollegeValid) {
                 val isPermitted = requestingScope.isDocumentPermitted(
                     docCollege = docCollege,
                     docBranch = docBranch,
                     docSemester = docSemester,
-                    docSubjectId = docSubjectId
+                    docSubjectId = docSubjectId,
+                    docSubjectName = docSubject
                 )
                 if (!isPermitted) return null
             }
