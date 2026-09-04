@@ -27,6 +27,10 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
+import kotlinx.coroutines.Job
+import java.security.MessageDigest
+import java.net.URLDecoder
+
 sealed interface PdfViewingUiState {
     object Loading : PdfViewingUiState
     data class Success(val pdfFile: File) : PdfViewingUiState
@@ -39,17 +43,64 @@ class PdfViewingViewModel(
     private val _uiState = MutableStateFlow<PdfViewingUiState>(PdfViewingUiState.Loading)
     val uiState: StateFlow<PdfViewingUiState> = _uiState.asStateFlow()
     private var hasIncremented = false
+    private var currentDocumentId: String? = null
+    private var currentFileUrl: String? = null
+    private var loadJob: Job? = null
+
+    companion object {
+        fun computePdfCacheFileName(documentId: String, fileUrl: String): String {
+            val safeDocId = documentId.replace(Regex("[^a-zA-Z0-9_-]"), "_").ifBlank { "unknown_doc" }
+            val decodedUrl = try {
+                URLDecoder.decode(fileUrl, "UTF-8")
+            } catch (e: Exception) {
+                fileUrl
+            }
+            val pathWithoutQuery = decodedUrl.substringBefore("?")
+            val rawFileName = pathWithoutQuery.substringAfterLast("/").substringBeforeLast(".pdf")
+            val cleanFileName = rawFileName.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(32)
+
+            val sha256 = MessageDigest.getInstance("SHA-256")
+                .digest(decodedUrl.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+                .take(16)
+
+            return if (cleanFileName.isNotBlank()) {
+                "${safeDocId}_${cleanFileName}_${sha256}.pdf"
+            } else {
+                "${safeDocId}_${sha256}.pdf"
+            }
+        }
+
+        fun getCachedPdfFile(context: Context, documentId: String, fileUrl: String): File {
+            val pdfsDir = File(context.cacheDir, "pdfs")
+            if (!pdfsDir.exists()) {
+                pdfsDir.mkdirs()
+            }
+            val fileName = computePdfCacheFileName(documentId, fileUrl)
+            return File(pdfsDir, fileName)
+        }
+    }
 
     fun loadPdf(context: Context, documentId: String, fileUrl: String) {
         android.util.Log.d("PDF_DEBUG", "loadPdf called")
         android.util.Log.d("PDF_DEBUG", "DocumentId=$documentId")
         android.util.Log.d("PDF_DEBUG", "FileUrl=$fileUrl")
+
+        loadJob?.cancel()
+
+        if (documentId != currentDocumentId || fileUrl != currentFileUrl) {
+            hasIncremented = false
+            currentDocumentId = documentId
+            currentFileUrl = fileUrl
+        }
+
         _uiState.value = PdfViewingUiState.Loading
-        viewModelScope.launch {
+
+        loadJob = viewModelScope.launch {
             try {
                 // 1. Check local attachment registry in DataStore
                 val db = DownloadDataStoreManager(context.applicationContext)
-                val localPath = db.getAttachmentLocalPath(fileUrl)
+                val localPath = db.getAttachmentLocalPath(documentId, fileUrl)
                 if (localPath != null) {
                     val localFile = File(localPath)
                     if (localFile.exists() && localFile.length() > 0) {
@@ -73,7 +124,8 @@ class PdfViewingViewModel(
                         return@launch
                     }
                 }
-                val pdfFile = getCachedPdfFile(context, documentId)
+
+                val pdfFile = getCachedPdfFile(context, documentId, fileUrl)
                 android.util.Log.d("PDF_DEBUG", "Checking cache")
                 android.util.Log.d("PDF_DEBUG", "CachePath=${pdfFile.absolutePath}")
                 android.util.Log.d("PDF_DEBUG", "CacheExists=${pdfFile.exists()}")
@@ -87,14 +139,6 @@ class PdfViewingViewModel(
                 _uiState.value = PdfViewingUiState.Error(e.localizedMessage ?: "Unknown error occurred.")
             }
         }
-    }
-
-    private fun getCachedPdfFile(context: Context, documentId: String): File {
-        val pdfsDir = File(context.cacheDir, "pdfs")
-        if (!pdfsDir.exists()) {
-            pdfsDir.mkdirs()
-        }
-        return File(pdfsDir, "$documentId.pdf")
     }
 
     private suspend fun downloadPdfAndCache(
@@ -121,7 +165,7 @@ class PdfViewingViewModel(
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val inputStream = connection.inputStream
-                    val tmpFile = File(context.cacheDir, "${documentId}_tmp.pdf")
+                    val tmpFile = File(context.cacheDir, "${targetFile.name}.tmp")
                     val outputStream = FileOutputStream(tmpFile)
 
                     val buffer = ByteArray(4096)

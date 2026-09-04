@@ -149,10 +149,12 @@ fun ImageViewingScreen(
                     )
                 }
                 is ImageViewingUiState.Success -> {
-                    ImageViewerContent(
-                        imageFile = state.imageFile,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    androidx.compose.runtime.key(state.imageFile.absolutePath) {
+                        ImageViewerContent(
+                            imageFile = state.imageFile,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

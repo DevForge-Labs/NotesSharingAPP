@@ -115,6 +115,27 @@ class DownloadDataStoreManager(private val context: Context) {
         return getDownloadedAttachments().firstOrNull { it.storagePath == storagePath }?.localPath
     }
 
+    suspend fun getAttachmentLocalPath(documentId: String, storagePath: String): String? {
+        val attachments = getDownloadedAttachments().filter { it.documentId == documentId }
+        val exactMatch = attachments.firstOrNull { it.storagePath == storagePath }?.localPath
+        if (exactMatch != null) return exactMatch
+
+        val decodedStoragePath = try {
+            java.net.URLDecoder.decode(storagePath, "UTF-8")
+        } catch (e: Exception) {
+            storagePath
+        }
+
+        return attachments.firstOrNull { att ->
+            val decodedAttPath = try {
+                java.net.URLDecoder.decode(att.storagePath, "UTF-8")
+            } catch (e: Exception) {
+                att.storagePath
+            }
+            att.storagePath == decodedStoragePath || decodedAttPath == storagePath || decodedAttPath == decodedStoragePath
+        }?.localPath
+    }
+
     // JSON Helper Methods using org.json (built-in Android SDK)
     private fun parseDownloadedDocuments(jsonStr: String): List<DownloadedDocument> {
         val list = mutableListOf<DownloadedDocument>()
