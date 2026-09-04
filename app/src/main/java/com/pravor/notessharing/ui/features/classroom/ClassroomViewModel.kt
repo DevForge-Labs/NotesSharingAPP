@@ -146,15 +146,26 @@ class ClassroomViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun getAuthIntent(): Intent {
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logClassroomConnectStarted()
         return authManager.getSignInIntent()
     }
 
     fun handleAuthResult(intent: Intent?) {
         authManager.handleSignInResult(intent)
+        when (val state = authManager.authState.value) {
+            is ClassroomAuthState.Connected -> {
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logClassroomConnectSuccess(0)
+            }
+            is ClassroomAuthState.Error -> {
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logClassroomConnectFailed(state.message)
+            }
+            else -> {}
+        }
     }
 
     fun disconnectClassroom() {
         viewModelScope.launch {
+            com.pravor.notessharing.core.analytics.AnalyticsManager.logClassroomDisconnect()
             repository.clearClassroomDataForCurrentAccount()
             authManager.disconnect()
             _coursesError.value = null

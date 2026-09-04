@@ -601,8 +601,15 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null, uploadProgress = 0f) }
+            val uploadStartTime = System.currentTimeMillis()
+            com.pravor.notessharing.core.analytics.AnalyticsManager.logUploadStarted(
+                contentType = type!!.name,
+                subject = state.subject,
+                semester = state.selectedSemester,
+                fileCount = if (type == UploadType.Youtube) 1 else state.selectedFiles.size
+            )
             runCatching {
-                when (type!!) {
+                when (type) {
                     UploadType.Pyq -> {
                         repository.uploadDocument(
                             branch = state.selectedBranch,
@@ -690,6 +697,12 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 }
             }.onSuccess {
+                val durationMs = System.currentTimeMillis() - uploadStartTime
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logUploadCompleted(
+                    contentType = type.name,
+                    subject = state.subject,
+                    durationMs = durationMs
+                )
                 _uiState.update {
                     it.copy(
                         selectedFiles = emptyList(),
@@ -704,6 +717,11 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                     )
                 }
             }.onFailure { e ->
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logUploadFailed(
+                    contentType = type.name,
+                    subject = state.subject,
+                    errorReason = e.javaClass.simpleName
+                )
                 _uiState.update {
                     it.copy(
                         isSaving = false,

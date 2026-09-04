@@ -109,6 +109,11 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                     } else {
                         tempGoogleProfile = null
                         _sessionState.update { SessionState.LoggedIn }
+                        com.pravor.notessharing.core.analytics.AnalyticsManager.setUserProperties(
+                            college = profile.college,
+                            branch = profile.branch,
+                            semester = profile.semester
+                        )
                     }
                 } else {
                     tempGoogleProfile = Profile(
@@ -132,13 +137,21 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
             _uiState.update { AuthUiState.Error("Please fill in all fields.") }
             return
         }
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthStarted("email_password")
         viewModelScope.launch {
             _uiState.update { AuthUiState.Loading }
             repository.emailLogin(email.trim(), password).collect { result ->
                 result.onSuccess { profile ->
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthSuccess("email_password", isNewUser = false)
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.setUserProperties(
+                        college = profile.college,
+                        branch = profile.branch,
+                        semester = profile.semester
+                    )
                     _uiState.update { AuthUiState.Success(profile) }
                     _sessionState.update { SessionState.LoggedIn }
                 }.onFailure { throwable ->
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthFailed("email_password", throwable.javaClass.simpleName)
                     _uiState.update { AuthUiState.Error(throwable.localizedMessage ?: "Login failed.") }
                 }
             }
@@ -171,6 +184,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
             _uiState.update { AuthUiState.Error("Passwords do not match.") }
             return
         }
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthStarted("email_password")
         viewModelScope.launch {
             _uiState.update { AuthUiState.Loading }
             repository.emailSignUp(
@@ -183,9 +197,16 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                 password = password
             ).collect { result ->
                 result.onSuccess { profile ->
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthSuccess("email_password", isNewUser = true)
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.setUserProperties(
+                        college = profile.college,
+                        branch = profile.branch,
+                        semester = profile.semester
+                    )
                     _uiState.update { AuthUiState.Success(profile) }
                     _sessionState.update { SessionState.LoggedIn }
                 }.onFailure { throwable ->
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthFailed("email_password", throwable.javaClass.simpleName)
                     _uiState.update { AuthUiState.Error(throwable.localizedMessage ?: "Sign up failed.") }
                 }
             }
@@ -193,10 +214,20 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
     }
 
     fun signInWithGoogle(idToken: String) {
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthStarted("google_credential_manager")
         viewModelScope.launch {
             _uiState.update { AuthUiState.Loading }
             repository.googleSignIn(idToken).collect { result ->
                 result.onSuccess { profile ->
+                    val isNewUser = profile.isOnboardingRequired
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthSuccess("google_credential_manager", isNewUser = isNewUser)
+                    if (!isNewUser) {
+                        com.pravor.notessharing.core.analytics.AnalyticsManager.setUserProperties(
+                            college = profile.college,
+                            branch = profile.branch,
+                            semester = profile.semester
+                        )
+                    }
                     if (profile.isOnboardingRequired) {
                         tempGoogleProfile = profile
                         _uiState.update { AuthUiState.Success(profile) }
@@ -207,6 +238,7 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                         _sessionState.update { SessionState.LoggedIn }
                     }
                 }.onFailure { throwable ->
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthFailed("google_credential_manager", throwable.javaClass.simpleName)
                     _uiState.update { AuthUiState.Error("Google Sign-In failed. Please try again.") }
                 }
             }
@@ -250,6 +282,16 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
                 )
                 repository.createUserProfile(profile)
                 tempGoogleProfile = null
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logOnboardingCompleted(
+                    college = college.trim(),
+                    branch = branch.trim(),
+                    semester = semester.trim()
+                )
+                com.pravor.notessharing.core.analytics.AnalyticsManager.setUserProperties(
+                    college = college.trim(),
+                    branch = branch.trim(),
+                    semester = semester.trim()
+                )
                 _uiState.update { AuthUiState.Success(profile) }
                 _sessionState.update { SessionState.LoggedIn }
             } catch (e: Exception) {
@@ -262,6 +304,8 @@ class AuthViewModel(private val repository: AuthRepository = AuthRepository()) :
         viewModelScope.launch {
             repository.logout()
             tempGoogleProfile = null
+            com.pravor.notessharing.core.analytics.AnalyticsManager.logAuthLogout()
+            com.pravor.notessharing.core.analytics.AnalyticsManager.setUserProperties(null, null, null)
             _sessionState.update { SessionState.LoggedOut }
             _uiState.update { AuthUiState.Idle }
         }

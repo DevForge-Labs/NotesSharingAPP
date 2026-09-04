@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -245,13 +246,19 @@ fun SearchScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    items(
+                                    itemsIndexed(
                                         items = results,
-                                        key = { it.id }
-                                    ) { result ->
+                                        key = { _, it -> it.id }
+                                    ) { index, result ->
                                         SearchResultCard(
                                             result = result,
                                             onClick = {
+                                                com.pravor.notessharing.core.analytics.AnalyticsManager.logSearchResultClick(
+                                                    searchTerm = state.query,
+                                                    contentId = result.id,
+                                                    contentType = result.type,
+                                                    position = index
+                                                )
                                                 val isVideo = result.type.equals("Video", ignoreCase = true) ||
                                                         result.type.equals("Videos", ignoreCase = true) ||
                                                         result.type.equals("YouTube Resource", ignoreCase = true) ||
