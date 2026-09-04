@@ -98,6 +98,9 @@ fun HomeSuccessContent(
     onViewAllLibraryClick: () -> Unit,
     onSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
+    activeHubSession: com.pravor.notessharing.domain.model.InteractiveHubSession? = null,
+    onInteractiveHubCtaClick: (String) -> Unit = {},
+    onSurveyVote: (String, String) -> Unit = { _, _ -> },
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
@@ -146,10 +149,28 @@ fun HomeSuccessContent(
                         onClick = onContinueClick
                     )
                 }
+                if (activeHubSession != null) {
+                    item(key = "interactive-hub-${activeHubSession.sessionId}", contentType = "interactive-hub") {
+                        InteractiveHubCard(
+                            session = activeHubSession,
+                            onCtaClick = onInteractiveHubCtaClick,
+                            onSurveyVote = onSurveyVote
+                        )
+                    }
+                }
                 item(key = "for-you-title", contentType = "section") {
                     SectionHeader("For You", onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null)
                 }
             } else {
+                if (activeHubSession != null) {
+                    item(key = "interactive-hub-${activeHubSession.sessionId}", contentType = "interactive-hub") {
+                        InteractiveHubCard(
+                            session = activeHubSession,
+                            onCtaClick = onInteractiveHubCtaClick,
+                            onSurveyVote = onSurveyVote
+                        )
+                    }
+                }
                 item(key = "for-you-title", contentType = "section") {
                     SectionHeader(
                         title = "For You",

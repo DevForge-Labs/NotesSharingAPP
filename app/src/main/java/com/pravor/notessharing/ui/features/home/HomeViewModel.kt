@@ -48,8 +48,35 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private var feedObservationJob: kotlinx.coroutines.Job? = null
     private val notificationRepository = com.pravor.notessharing.data.repository.NotificationRepository()
     private val metadataRepository = com.pravor.notessharing.data.repository.MetadataRepository()
+    private val interactiveHubRepository = com.pravor.notessharing.data.repository.InteractiveHubRepository.getInstance(application)
     val notifications = notificationRepository.notifications
     val unreadNotificationsCount = notificationRepository.unreadCount
+
+    private val _activeHubSession = MutableStateFlow<com.pravor.notessharing.domain.model.InteractiveHubSession?>(null)
+    val activeHubSession: StateFlow<com.pravor.notessharing.domain.model.InteractiveHubSession?> = _activeHubSession.asStateFlow()
+
+    fun refreshInteractiveHub(forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            try {
+                val session = interactiveHubRepository.getActiveSession(forceRefresh)
+                _activeHubSession.value = session
+            } catch (e: Exception) {
+                android.util.Log.w("HomeViewModel", "Failed to refresh Interactive Hub: ${e.message}")
+            }
+        }
+    }
+
+    fun onSurveyVote(sessionId: String, option: String) {
+        viewModelScope.launch {
+            try {
+                interactiveHubRepository.submitSurveyResponse(sessionId, option)
+                // Instantly remove the card from the user's Home experience
+                _activeHubSession.value = null
+            } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error submitting survey vote: ${e.message}")
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow<HomeUiState>(
         HomeUiState.Success(
@@ -170,6 +197,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         loadCachedRoomFeedFirst()
         observeUserProfileState()
         refreshRecentlyOpened()
+        refreshInteractiveHub()
 
         viewModelScope.launch {
             com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
@@ -548,6 +576,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         activeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             if (isPullToRefresh) {
                 _isRefreshing.value = true
+                refreshInteractiveHub(forceRefresh = true)
             }
             try {
                 val startTime = System.currentTimeMillis()
