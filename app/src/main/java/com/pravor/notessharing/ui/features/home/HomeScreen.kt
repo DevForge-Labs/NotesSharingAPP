@@ -98,12 +98,14 @@ fun HomeRoute(
     onSeeMoreClick: () -> Unit = {},
     onDocumentClick: (String) -> Unit = {},
     onVideoClick: (String) -> Unit = {},
+    onInteractiveHubNavigate: (String) -> Unit = {},
     pendingNotificationId: String? = null,
     onClearPendingNotificationId: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val activeHubSession by viewModel.activeHubSession.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val activeDownloadsCount by DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
     val uploadsCount by viewModel.uploadsCount.collectAsStateWithLifecycle()
@@ -168,6 +170,9 @@ fun HomeRoute(
         onSeeMoreClick = onSeeMoreClick,
         onDocumentClick = onDocumentClick,
         onVideoClick = onVideoClick,
+        activeHubSession = activeHubSession,
+        onInteractiveHubNavigate = onInteractiveHubNavigate,
+        onSurveyVote = viewModel::onSurveyVote,
         pendingNotificationId = pendingNotificationId,
         onClearPendingNotificationId = onClearPendingNotificationId
     )
@@ -201,6 +206,9 @@ fun HomeScreen(
     onSeeMoreClick: () -> Unit,
     onDocumentClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
+    activeHubSession: com.pravor.notessharing.domain.model.InteractiveHubSession? = null,
+    onInteractiveHubNavigate: (String) -> Unit = {},
+    onSurveyVote: (String, String) -> Unit = { _, _ -> },
     pendingNotificationId: String? = null,
     onClearPendingNotificationId: () -> Unit = {},
     myFilesUiState: MyFilesUiState = MyFilesUiState.Loading,
@@ -349,6 +357,9 @@ fun HomeScreen(
                                 onDocumentClick(docId)
                             }
                         },
+                        activeHubSession = activeHubSession,
+                        onInteractiveHubCtaClick = onInteractiveHubNavigate,
+                        onSurveyVote = onSurveyVote,
                         listState = feedListState
                     )
                 }

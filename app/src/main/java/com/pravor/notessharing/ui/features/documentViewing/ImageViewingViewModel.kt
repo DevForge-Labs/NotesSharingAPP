@@ -134,6 +134,12 @@ class ImageViewingViewModel(
     private fun incrementViewsCount(documentId: String) {
         if (hasIncremented) return
         hasIncremented = true
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logContentViewFile(
+            contentId = documentId,
+            contentType = "document",
+            fileFormat = "image",
+            viewerType = "in_app_image"
+        )
         viewModelScope.launch {
             viewTrackingRepository.incrementViewCount(documentId)
         }

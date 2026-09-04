@@ -71,6 +71,7 @@ class DocumentDetailViewModel(
     private val storageProvider: ShareStorageProvider? = null
 ) : ViewModel() {
     private var loadedDocumentId: String? = null
+    private var hasLoggedContentOpen = false
 
     private val _uiState = MutableStateFlow<DocumentDetailUiState>(DocumentDetailUiState.Loading)
     val uiState: StateFlow<DocumentDetailUiState> = _uiState.asStateFlow()
@@ -200,6 +201,14 @@ class DocumentDetailViewModel(
             Pair(col, relatedDoc.upvotes)
         }
 
+        val wasUpvoted = com.pravor.notessharing.data.repository.UpvoteRepository.upvotesFlow.value.contains(itemId)
+        val docType = if (successState.document.id == itemId) successState.document.documentType else "Notes"
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logContentUpvoteToggle(
+            contentId = itemId,
+            contentType = docType,
+            isUpvoted = !wasUpvoted
+        )
+
         viewModelScope.launch {
             upvoteRepository.toggleUpvote(
                 documentId = itemId,
@@ -221,6 +230,12 @@ class DocumentDetailViewModel(
         }
 
         val wasBookmarked = com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.value.any { it.id == itemId }
+
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logContentBookmarkToggle(
+            contentId = itemId,
+            contentType = doc.documentType,
+            isBookmarked = !wasBookmarked
+        )
 
         viewModelScope.launch {
             if (wasBookmarked) {
@@ -288,6 +303,9 @@ class DocumentDetailViewModel(
     }
 
     fun loadDocumentDetail(documentId: String, context: Context) {
+        if (loadedDocumentId != documentId) {
+            hasLoggedContentOpen = false
+        }
         loadedDocumentId = documentId
         
         val currentUid = auth.currentUser?.uid
@@ -350,6 +368,16 @@ class DocumentDetailViewModel(
                                 isArchived = false
                             )
                             android.util.Log.d("REC_TRACE", "[DOC_VM] 7. Exposed through UI State success (cached flow) count=${uiStateToSet.relatedDocuments.size}")
+                            if (!hasLoggedContentOpen) {
+                                hasLoggedContentOpen = true
+                                com.pravor.notessharing.core.analytics.AnalyticsManager.logContentOpen(
+                                    contentId = docDetail.id,
+                                    contentType = docDetail.documentType,
+                                    subject = docDetail.subject,
+                                    semester = docDetail.semester,
+                                    sourceScreen = "document_detail"
+                                )
+                            }
                             _uiState.value = uiStateToSet
                             return@launch
                         } else {
@@ -419,6 +447,16 @@ class DocumentDetailViewModel(
                         isArchived = false
                     )
                     android.util.Log.d("REC_TRACE", "[DOC_VM] 7. Exposed through UI State success count=${uiStateToSet.relatedDocuments.size}")
+                    if (!hasLoggedContentOpen) {
+                        hasLoggedContentOpen = true
+                        com.pravor.notessharing.core.analytics.AnalyticsManager.logContentOpen(
+                            contentId = docDetail.id,
+                            contentType = docDetail.documentType,
+                            subject = docDetail.subject,
+                            semester = docDetail.semester,
+                            sourceScreen = "document_detail"
+                        )
+                    }
                     _uiState.value = uiStateToSet
                 } else {
                     _uiState.value = DocumentDetailUiState.Error("This document is not accessible or not available for your academic semester/branch.")
@@ -521,6 +559,11 @@ class DocumentDetailViewModel(
                 }
 
                 if (preparedFiles.isNotEmpty()) {
+                    com.pravor.notessharing.core.analytics.AnalyticsManager.logContentShare(
+                        contentId = doc.id,
+                        contentType = doc.documentType,
+                        subject = doc.subject
+                    )
                     _shareEvent.emit(ShareEvent.Success(preparedFiles))
                 } else {
                     throw Exception("No attachments found to share.")

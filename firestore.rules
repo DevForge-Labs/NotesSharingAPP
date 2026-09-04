@@ -1,0 +1,125 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        );
+    }
+
+    function isOwner() {
+      return signedIn() &&
+        (
+          resource.data.uploaderUid == request.auth.uid ||
+          resource.data.uploaderId == request.auth.uid ||
+          resource.data.userId == request.auth.uid ||
+          resource.data.uid == request.auth.uid
+        );
+    }
+
+    // USERS
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow update, delete: if request.auth.uid == userId || isAdmin();
+      match /{subCollection=**} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // ADMINS
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // APP CONFIG
+    match /app_config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // INTERACTIVE HUB SESSIONS
+    match /interactive_hub_sessions/{sessionId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // INTERACTIVE HUB RESPONSES
+    match /interactive_hub_responses/{responseId} {
+      allow read: if isAdmin();
+      allow get: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if (
+        (signedIn() && request.resource.data.userId == request.auth.uid) ||
+        (!signedIn() && request.resource.data.userId != null)
+      ) && responseId == request.resource.data.sessionId + '_' + request.resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ADMIN AUDIT LOGS
+    match /admin_deletion_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // BOOKMARKS
+    match /bookmarks/{bookmarkId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if resource.data.userId == request.auth.uid || isAdmin();
+    }
+
+    // UPVOTES
+    match /upvotes/{upvoteId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if resource.data.userId == request.auth.uid || isAdmin();
+    }
+    
+    // REPORTS
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // RESOURCE COLLECTIONS
+    match /notes/{docId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isOwner() || isAdmin();
+    }
+
+    match /assignments/{docId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isOwner() || isAdmin();
+    }
+
+    match /cheatsheets/{docId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isOwner() || isAdmin();
+    }
+
+    match /pyqs/{docId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isOwner() || isAdmin();
+    }
+
+    match /videos/{docId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isOwner() || isAdmin();
+    }
+  }
+}

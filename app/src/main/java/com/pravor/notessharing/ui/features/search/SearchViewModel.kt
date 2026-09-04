@@ -166,6 +166,13 @@ class SearchViewModel(
                 }.toSet()
 
                 val results = searchRepository.search(trimmed, scope, docTypes)
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logSearchPerformed(
+                    query = trimmed,
+                    category = _selectedCategory.value.name,
+                    branch = scope.branchId,
+                    semester = scope.semester,
+                    resultsCount = results.size
+                )
                 if (results.isEmpty()) {
                     _uiState.value = SearchUiState.Empty
                 } else {

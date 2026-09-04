@@ -512,7 +512,13 @@ fun ClassroomUpcomingScreen(
                             isLocallyDone = item.isLocallyDone,
                             isMarkingDone = uiState.markingDoneIds.contains(item.courseWork.id),
                             onAttachmentClick = onAttachmentClick,
-                            onSubmitClick = { selectedAssignmentForSubmission = item },
+                            onSubmitClick = {
+                                selectedAssignmentForSubmission = item
+                                com.pravor.notessharing.core.analytics.AnalyticsManager.logClassroomSubmissionOpened(
+                                    courseId = item.courseId,
+                                    workId = item.courseWork.id
+                                )
+                            },
                             onOpenExternalTaskClick = { cw, url ->
                                 onOpenExternalTaskClick?.invoke(item, url)
                             },

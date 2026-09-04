@@ -162,6 +162,12 @@ class PdfViewingViewModel(
     private fun incrementViewsCount(documentId: String) {
         if (hasIncremented) return
         hasIncremented = true
+        com.pravor.notessharing.core.analytics.AnalyticsManager.logContentViewFile(
+            contentId = documentId,
+            contentType = "document",
+            fileFormat = "pdf",
+            viewerType = "in_app_pdf"
+        )
         viewModelScope.launch {
             viewTrackingRepository.incrementViewCount(documentId)
         }

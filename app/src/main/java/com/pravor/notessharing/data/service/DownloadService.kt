@@ -41,6 +41,13 @@ object DownloadService {
             val progressMap = mutableMapOf<String, Float>()
             urls.forEach { progressMap[it] = 0f }
 
+            val downloadStartTime = System.currentTimeMillis()
+            com.pravor.notessharing.core.analytics.AnalyticsManager.logDownloadStarted(
+                contentId = document.id,
+                contentType = document.documentType,
+                fileCount = urls.size
+            )
+
             try {
                 // Download each attachment sequentially
                 for ((index, url) in urls.withIndex()) {
@@ -112,7 +119,19 @@ object DownloadService {
                     .getUploaderContributorLevel(document.uploaderId) ?: "Bronze Contributor"
                 manager.addDownload(document, uploaderLevel, attachments, localThumbnailPath)
 
+                val durationMs = System.currentTimeMillis() - downloadStartTime
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logDownloadCompleted(
+                    contentId = document.id,
+                    contentType = document.documentType,
+                    durationMs = durationMs
+                )
+
             } catch (e: Exception) {
+                com.pravor.notessharing.core.analytics.AnalyticsManager.logDownloadFailed(
+                    contentId = document.id,
+                    contentType = document.documentType,
+                    errorType = e.javaClass.simpleName
+                )
                 // Cleanup on failure
                 try {
                     docDir.deleteRecursively()

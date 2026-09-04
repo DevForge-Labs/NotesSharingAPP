@@ -77,6 +77,22 @@ fun NotesSharingApp(
     val authViewModel: AuthViewModel = viewModel()
     val navController = rememberNavController()
 
+    // Centralized Navigation Screen Tracking for Jetpack Compose
+    androidx.compose.runtime.DisposableEffect(navController) {
+        val destinationListener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
+            val route = destination.route
+            val screenName = com.pravor.notessharing.core.analytics.AnalyticsScreenMapper.mapRouteToScreenName(route)
+            com.pravor.notessharing.core.analytics.AnalyticsManager.logScreenView(
+                screenName = screenName,
+                screenClass = route ?: screenName
+            )
+        }
+        navController.addOnDestinationChangedListener(destinationListener)
+        onDispose {
+            navController.removeOnDestinationChangedListener(destinationListener)
+        }
+    }
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? androidx.activity.ComponentActivity
 

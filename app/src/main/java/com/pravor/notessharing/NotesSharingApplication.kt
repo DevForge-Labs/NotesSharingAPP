@@ -29,6 +29,13 @@ class NotesSharingApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         appContext = applicationContext
 
+        // Initialize Centralized Analytics
+        try {
+            com.pravor.notessharing.core.analytics.AnalyticsManager.initialize(this)
+        } catch (e: Exception) {
+            android.util.Log.w("Application", "AnalyticsManager initialization skipped/failed", e)
+        }
+
         // Initialize Classroom reminders and periodic sync
         try {
             com.pravor.notessharing.data.classroom.reminder.ClassroomReminderReceiver.createNotificationChannel(this)

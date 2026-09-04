@@ -667,7 +667,13 @@ fun ClassroomCourseScreen(
                                     isLocallyDone = isLocallyDone,
                                     isMarkingDone = isMarkingDone,
                                     accentColor = courseTheme.accentColor,
-                                    onSubmitClick = { selectedCourseWorkForSubmission = item },
+                                    onSubmitClick = {
+                                        selectedCourseWorkForSubmission = item
+                                        com.pravor.notessharing.core.analytics.AnalyticsManager.logClassroomSubmissionOpened(
+                                            courseId = uiState.course?.id.orEmpty(),
+                                            workId = item.id
+                                        )
+                                    },
                                     onOpenExternalTaskClick = onOpenExternalTaskClick,
                                     onMarkAsDoneClick = onMarkAsDoneClick,
                                     onDoneStatusClick = onDoneStatusClick

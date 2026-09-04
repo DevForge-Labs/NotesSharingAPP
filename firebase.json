@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "public": "C:/Users/KIIT/OneDrive/Desktop/NotesSharingBackend/NotesSharingAdmin/dist",
     "ignore": [

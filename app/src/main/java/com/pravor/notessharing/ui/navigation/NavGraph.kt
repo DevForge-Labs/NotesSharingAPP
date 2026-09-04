@@ -215,6 +215,12 @@ fun NavGraph(
                         AppDestination.VideoDetail.createRoute(videoId)
                     )
                 },
+                onInteractiveHubNavigate = { destinationId ->
+                    val targetRoute = com.pravor.notessharing.ui.features.home.components.InteractiveHubDestinationMapper.resolveRoute(destinationId)
+                    navController.navigate(targetRoute) {
+                        launchSingleTop = true
+                    }
+                },
                 pendingNotificationId = notificationId,
                 onClearPendingNotificationId = {
                     intent?.removeExtra("notification_id")
