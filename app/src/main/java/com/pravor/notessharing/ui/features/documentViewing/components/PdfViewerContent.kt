@@ -262,7 +262,7 @@ fun PdfPage(
     pageIndex: Int,
     modifier: Modifier = Modifier
 ) {
-    var bitmap by remember(pageIndex) { mutableStateOf<Bitmap?>(null) }
+    var bitmap by remember(pageIndex, pdfRenderer) { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(pageIndex, pdfRenderer) {
         withContext(Dispatchers.IO) {

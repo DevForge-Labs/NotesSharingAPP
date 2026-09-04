@@ -27,6 +27,10 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
+import kotlinx.coroutines.Job
+import java.security.MessageDigest
+import java.net.URLDecoder
+
 sealed interface ImageViewingUiState {
     object Loading : ImageViewingUiState
     data class Success(val imageFile: File) : ImageViewingUiState
@@ -39,14 +43,63 @@ class ImageViewingViewModel(
     private val _uiState = MutableStateFlow<ImageViewingUiState>(ImageViewingUiState.Loading)
     val uiState: StateFlow<ImageViewingUiState> = _uiState.asStateFlow()
     private var hasIncremented = false
+    private var currentDocumentId: String? = null
+    private var currentImageUrl: String? = null
+    private var loadJob: Job? = null
+
+    companion object {
+        fun computeImageCacheFileName(documentId: String, imageUrl: String): String {
+            val safeDocId = documentId.replace(Regex("[^a-zA-Z0-9_-]"), "_").ifBlank { "unknown_doc" }
+            val decodedUrl = try {
+                URLDecoder.decode(imageUrl, "UTF-8")
+            } catch (e: Exception) {
+                imageUrl
+            }
+            val ext = decodedUrl.substringBefore("?").substringAfterLast(".", "jpg")
+            val sanitizedExt = if (ext.length in 2..4) ext else "jpg"
+
+            val pathWithoutQuery = decodedUrl.substringBefore("?")
+            val rawFileName = pathWithoutQuery.substringAfterLast("/").substringBeforeLast(".$sanitizedExt")
+            val cleanFileName = rawFileName.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(32)
+
+            val sha256 = MessageDigest.getInstance("SHA-256")
+                .digest(decodedUrl.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+                .take(16)
+
+            return if (cleanFileName.isNotBlank()) {
+                "${safeDocId}_${cleanFileName}_${sha256}.$sanitizedExt"
+            } else {
+                "${safeDocId}_${sha256}.$sanitizedExt"
+            }
+        }
+
+        fun getCachedImageFile(context: Context, documentId: String, imageUrl: String): File {
+            val imagesDir = File(context.cacheDir, "images")
+            if (!imagesDir.exists()) {
+                imagesDir.mkdirs()
+            }
+            val fileName = computeImageCacheFileName(documentId, imageUrl)
+            return File(imagesDir, fileName)
+        }
+    }
 
     fun loadImage(context: Context, documentId: String, imageUrl: String) {
+        loadJob?.cancel()
+
+        if (documentId != currentDocumentId || imageUrl != currentImageUrl) {
+            hasIncremented = false
+            currentDocumentId = documentId
+            currentImageUrl = imageUrl
+        }
+
         _uiState.value = ImageViewingUiState.Loading
-        viewModelScope.launch {
+
+        loadJob = viewModelScope.launch {
             try {
                 // 1. Check local attachment registry in DataStore
                 val db = DownloadDataStoreManager(context.applicationContext)
-                val localPath = db.getAttachmentLocalPath(imageUrl)
+                val localPath = db.getAttachmentLocalPath(documentId, imageUrl)
                 if (localPath != null) {
                     val localFile = File(localPath)
                     if (localFile.exists() && localFile.length() > 0) {
@@ -74,16 +127,6 @@ class ImageViewingViewModel(
         }
     }
 
-    private fun getCachedImageFile(context: Context, documentId: String, imageUrl: String): File {
-        val imagesDir = File(context.cacheDir, "images")
-        if (!imagesDir.exists()) {
-            imagesDir.mkdirs()
-        }
-        val ext = imageUrl.substringBefore("?").substringAfterLast(".", "jpg")
-        val sanitizedExt = if (ext.length in 2..4) ext else "jpg"
-        return File(imagesDir, "${documentId}.$sanitizedExt")
-    }
-
     private suspend fun downloadImageAndCache(
         context: Context,
         documentId: String,
@@ -101,7 +144,7 @@ class ImageViewingViewModel(
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val inputStream = connection.inputStream
-                    val tmpFile = File(context.cacheDir, "${documentId}_tmp_img")
+                    val tmpFile = File(context.cacheDir, "${targetFile.name}.tmp")
                     val outputStream = FileOutputStream(tmpFile)
 
                     val buffer = ByteArray(4096)

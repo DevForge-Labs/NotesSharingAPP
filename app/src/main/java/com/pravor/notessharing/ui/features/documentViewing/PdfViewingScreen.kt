@@ -161,10 +161,12 @@ fun PdfViewingScreen(
                     }
                 }
                 is PdfViewingUiState.Success -> {
-                    PdfViewerContent(
-                        pdfFile = state.pdfFile,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    androidx.compose.runtime.key(state.pdfFile.absolutePath) {
+                        PdfViewerContent(
+                            pdfFile = state.pdfFile,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }
