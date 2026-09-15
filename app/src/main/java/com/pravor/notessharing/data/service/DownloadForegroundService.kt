@@ -51,6 +51,12 @@ class DownloadForegroundService : Service() {
         const val EXTRA_DOC_TYPE = "extra_doc_type"
         const val EXTRA_UPLOADER_ID = "extra_uploader_id"
         const val EXTRA_FILE_URLS = "extra_file_urls"
+        const val EXTRA_DOC_THUMBNAIL_URL = "extra_doc_thumbnail_url"
+        const val EXTRA_DOC_SUBJECT = "extra_doc_subject"
+        const val EXTRA_DOC_UPLOADER_NAME = "extra_doc_uploader_name"
+        const val EXTRA_DOC_EXAM_YEAR = "extra_doc_exam_year"
+        const val EXTRA_DOC_EXAM_TYPE = "extra_doc_exam_type"
+        const val EXTRA_DOC_SECTION_DISPLAY = "extra_doc_section_display"
     }
 
     override fun onCreate() {
@@ -67,6 +73,12 @@ class DownloadForegroundService : Service() {
             val fileUrls = intent.getStringArrayListExtra(EXTRA_FILE_URLS) ?: emptyList<String>()
             val docType = intent.getStringExtra(EXTRA_DOC_TYPE) ?: "Notes"
             val uploaderId = intent.getStringExtra(EXTRA_UPLOADER_ID) ?: ""
+            val thumbnailUrl = intent.getStringExtra(EXTRA_DOC_THUMBNAIL_URL)
+            val subject = intent.getStringExtra(EXTRA_DOC_SUBJECT) ?: ""
+            val uploaderName = intent.getStringExtra(EXTRA_DOC_UPLOADER_NAME) ?: ""
+            val examYear = intent.getStringExtra(EXTRA_DOC_EXAM_YEAR)
+            val examType = intent.getStringExtra(EXTRA_DOC_EXAM_TYPE)
+            val sectionDisplay = intent.getStringExtra(EXTRA_DOC_SECTION_DISPLAY)
 
             Log.d("DOWNLOAD_NOTIFICATION_DEBUG", "DownloadForegroundService onStartCommand: Starting download process for \"$title\" (ID: $docId)")
 
@@ -77,10 +89,10 @@ class DownloadForegroundService : Service() {
                 description = "",
                 branch = "",
                 semester = "",
-                subject = "",
+                subject = subject,
                 documentType = docType,
                 uploaderId = uploaderId,
-                uploaderName = "",
+                uploaderName = uploaderName,
                 uploaderPhotoUrl = "",
                 uploadedAt = 0L,
                 downloadsCount = 0,
@@ -90,7 +102,11 @@ class DownloadForegroundService : Service() {
                 fileSize = 0L,
                 fileExtension = "",
                 fileType = "",
-                attachmentCount = fileUrls.size
+                attachmentCount = fileUrls.size,
+                thumbnailUrl = thumbnailUrl,
+                examYear = examYear,
+                examType = examType,
+                sectionDisplay = sectionDisplay
             )
 
             startDocumentDownload(document)
@@ -433,6 +449,12 @@ class DownloadForegroundService : Service() {
             putExtra(EXTRA_DOC_TYPE, document.documentType)
             putExtra(EXTRA_UPLOADER_ID, document.uploaderId)
             putStringArrayListExtra(EXTRA_FILE_URLS, java.util.ArrayList(document.fileUrls))
+            putExtra(EXTRA_DOC_THUMBNAIL_URL, document.thumbnailUrl)
+            putExtra(EXTRA_DOC_SUBJECT, document.subject)
+            putExtra(EXTRA_DOC_UPLOADER_NAME, document.uploaderName)
+            putExtra(EXTRA_DOC_EXAM_YEAR, document.examYear)
+            putExtra(EXTRA_DOC_EXAM_TYPE, document.examType)
+            putExtra(EXTRA_DOC_SECTION_DISPLAY, document.sectionDisplay)
         }
         val retryPendingIntent = PendingIntent.getService(
             this,

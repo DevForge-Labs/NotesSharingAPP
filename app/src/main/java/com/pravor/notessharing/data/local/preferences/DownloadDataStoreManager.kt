@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -22,10 +23,30 @@ class DownloadDataStoreManager(private val context: Context) {
         private val DOWNLOADED_ATTACHMENTS_KEY = stringPreferencesKey("downloaded_attachments")
     }
 
+    // Validates that a downloaded document has its files present and non-empty on disk
+    fun isDocumentLocallyComplete(
+        doc: DownloadedDocument,
+        attachments: List<DownloadedAttachment>?
+    ): Boolean {
+        if (!attachments.isNullOrEmpty()) {
+            return attachments.all { att ->
+                val file = java.io.File(att.localPath)
+                file.exists() && file.length() > 0
+            }
+        }
+        val docDir = java.io.File(context.filesDir, "downloads/${doc.documentId}")
+        if (docDir.exists() && docDir.isDirectory) {
+            val files = docDir.listFiles() ?: return false
+            val nonTmpFiles = files.filter { !it.name.endsWith(".tmp") && !it.name.startsWith("thumbnail") && it.length() > 0 }
+            return nonTmpFiles.isNotEmpty()
+        }
+        return false
+    }
+
     // Get all downloaded documents as Flow
     val downloadedDocumentsFlow: Flow<List<DownloadedDocument>> = context.dataStore.data.map { preferences ->
         val jsonStr = preferences[DOWNLOADED_DOCUMENTS_KEY] ?: "[]"
-        parseDownloadedDocuments(jsonStr)
+        parseDownloadedDocuments(jsonStr).sortedByDescending { it.downloadedAt }
     }
 
     // Get all downloaded attachments as Flow
@@ -34,12 +55,53 @@ class DownloadDataStoreManager(private val context: Context) {
         parseDownloadedAttachments(jsonStr)
     }
 
+    // Reactive single source of truth for valid, on-disk downloaded documents
+    val validDownloadedDocumentsFlow: Flow<List<DownloadedDocument>> = context.dataStore.data.map { preferences ->
+        val docsJson = preferences[DOWNLOADED_DOCUMENTS_KEY] ?: "[]"
+        val attsJson = preferences[DOWNLOADED_ATTACHMENTS_KEY] ?: "[]"
+        val docs = parseDownloadedDocuments(docsJson)
+        val atts = parseDownloadedAttachments(attsJson)
+        val attsByDoc = atts.groupBy { it.documentId }
+        docs.filter { doc ->
+            isDocumentLocallyComplete(doc, attsByDoc[doc.documentId])
+        }.sortedByDescending { it.downloadedAt }
+    }
+
+    // Reactive count of unique valid downloaded documents
+    val validDownloadsCountFlow: Flow<Int> = validDownloadedDocumentsFlow
+        .map { it.size }
+        .distinctUntilChanged()
+
     suspend fun getDownloadedDocuments(): List<DownloadedDocument> {
         return downloadedDocumentsFlow.first()
     }
 
     suspend fun getDownloadedAttachments(): List<DownloadedAttachment> {
         return downloadedAttachmentsFlow.first()
+    }
+
+    suspend fun getValidDownloadedDocuments(): List<DownloadedDocument> {
+        return validDownloadedDocumentsFlow.first()
+    }
+
+    suspend fun getValidDownloadsCount(): Int {
+        val docs = getDownloadedDocuments()
+        val allAttachments = getDownloadedAttachments()
+        val attsByDoc = allAttachments.groupBy { it.documentId }
+        return docs.count { isDocumentLocallyComplete(it, attsByDoc[it.documentId]) }
+    }
+
+    suspend fun cleanStaleDownloads(): Int {
+        val docs = getDownloadedDocuments()
+        val allAttachments = getDownloadedAttachments()
+        val attsByDoc = allAttachments.groupBy { it.documentId }
+        val staleDocIds = docs.filterNot { isDocumentLocallyComplete(it, attsByDoc[it.documentId]) }
+            .map { it.documentId }
+            .toSet()
+        if (staleDocIds.isNotEmpty()) {
+            removeDownloads(staleDocIds)
+        }
+        return staleDocIds.size
     }
 
     suspend fun addDownload(
@@ -52,6 +114,7 @@ class DownloadDataStoreManager(private val context: Context) {
             val docs = parseDownloadedDocuments(preferences[DOWNLOADED_DOCUMENTS_KEY] ?: "[]").toMutableList()
             docs.removeAll { it.documentId == document.id }
             docs.add(
+                0,
                 DownloadedDocument(
                     documentId = document.id,
                     downloadedAt = System.currentTimeMillis(),
@@ -85,13 +148,18 @@ class DownloadDataStoreManager(private val context: Context) {
     }
 
     suspend fun removeDownload(documentId: String) {
+        removeDownloads(setOf(documentId))
+    }
+
+    suspend fun removeDownloads(documentIds: Set<String>) {
+        if (documentIds.isEmpty()) return
         context.dataStore.edit { preferences ->
             val docs = parseDownloadedDocuments(preferences[DOWNLOADED_DOCUMENTS_KEY] ?: "[]").toMutableList()
-            docs.removeAll { it.documentId == documentId }
+            docs.removeAll { it.documentId in documentIds }
             preferences[DOWNLOADED_DOCUMENTS_KEY] = serializeDownloadedDocuments(docs)
 
             val atts = parseDownloadedAttachments(preferences[DOWNLOADED_ATTACHMENTS_KEY] ?: "[]").toMutableList()
-            atts.removeAll { it.documentId == documentId }
+            atts.removeAll { it.documentId in documentIds }
             preferences[DOWNLOADED_ATTACHMENTS_KEY] = serializeDownloadedAttachments(atts)
         }
         try {
@@ -102,13 +170,16 @@ class DownloadDataStoreManager(private val context: Context) {
     }
 
     suspend fun isDocumentDownloaded(documentId: String): Boolean {
-        return getDownloadedDocuments().any { it.documentId == documentId }
+        val docs = getDownloadedDocuments()
+        val doc = docs.firstOrNull { it.documentId == documentId } ?: return false
+        val atts = getDownloadedAttachments().filter { it.documentId == documentId }
+        return isDocumentLocallyComplete(doc, atts)
     }
 
     fun isDocumentDownloadedFlow(documentId: String): Flow<Boolean> {
-        return downloadedDocumentsFlow.map { docs ->
+        return validDownloadedDocumentsFlow.map { docs ->
             docs.any { it.documentId == documentId }
-        }
+        }.distinctUntilChanged()
     }
 
     suspend fun getAttachmentLocalPath(storagePath: String): String? {

@@ -484,6 +484,12 @@ class DocumentDetailViewModel(
             putExtra(DownloadForegroundService.EXTRA_DOC_TYPE, doc.documentType)
             putExtra(DownloadForegroundService.EXTRA_UPLOADER_ID, doc.uploaderId)
             putStringArrayListExtra(DownloadForegroundService.EXTRA_FILE_URLS, java.util.ArrayList(doc.fileUrls))
+            putExtra(DownloadForegroundService.EXTRA_DOC_THUMBNAIL_URL, doc.thumbnailUrl ?: doc.thumbnailUrls.firstOrNull() ?: doc.youtubeThumbnailUrl)
+            putExtra(DownloadForegroundService.EXTRA_DOC_SUBJECT, doc.subject)
+            putExtra(DownloadForegroundService.EXTRA_DOC_UPLOADER_NAME, doc.uploaderName)
+            putExtra(DownloadForegroundService.EXTRA_DOC_EXAM_YEAR, doc.examYear)
+            putExtra(DownloadForegroundService.EXTRA_DOC_EXAM_TYPE, doc.examType)
+            putExtra(DownloadForegroundService.EXTRA_DOC_SECTION_DISPLAY, doc.sectionDisplay)
         }
         
         val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)

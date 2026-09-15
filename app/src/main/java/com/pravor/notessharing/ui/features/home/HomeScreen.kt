@@ -35,6 +35,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -108,9 +109,23 @@ fun HomeRoute(
     val activeHubSession by viewModel.activeHubSession.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val activeDownloadsCount by DownloadTracker.activeDownloadsCount.collectAsStateWithLifecycle()
+    val downloadsCount by viewModel.downloadsCount.collectAsStateWithLifecycle()
     val uploadsCount by viewModel.uploadsCount.collectAsStateWithLifecycle()
     val bookmarks by com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collectAsStateWithLifecycle()
     val bookmarksCount = bookmarks.size
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshDownloads()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshRecentlyOpened()
@@ -151,6 +166,7 @@ fun HomeRoute(
         uploadsCount = uploadsCount,
         bookmarksCount = bookmarksCount,
         activeDownloadsCount = activeDownloadsCount,
+        downloadsCount = downloadsCount,
         notifications = notifications,
         unreadNotificationsCount = unreadNotificationsCount,
         isGreetingVisible = isGreetingVisible,
@@ -187,6 +203,7 @@ fun HomeScreen(
     uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
+    downloadsCount: Int = 0,
     notifications: List<Notification>,
     unreadNotificationsCount: Int,
     isGreetingVisible: Boolean = true,
@@ -316,6 +333,7 @@ fun HomeScreen(
                         uploadsCount = uploadsCount,
                         bookmarksCount = bookmarksCount,
                         activeDownloadsCount = activeDownloadsCount,
+                        downloadsCount = downloadsCount,
                         unreadNotificationsCount = unreadNotificationsCount,
                         isGreetingVisible = isGreetingVisible,
                         shouldPlayGreetingWave = shouldPlayGreetingWave,

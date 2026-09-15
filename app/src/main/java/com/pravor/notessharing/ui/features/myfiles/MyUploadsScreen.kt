@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,6 +81,12 @@ fun MyUploadsScreen(
     viewModel: MyFilesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isUploadsLoading by viewModel.isUploadsLoading.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadMyFiles()
+    }
+
     val listState = rememberLazyListState()
     val scrollState = rememberScrollState()
     val bottomPadding = LocalBottomBarPadding.current
@@ -115,12 +122,18 @@ fun MyUploadsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Crossfade(targetState = uiState, label = "my-uploads-state", modifier = Modifier.fillMaxSize()) { state ->
-                when (state) {
-                    MyFilesUiState.Loading -> com.pravor.notessharing.ui.common.loading.StudyLoadingIndicator(
-                        text = "Loading your uploads...",
-                        modifier = Modifier.fillMaxSize()
-                    )
+            if (isUploadsLoading) {
+                com.pravor.notessharing.ui.common.loading.StudyLoadingIndicator(
+                    text = "Loading your uploads...",
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Crossfade(targetState = uiState, label = "my-uploads-state", modifier = Modifier.fillMaxSize()) { state ->
+                    when (state) {
+                        MyFilesUiState.Loading -> com.pravor.notessharing.ui.common.loading.StudyLoadingIndicator(
+                            text = "Loading your uploads...",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     is MyFilesUiState.Error -> StatePanel(
                         title = "Uploads unavailable",
                         message = state.message,
@@ -344,6 +357,7 @@ fun MyUploadsScreen(
             }
         }
     }
+}
 }
 
 // Extracted matchesFilter helper based on the app's existing document classification

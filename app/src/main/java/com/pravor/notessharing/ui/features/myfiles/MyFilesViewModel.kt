@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -52,9 +53,11 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
     private var isDownloadsLoaded = false
     private var isUploadedLoaded = false
 
+    private val _isUploadsLoading = MutableStateFlow(false)
+    val isUploadsLoading: StateFlow<Boolean> = _isUploadsLoading.asStateFlow()
+
     init {
         loadDownloads(application)
-        loadMyFiles()
     }
 
     fun loadDownloads(context: Context) {
@@ -62,50 +65,47 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
         isObservingDownloads = true
 
         val manager = DownloadDataStoreManager(context.applicationContext)
+        viewModelScope.launch(Dispatchers.IO) {
+            manager.cleanStaleDownloads()
+        }
         viewModelScope.launch {
-            manager.downloadedDocumentsFlow.collect { docs ->
+            manager.validDownloadedDocumentsFlow.collect { docs ->
+                val sortedDocs = docs.sortedByDescending { it.downloadedAt }
                 val studyFiles = mutableListOf<StudyFile>()
-                val allAttachments = manager.getDownloadedAttachments()
-                val attachmentsByDoc = allAttachments.groupBy { it.documentId }
 
-                for (doc in docs) {
-                    val attachments = attachmentsByDoc[doc.documentId] ?: emptyList()
-                    val pdfExists = attachments.isNotEmpty() && attachments.all { java.io.File(it.localPath).exists() }
-                    val thumbnailExists = !doc.localThumbnailPath.isNullOrBlank() && java.io.File(doc.localThumbnailPath).exists()
-                    
-                    if (pdfExists) {
-                        val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.ROOT).trim()) {
-                            "pyq", "pyqs" -> FileType.Pyq
-                            "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
-                            "assignment", "assignments" -> FileType.Notes
-                            "notes" -> FileType.Notes
-                            else -> FileType.Pdf
-                        }
-                        val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-                        val downloadDateStr = "Downloaded " + sdf.format(java.util.Date(doc.downloadedAt))
-                        
-                        studyFiles.add(
-                            StudyFile(
-                                id = doc.documentId,
-                                title = doc.title.ifBlank { "Downloaded Document" },
-                                uploadDate = downloadDateStr,
-                                fileType = fileTypeEnum,
-                                downloadsCount = doc.downloadsCount,
-                                upvotes = doc.upvotes,
-                                thumbnailUrl = doc.thumbnailUrl,
-                                subject = doc.subject.ifBlank { "General" },
-                                documentType = doc.documentType,
-                                examYear = doc.examYear,
-                                examType = doc.examType,
-                                sectionDisplay = doc.sectionDisplay,
-                                availability = com.pravor.notessharing.domain.model.ResourceAvailability.ARCHIVED_DOWNLOAD,
-                                localThumbnailPath = if (thumbnailExists) doc.localThumbnailPath else null
-                            )
-                        )
-                    } else {
-                        // Local PDF is missing -> remove the stale download
-                        manager.removeDownload(doc.documentId)
+                for (doc in sortedDocs) {
+                    val docDir = java.io.File(context.filesDir, "downloads/${doc.documentId}")
+                    val localThumbFile = doc.localThumbnailPath?.let { java.io.File(it) }?.takeIf { it.exists() && it.length() > 0 }
+                        ?: docDir.listFiles()?.firstOrNull { it.name.startsWith("thumbnail.") && it.length() > 0 }
+
+                    val fileTypeEnum = when (doc.documentType.lowercase(java.util.Locale.ROOT).trim()) {
+                        "pyq", "pyqs" -> FileType.Pyq
+                        "cheat sheet", "cheatsheet", "cheatsheets" -> FileType.CheatSheet
+                        "assignment", "assignments" -> FileType.Notes
+                        "notes" -> FileType.Notes
+                        else -> FileType.Pdf
                     }
+                    val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+                    val downloadDateStr = "Downloaded " + sdf.format(java.util.Date(doc.downloadedAt))
+                    
+                    studyFiles.add(
+                        StudyFile(
+                            id = doc.documentId,
+                            title = doc.title.ifBlank { "Downloaded Document" },
+                            uploadDate = downloadDateStr,
+                            fileType = fileTypeEnum,
+                            downloadsCount = 0,
+                            upvotes = 0,
+                            thumbnailUrl = null,
+                            subject = doc.subject.ifBlank { "General" },
+                            documentType = doc.documentType,
+                            examYear = doc.examYear,
+                            examType = doc.examType,
+                            sectionDisplay = doc.sectionDisplay,
+                            availability = com.pravor.notessharing.domain.model.ResourceAvailability.ACTIVE,
+                            localThumbnailPath = localThumbFile?.absolutePath
+                        )
+                    )
                 }
                 downloadedDocs = studyFiles
                 isDownloadsLoaded = true
@@ -123,6 +123,7 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
+        _isUploadsLoading.value = true
         viewModelScope.launch {
             try {
                 val collections = listOf("notes", "pyqs", "assignments", "cheatsheets", "videos")
@@ -148,22 +149,23 @@ class MyFilesViewModel(application: Application) : AndroidViewModel(application)
                     documentToStudyFile(data)
                 }
                 isUploadedLoaded = true
-                updateUiState()
             } catch (e: Exception) {
                 realUploaded = emptyList()
                 isUploadedLoaded = true
+            } finally {
+                _isUploadsLoading.value = false
                 updateUiState()
             }
         }
     }
 
     private fun updateUiState() {
-        if (!isDownloadsLoaded || !isUploadedLoaded) {
+        if (!isDownloadsLoaded) {
             _uiState.update { MyFilesUiState.Loading }
             return
         }
         _uiState.update {
-            if (downloadedDocs.isEmpty() && realUploaded.isEmpty()) {
+            if (downloadedDocs.isEmpty() && realUploaded.isEmpty() && isUploadedLoaded) {
                 MyFilesUiState.Empty
             } else {
                 MyFilesUiState.Success(
