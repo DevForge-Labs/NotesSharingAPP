@@ -226,6 +226,7 @@ fun StudyHubShelfCard(
     file: StudyFile,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showCommunityMetrics: Boolean = true,
     onBookmarkClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null
 ) {
@@ -263,15 +264,14 @@ fun StudyHubShelfCard(
                 var hasImageLoaded by remember { mutableStateOf(false) }
                 var imageLoadError by remember { mutableStateOf(false) }
 
-                val imageModel = remember(file.thumbnailUrl, file.localThumbnailPath, file.availability) {
-                    if (file.availability == ResourceAvailability.ARCHIVED_DOWNLOAD) {
-                        file.localThumbnailPath?.let { File(it) }
+                val imageModel = remember(file.thumbnailUrl, file.localThumbnailPath, file.availability, showCommunityMetrics) {
+                    val localFile = file.localThumbnailPath?.let { File(it) }?.takeIf { it.exists() && it.length() > 0 }
+                    if (localFile != null) {
+                        localFile
+                    } else if (file.availability != ResourceAvailability.ARCHIVED_DOWNLOAD && !file.thumbnailUrl.isNullOrBlank() && showCommunityMetrics) {
+                        file.thumbnailUrl
                     } else {
-                        if (!file.localThumbnailPath.isNullOrBlank()) {
-                            File(file.localThumbnailPath)
-                        } else {
-                            file.thumbnailUrl
-                        }
+                        null
                     }
                 }
 
@@ -286,8 +286,7 @@ fun StudyHubShelfCard(
                     )
                 }
 
-                val showFallback =
-                    (file.thumbnailUrl.isNullOrBlank() || imageLoadError) && !hasImageLoaded
+                val showFallback = imageModel == null || (imageLoadError && !hasImageLoaded)
                 if (showFallback) {
                     DocumentPlaceholder(
                         documentType = docTypeStr,
@@ -398,78 +397,82 @@ fun StudyHubShelfCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(6.dp))
+                if (showCommunityMetrics || onDeleteClick != null || onBookmarkClick != null) {
+                    Spacer(Modifier.height(6.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Download,
-                                contentDescription = null,
-                                tint = Color(0xFF64B5F6),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = file.downloadsCount.toString(),
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                color = Color(0xFF64B5F6).copy(alpha = 0.9f),
-                                fontWeight = FontWeight.Medium
-                            )
+                        if (showCommunityMetrics) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = null,
+                                        tint = Color(0xFF64B5F6),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = file.downloadsCount.toString(),
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                        color = Color(0xFF64B5F6).copy(alpha = 0.9f),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ThumbUp,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFB74D),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = file.upvotes.toString(),
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                        color = Color(0xFFFFB74D).copy(alpha = 0.9f),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ThumbUp,
-                                contentDescription = null,
-                                tint = Color(0xFFFFB74D),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = file.upvotes.toString(),
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                color = Color(0xFFFFB74D).copy(alpha = 0.9f),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    if (onDeleteClick != null) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        IconButton(
-                            onClick = onDeleteClick,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Download",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    } else if (onBookmarkClick != null) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        IconButton(
-                            onClick = onBookmarkClick,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Bookmark,
-                                contentDescription = "Bookmark",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        if (onDeleteClick != null) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            IconButton(
+                                onClick = onDeleteClick,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Download",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        } else if (onBookmarkClick != null) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            IconButton(
+                                onClick = onBookmarkClick,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Bookmark,
+                                    contentDescription = "Bookmark",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

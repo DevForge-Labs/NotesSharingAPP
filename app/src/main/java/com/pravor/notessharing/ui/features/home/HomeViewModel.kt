@@ -97,6 +97,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _uploadsCount = MutableStateFlow(0)
     val uploadsCount: StateFlow<Int> = _uploadsCount.asStateFlow()
 
+    private val downloadManager = com.pravor.notessharing.data.local.preferences.DownloadDataStoreManager(application)
+    private val _downloadsCount = MutableStateFlow(0)
+    val downloadsCount: StateFlow<Int> = _downloadsCount.asStateFlow()
+
     private val _isGreetingVisible = MutableStateFlow(true)
     val isGreetingVisible: StateFlow<Boolean> = _isGreetingVisible.asStateFlow()
 
@@ -198,6 +202,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         observeUserProfileState()
         refreshRecentlyOpened()
         refreshInteractiveHub()
+        refreshDownloads()
+
+        viewModelScope.launch {
+            downloadManager.validDownloadsCountFlow.collect { count ->
+                _downloadsCount.value = count
+            }
+        }
 
         viewModelScope.launch {
             com.pravor.notessharing.data.repository.BookmarkRepository.bookmarksFlow.collect { bookmarks ->
@@ -504,6 +515,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    fun refreshDownloads() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                downloadManager.cleanStaleDownloads()
+                val count = downloadManager.getValidDownloadsCount()
+                _downloadsCount.value = count
+            } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Failed to refresh downloads: ${e.message}", e)
             }
         }
     }

@@ -84,6 +84,7 @@ fun HomeSuccessContent(
     uploadsCount: Int,
     bookmarksCount: Int,
     activeDownloadsCount: Int,
+    downloadsCount: Int = 0,
     unreadNotificationsCount: Int = 0,
     isGreetingVisible: Boolean = true,
     shouldPlayGreetingWave: Boolean = false,
@@ -364,10 +365,7 @@ fun HomeSuccessContent(
             }
 
             item(key = "study-hub-downloads", contentType = "study-hub-card") {
-                val downloadedCount = when (myFilesUiState) {
-                    is MyFilesUiState.Success -> myFilesUiState.content.savedFiles.size
-                    else -> 0
-                }
+                val downloadedCount = downloadsCount
                 val downloadsText = if (downloadedCount == 1) "1 Document" else "$downloadedCount Documents"
                 
                 val activeDownloadsText = if (activeDownloadsCount > 0) {

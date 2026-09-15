@@ -343,6 +343,7 @@ fun MyFilesScreen(
                                         Box(modifier = Modifier.padding(horizontal = 18.dp)) {
                                             StudyHubShelfCard(
                                                 file = file,
+                                                showCommunityMetrics = false,
                                                 onClick = {
                                                     if (file.id.contains("video", ignoreCase = true)) {
                                                         onVideoClick(file.id)

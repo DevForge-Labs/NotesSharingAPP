@@ -48,8 +48,7 @@ class WidgetCountRepository(private val context: Context) {
     suspend fun getDownloadsCount(): Int {
         return try {
             val downloadManager = DownloadDataStoreManager(context)
-            val docs = downloadManager.getDownloadedDocuments()
-            val count = docs.size
+            val count = downloadManager.getValidDownloadsCount()
             android.util.Log.d("WidgetCountRepository", "getDownloadsCount() - returned $count using DownloadDataStoreManager")
             count
         } catch (e: Exception) {
