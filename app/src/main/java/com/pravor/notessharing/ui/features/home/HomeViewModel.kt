@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -109,6 +110,225 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onGreetingWaveCompleted() {
         _shouldPlayGreetingWave.value = false
+    }
+
+    private val kayaRepository = com.pravor.notessharing.data.repository.KayaTimetableRepository.getInstance(application)
+    private var timetableObservationJob: kotlinx.coroutines.Job? = null
+
+    private val _isConnectingKaya = MutableStateFlow(false)
+    val isConnectingKaya: StateFlow<Boolean> = _isConnectingKaya.asStateFlow()
+
+    private val _kayaConnectError = MutableStateFlow<String?>(null)
+    val kayaConnectError: StateFlow<String?> = _kayaConnectError.asStateFlow()
+
+    private val _selectedTimetableDay = MutableStateFlow(getInitialWeekday())
+    val selectedTimetableDay: StateFlow<String> = _selectedTimetableDay.asStateFlow()
+
+    fun getInitialWeekday(): String {
+        return try {
+            val dayOfWeek = java.time.LocalDate.now().dayOfWeek
+            when (dayOfWeek) {
+                java.time.DayOfWeek.MONDAY -> "Monday"
+                java.time.DayOfWeek.TUESDAY -> "Tuesday"
+                java.time.DayOfWeek.WEDNESDAY -> "Wednesday"
+                java.time.DayOfWeek.THURSDAY -> "Thursday"
+                java.time.DayOfWeek.FRIDAY -> "Friday"
+                java.time.DayOfWeek.SATURDAY -> "Saturday"
+                java.time.DayOfWeek.SUNDAY -> "Sunday"
+            }
+        } catch (e: Throwable) {
+            com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.getCurrentDayName()
+        }
+    }
+
+    fun resetTimetableToToday() {
+        _selectedTimetableDay.value = getInitialWeekday()
+    }
+
+    private val _timetableUiState = MutableStateFlow<com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState>(
+        com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.NotConnected
+    )
+    val timetableUiState: StateFlow<com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState> = _timetableUiState.asStateFlow()
+
+    private val minuteTickerFlow = kotlinx.coroutines.flow.flow {
+        emit(System.currentTimeMillis())
+        while (true) {
+            val now = System.currentTimeMillis()
+            val delayMs = 60_000L - (now % 60_000L) + 50L
+            kotlinx.coroutines.delay(delayMs)
+            emit(System.currentTimeMillis())
+        }
+    }
+
+    private fun loadCachedTimetableFirst() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uid = auth.currentUser?.uid ?: kayaRepository.getLastConnectedUserId() ?: "anonymous"
+            val cached = kayaRepository.getCachedTimetableDirect(uid)
+            if (cached.isNotEmpty()) {
+                val calendar = java.util.Calendar.getInstance()
+                val currentDay = com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.getCurrentDayName(calendar)
+                val currentMinutes = com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.getCurrentMinutes(calendar)
+
+                val processedAllEntries = cached.map { item ->
+                    val isActive = com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.isClassActive(
+                        item = item,
+                        selectedDay = currentDay,
+                        currentDay = currentDay,
+                        currentMinutes = currentMinutes
+                    )
+                    item.copy(isCurrentClass = isActive)
+                }
+
+                val selectedDay = _selectedTimetableDay.value
+                val dayEntries = processedAllEntries.filter { it.day.equals(selectedDay, ignoreCase = true) }
+
+                val baseDays = mutableListOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+                if (currentDay.equals("Sunday", ignoreCase = true) || cached.any { it.day.equals("Sunday", ignoreCase = true) }) {
+                    baseDays.add("Sunday")
+                }
+
+                val isExpired = kayaRepository.isSessionExpired(uid)
+                _timetableUiState.value = com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Success(
+                    entries = dayEntries,
+                    allEntries = processedAllEntries,
+                    selectedDay = selectedDay,
+                    availableDays = baseDays,
+                    isSyncing = false,
+                    isSessionExpired = isExpired
+                )
+            }
+        }
+    }
+
+    fun observeTimetableData() {
+        timetableObservationJob?.cancel()
+        val uid = auth.currentUser?.uid ?: kayaRepository.getLastConnectedUserId() ?: "anonymous"
+        timetableObservationJob = viewModelScope.launch {
+            combine(
+                kayaRepository.observeTimetable(uid),
+                _selectedTimetableDay,
+                _isConnectingKaya,
+                minuteTickerFlow
+            ) { allEntries, selectedDay, isConnecting, _ ->
+                val isConnected = kayaRepository.isConnected(uid)
+                val isExpired = kayaRepository.isSessionExpired(uid)
+
+                if (allEntries.isEmpty()) {
+                    if (isConnecting) {
+                        com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Connecting
+                    } else if (_kayaConnectError.value != null && !isConnected) {
+                        com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Error(
+                            _kayaConnectError.value ?: "Unable to connect to KAYA."
+                        )
+                    } else if (_timetableUiState.value is com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Success && isConnected) {
+                        // Retain existing success state; do not wipe cache during transient query resets
+                        _timetableUiState.value
+                    } else {
+                        com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.NotConnected
+                    }
+                } else {
+                    val calendar = java.util.Calendar.getInstance()
+                    val currentDay = com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.getCurrentDayName(calendar)
+                    val currentMinutes = com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.getCurrentMinutes(calendar)
+
+                    val processedAllEntries = allEntries.map { item ->
+                        val isActive = com.pravor.notessharing.ui.features.home.timetable.TimetableTimeUtils.isClassActive(
+                            item = item,
+                            selectedDay = currentDay,
+                            currentDay = currentDay,
+                            currentMinutes = currentMinutes
+                        )
+                        item.copy(isCurrentClass = isActive)
+                    }
+
+                    val dayEntries = processedAllEntries.filter { it.day.equals(selectedDay, ignoreCase = true) }
+
+                    val baseDays = mutableListOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+                    if (currentDay.equals("Sunday", ignoreCase = true) || allEntries.any { it.day.equals("Sunday", ignoreCase = true) }) {
+                        baseDays.add("Sunday")
+                    }
+
+                    com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Success(
+                        entries = dayEntries,
+                        allEntries = processedAllEntries,
+                        selectedDay = selectedDay,
+                        availableDays = baseDays,
+                        isSyncing = isConnecting,
+                        isSessionExpired = isExpired
+                    )
+                }
+            }.collect { state ->
+                _timetableUiState.value = state
+            }
+        }
+    }
+
+    fun connectKaya(username: String, password: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isConnectingKaya.value = true
+            _kayaConnectError.value = null
+
+            val result = kayaRepository.syncTimetable(username, password)
+            _isConnectingKaya.value = false
+
+            if (result.isSuccess) {
+                _kayaConnectError.value = null
+                observeTimetableData()
+                onSuccess()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to connect to KAYA. Please try again."
+                _kayaConnectError.value = message
+                val uid = auth.currentUser?.uid ?: "anonymous"
+                val cached = kayaRepository.observeTimetable(uid).firstOrNull() ?: emptyList()
+                if (cached.isEmpty()) {
+                    _timetableUiState.value = com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Error(message)
+                }
+            }
+        }
+    }
+
+    fun syncTimetableSilently() {
+        val uid = auth.currentUser?.uid ?: kayaRepository.getLastConnectedUserId() ?: return
+        if (kayaRepository.isConnected(uid)) {
+            viewModelScope.launch {
+                try {
+                    kayaRepository.syncTimetable()
+                } catch (e: Exception) {
+                    android.util.Log.w("HomeViewModel", "Background KAYA sync failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun onTimetableDaySelected(day: String) {
+        _selectedTimetableDay.value = day
+    }
+
+    fun onRetryKayaClick() {
+        _kayaConnectError.value = null
+        _timetableUiState.value = com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.NotConnected
+    }
+
+    fun clearKayaError() {
+        _kayaConnectError.value = null
+    }
+
+    fun getStoredKayaUsername(): String? {
+        val uid = auth.currentUser?.uid ?: return null
+        return kayaRepository.getStoredUsername(uid)
+    }
+
+    fun disconnectKaya(onSuccess: () -> Unit = {}) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            kayaRepository.disconnectKaya(uid)
+            _timetableUiState.value = com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.NotConnected
+            onSuccess()
+        }
+    }
+
+    fun setTimetableUiState(state: com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState) {
+        _timetableUiState.value = state
     }
 
     private val greetingDurationMs = 10_000L
@@ -188,10 +408,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         if (uid != null) {
             startObservingProfile(uid)
             notificationRepository.startObserving(uid)
+            observeTimetableData()
+            syncTimetableSilently()
         } else {
             profileJob?.cancel()
             _uploadsCount.value = 0
             notificationRepository.stopObserving()
+            observeTimetableData()
         }
     }
 
@@ -199,10 +422,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         android.util.Log.d("PERF", "[PERF] Home startup START thread=${Thread.currentThread().name}")
         startGreetingTimerIfNeeded()
         loadCachedRoomFeedFirst()
+        loadCachedTimetableFirst()
         observeUserProfileState()
         refreshRecentlyOpened()
         refreshInteractiveHub()
         refreshDownloads()
+        observeTimetableData()
+        syncTimetableSilently()
 
         viewModelScope.launch {
             downloadManager.validDownloadsCountFlow.collect { count ->

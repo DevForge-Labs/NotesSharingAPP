@@ -56,6 +56,9 @@ android {
         disable.add("UnsafeOptInUsageError")
         disable.add("UnsafeOptInUsageWarning")
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 ksp {
@@ -133,4 +136,7 @@ dependencies {
     // Google Play In-App Updates
     implementation(libs.play.app.update)
     implementation(libs.play.app.update.ktx)
+
+    // HTML Parser for KAYA Timetable
+    implementation(libs.jsoup)
 }
