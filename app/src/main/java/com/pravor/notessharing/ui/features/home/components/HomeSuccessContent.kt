@@ -102,6 +102,11 @@ fun HomeSuccessContent(
     activeHubSession: com.pravor.notessharing.domain.model.InteractiveHubSession? = null,
     onInteractiveHubCtaClick: (String) -> Unit = {},
     onSurveyVote: (String, String) -> Unit = { _, _ -> },
+    timetableUiState: com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState = com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.NotConnected,
+    onConnectKayaClick: () -> Unit = {},
+    onRetryKayaClick: () -> Unit = {},
+    onReconnectClick: () -> Unit = {},
+    onTimetableDaySelected: (String) -> Unit = {},
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
@@ -150,40 +155,41 @@ fun HomeSuccessContent(
                         onClick = onContinueClick
                     )
                 }
-                if (activeHubSession != null) {
-                    item(key = "interactive-hub-${activeHubSession.sessionId}", contentType = "interactive-hub") {
-                        InteractiveHubCard(
-                            session = activeHubSession,
-                            onCtaClick = onInteractiveHubCtaClick,
-                            onSurveyVote = onSurveyVote
-                        )
-                    }
-                }
-                item(key = "for-you-title", contentType = "section") {
-                    SectionHeader("For You", onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null)
-                }
-            } else {
-                if (activeHubSession != null) {
-                    item(key = "interactive-hub-${activeHubSession.sessionId}", contentType = "interactive-hub") {
-                        InteractiveHubCard(
-                            session = activeHubSession,
-                            onCtaClick = onInteractiveHubCtaClick,
-                            onSurveyVote = onSurveyVote
-                        )
-                    }
-                }
-                item(key = "for-you-title", contentType = "section") {
-                    SectionHeader(
-                        title = "For You",
-                        onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null,
-                        trailingContent = {
+            }
+
+            item(key = "home-timetable-section", contentType = "timetable") {
+                HomeTimetableSection(
+                    state = timetableUiState,
+                    onConnectKayaClick = onConnectKayaClick,
+                    onRetryClick = onRetryKayaClick,
+                    onReconnectClick = onReconnectClick,
+                    onDaySelected = onTimetableDaySelected,
+                    trailingContent = if (content.recentlyOpened == null) {
+                        {
                             HomeNotificationBell(
                                 unreadCount = unreadNotificationsCount,
                                 onBellClick = onBellClick
                             )
                         }
+                    } else null
+                )
+            }
+
+            if (activeHubSession != null) {
+                item(key = "interactive-hub-${activeHubSession.sessionId}", contentType = "interactive-hub") {
+                    InteractiveHubCard(
+                        session = activeHubSession,
+                        onCtaClick = onInteractiveHubCtaClick,
+                        onSurveyVote = onSurveyVote
                     )
                 }
+            }
+
+            item(key = "for-you-title", contentType = "section") {
+                SectionHeader(
+                    title = "For You",
+                    onSeeMoreClick = if (content.feedItems.size > visibleFeedItems.size) onSeeMoreClick else null
+                )
             }
             if (content.isLoadingFeed && visibleFeedItems.isEmpty()) {
                 (0 until 3).forEach { rowIndex ->

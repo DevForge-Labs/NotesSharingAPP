@@ -22,6 +22,8 @@ import com.pravor.notessharing.data.local.entity.ExploreItemEntity
 import com.pravor.notessharing.data.local.entity.HomeFeedItemEntity
 import com.pravor.notessharing.data.local.entity.SubjectCatalogEntity
 import com.pravor.notessharing.data.local.entity.UserProfileEntity
+import com.pravor.notessharing.data.local.entity.KayaTimetableEntity
+import com.pravor.notessharing.data.local.dao.KayaTimetableDao
 
 @Database(
     entities = [
@@ -37,9 +39,10 @@ import com.pravor.notessharing.data.local.entity.UserProfileEntity
         ClassroomHiddenCourseEntity::class,
         ClassroomSubmissionEntity::class,
         ClassroomManualCompletionEntity::class,
-        SubjectCatalogEntity::class
+        SubjectCatalogEntity::class,
+        KayaTimetableEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -48,6 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun exploreDao(): ExploreDao
     abstract fun classroomDao(): ClassroomDao
     abstract fun subjectCatalogDao(): SubjectCatalogDao
+    abstract fun kayaTimetableDao(): KayaTimetableDao
 
     companion object {
         @Volatile
@@ -69,7 +73,8 @@ abstract class AppDatabase : RoomDatabase() {
                     ClassroomDatabaseMigration8To9(),
                     ExploreDatabaseMigration9To10(),
                     SubjectDatabaseMigration10To11(),
-                    ExploreDatabaseMigration11To12()
+                    ExploreDatabaseMigration11To12(),
+                    KayaDatabaseMigration12To13()
                 )
                 .fallbackToDestructiveMigration()
                 .build()

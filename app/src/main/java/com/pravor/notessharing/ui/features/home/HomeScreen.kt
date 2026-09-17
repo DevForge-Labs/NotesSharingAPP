@@ -81,6 +81,7 @@ import com.pravor.notessharing.ui.common.loading.KnowledgeNetworkLoading
 import com.pravor.notessharing.ui.features.home.components.HomeAtmosphericBackground
 import com.pravor.notessharing.ui.features.home.components.HomeNotificationsBottomSheet
 import com.pravor.notessharing.ui.features.home.components.HomeSuccessContent
+import com.pravor.notessharing.ui.features.home.components.KayaConnectBottomSheet
 import com.pravor.notessharing.ui.features.myfiles.BookmarkUiState
 import com.pravor.notessharing.ui.features.myfiles.BookmarkViewModel
 import com.pravor.notessharing.ui.features.myfiles.MyFilesViewModel
@@ -149,11 +150,17 @@ fun HomeRoute(
                 }
             }
     }
+    LaunchedEffect(Unit) {
+        viewModel.resetTimetableToToday()
+    }
 
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val unreadNotificationsCount by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
     val isGreetingVisible by viewModel.isGreetingVisible.collectAsStateWithLifecycle()
     val shouldPlayGreetingWave by viewModel.shouldPlayGreetingWave.collectAsStateWithLifecycle()
+    val timetableUiState by viewModel.timetableUiState.collectAsStateWithLifecycle()
+    val isConnectingKaya by viewModel.isConnectingKaya.collectAsStateWithLifecycle()
+    val kayaConnectError by viewModel.kayaConnectError.collectAsStateWithLifecycle()
 
     HomeScreen(
         uiState = uiState,
@@ -190,7 +197,15 @@ fun HomeRoute(
         onInteractiveHubNavigate = onInteractiveHubNavigate,
         onSurveyVote = viewModel::onSurveyVote,
         pendingNotificationId = pendingNotificationId,
-        onClearPendingNotificationId = onClearPendingNotificationId
+        onClearPendingNotificationId = onClearPendingNotificationId,
+        timetableUiState = timetableUiState,
+        isConnectingKaya = isConnectingKaya,
+        kayaConnectError = kayaConnectError,
+        onConnectKayaSubmit = viewModel::connectKaya,
+        onClearKayaError = viewModel::clearKayaError,
+        onRetryKayaClick = viewModel::onRetryKayaClick,
+        onTimetableDaySelected = viewModel::onTimetableDaySelected,
+        getStoredKayaUsername = viewModel::getStoredKayaUsername
     )
 }
 
@@ -229,6 +244,15 @@ fun HomeScreen(
     pendingNotificationId: String? = null,
     onClearPendingNotificationId: () -> Unit = {},
     myFilesUiState: MyFilesUiState = MyFilesUiState.Loading,
+    timetableUiState: com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState = com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.NotConnected,
+    isConnectingKaya: Boolean = false,
+    kayaConnectError: String? = null,
+    onConnectKayaSubmit: (String, String, () -> Unit) -> Unit = { _, _, _ -> },
+    onClearKayaError: () -> Unit = {},
+    onConnectKayaClick: () -> Unit = {},
+    onRetryKayaClick: () -> Unit = {},
+    onTimetableDaySelected: (String) -> Unit = {},
+    getStoredKayaUsername: () -> String? = { null },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -241,6 +265,8 @@ fun HomeScreen(
     val feedListState = rememberLazyListState()
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var showKayaSheet by remember { mutableStateOf(false) }
 
     var highlightedNotificationId by remember { mutableStateOf<String?>(null) }
     var showClearAllConfirmation by remember { mutableStateOf(false) }
@@ -378,6 +404,20 @@ fun HomeScreen(
                         activeHubSession = activeHubSession,
                         onInteractiveHubCtaClick = onInteractiveHubNavigate,
                         onSurveyVote = onSurveyVote,
+                        timetableUiState = timetableUiState,
+                        onConnectKayaClick = {
+                            onClearKayaError()
+                            showKayaSheet = true
+                        },
+                        onRetryKayaClick = {
+                            onClearKayaError()
+                            showKayaSheet = true
+                        },
+                        onReconnectClick = {
+                            onClearKayaError()
+                            showKayaSheet = true
+                        },
+                        onTimetableDaySelected = onTimetableDaySelected,
                         listState = feedListState
                     )
                 }
@@ -550,6 +590,25 @@ fun HomeScreen(
                 onClearAllClick = { showClearAllConfirmation = true },
                 onDocumentClick = onDocumentClick,
                 onVideoClick = onVideoClick
+            )
+        }
+
+        if (showKayaSheet) {
+            KayaConnectBottomSheet(
+                isLoading = isConnectingKaya,
+                errorMessage = kayaConnectError,
+                initialUsername = getStoredKayaUsername() ?: "",
+                onConnect = { username, password ->
+                    onConnectKayaSubmit(username, password) {
+                        showKayaSheet = false
+                    }
+                },
+                onDismiss = {
+                    if (!isConnectingKaya) {
+                        showKayaSheet = false
+                        onClearKayaError()
+                    }
+                }
             )
         }
     }
