@@ -11,7 +11,12 @@ import com.pravor.notessharing.domain.model.*
 
 import com.pravor.notessharing.core.util.*
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.pravor.notessharing.NotesSharingApplication
+import com.pravor.notessharing.data.repository.KayaTimetableRepository
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.pravor.notessharing.domain.model.Profile
@@ -30,11 +35,35 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 import com.pravor.notessharing.ui.common.EditProfileState
 
+data class KayaProfileState(
+    val isConnected: Boolean = false,
+    val username: String? = null,
+    val isConnecting: Boolean = false,
+    val errorMessage: String? = null
+)
+
 class ProfileViewModel(
-    private val profileRepository: ProfileRepository = ProfileRepository()
-) : ViewModel() {
+    application: Application,
+    private val profileRepository: ProfileRepository,
+    private val kayaRepository: KayaTimetableRepository
+) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application = application,
+        profileRepository = ProfileRepository(application),
+        kayaRepository = KayaTimetableRepository.getInstance(application)
+    )
+
+    constructor() : this(
+        application = NotesSharingApplication.appContext as Application,
+        profileRepository = ProfileRepository(NotesSharingApplication.appContext),
+        kayaRepository = KayaTimetableRepository.getInstance(NotesSharingApplication.appContext)
+    )
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    private val _kayaState = MutableStateFlow(KayaProfileState())
+    val kayaState: StateFlow<KayaProfileState> = _kayaState.asStateFlow()
 
     private val _editState = MutableStateFlow<EditProfileState>(EditProfileState.Idle)
     val editState: StateFlow<EditProfileState> = _editState.asStateFlow()
@@ -71,6 +100,7 @@ class ProfileViewModel(
 
     init {
         loadUserProfile()
+        refreshKayaConnection()
     }
 
     fun loadUserProfile() {
@@ -230,5 +260,81 @@ class ProfileViewModel(
 
     fun clearEditState() {
         _editState.update { EditProfileState.Idle }
+    }
+
+    fun refreshKayaConnection() {
+        val currentFirebaseUser = FirebaseAuth.getInstance().currentUser
+        val uid = currentFirebaseUser?.uid ?: kayaRepository.getLastConnectedUserId() ?: "anonymous"
+        val connected = kayaRepository.isConnected(uid)
+        val user = if (connected) kayaRepository.getStoredUsername(uid) else null
+        _kayaState.update {
+            it.copy(
+                isConnected = connected,
+                username = user
+            )
+        }
+    }
+
+    fun disconnectKaya() {
+        val currentFirebaseUser = FirebaseAuth.getInstance().currentUser
+        val uid = currentFirebaseUser?.uid ?: kayaRepository.getLastConnectedUserId() ?: "anonymous"
+        viewModelScope.launch {
+            kayaRepository.disconnectKaya(uid)
+            _kayaState.update {
+                KayaProfileState(
+                    isConnected = false,
+                    username = null,
+                    isConnecting = false,
+                    errorMessage = null
+                )
+            }
+        }
+    }
+
+    fun connectKaya(username: String, password: String, onSuccess: () -> Unit = {}) {
+        val currentFirebaseUser = FirebaseAuth.getInstance().currentUser
+        val uid = currentFirebaseUser?.uid ?: "anonymous"
+        viewModelScope.launch {
+            _kayaState.update { it.copy(isConnecting = true, errorMessage = null) }
+            val result = kayaRepository.syncTimetable(username, password)
+            if (result.isSuccess) {
+                val storedUsername = kayaRepository.getStoredUsername(uid) ?: username.trim()
+                _kayaState.update {
+                    it.copy(
+                        isConnected = true,
+                        username = storedUsername,
+                        isConnecting = false,
+                        errorMessage = null
+                    )
+                }
+                onSuccess()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to connect to KAYA. Please try again."
+                _kayaState.update {
+                    it.copy(
+                        isConnecting = false,
+                        errorMessage = message
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearKayaError() {
+        _kayaState.update { it.copy(errorMessage = null) }
+    }
+}
+
+class ProfileViewModelFactory(
+    private val application: Application,
+    private val profileRepository: ProfileRepository = ProfileRepository(application),
+    private val kayaRepository: KayaTimetableRepository = KayaTimetableRepository.getInstance(application)
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
+            return ProfileViewModel(application, profileRepository, kayaRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }

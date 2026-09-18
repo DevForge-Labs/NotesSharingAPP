@@ -16,8 +16,8 @@ android {
         applicationId = "com.pravor.notessharing"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "11.1"
+        versionCode = 15
+        versionName = "12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

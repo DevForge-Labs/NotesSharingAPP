@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.pravor.notessharing.ui.features.profile
 
 import android.annotation.SuppressLint
@@ -47,11 +48,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,6 +82,8 @@ import com.pravor.notessharing.ui.features.profile.components.ProfileSkeletonLoa
 import com.pravor.notessharing.ui.features.profile.components.SpeedDialItem
 import com.pravor.notessharing.ui.features.profile.components.StatCard
 import com.pravor.notessharing.ui.features.profile.components.UploadsBreakdownCard
+import com.pravor.notessharing.ui.features.profile.components.KayaConnectionCard
+import com.pravor.notessharing.ui.features.home.components.KayaConnectBottomSheet
 import com.pravor.notessharing.ui.navigation.LocalBottomBarPadding
 import kotlinx.coroutines.delay
 
@@ -93,15 +100,34 @@ fun ProfileRoute(
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val kayaState by viewModel.kayaState.collectAsStateWithLifecycle()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshKayaConnection()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     ProfileScreen(
         uiState = uiState,
+        kayaState = kayaState,
         appSettings = appSettings,
         onThemePreferenceChange = onThemePreferenceChange,
         onNotificationPreferencesClick = onNotificationPreferencesClick,
         onLogoutClick = onLogoutClick,
         onEditProfileClick = onEditProfileClick,
         onMyUploadsClick = onMyUploadsClick,
-        onAboutClick = onAboutClick
+        onAboutClick = onAboutClick,
+        onConnectKayaSubmit = viewModel::connectKaya,
+        onDisconnectKaya = viewModel::disconnectKaya,
+        onClearKayaError = viewModel::clearKayaError
     )
 }
 
@@ -109,6 +135,7 @@ fun ProfileRoute(
 @Composable
 fun ProfileScreen(
     uiState: ProfileUiState,
+    kayaState: KayaProfileState = KayaProfileState(),
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationPreferencesClick: () -> Unit,
@@ -116,6 +143,9 @@ fun ProfileScreen(
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit,
     onAboutClick: () -> Unit,
+    onConnectKayaSubmit: (username: String, password: String, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
+    onDisconnectKaya: () -> Unit = {},
+    onClearKayaError: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val profileListState = rememberLazyListState()
@@ -140,6 +170,7 @@ fun ProfileScreen(
                 profile = state.profile,
                 resolvedCollegeName = state.resolvedCollegeName,
                 resolvedBranchName = state.resolvedBranchName,
+                kayaState = kayaState,
                 appSettings = appSettings,
                 onThemePreferenceChange = onThemePreferenceChange,
                 onNotificationPreferencesClick = onNotificationPreferencesClick,
@@ -147,6 +178,9 @@ fun ProfileScreen(
                 onEditProfileClick = onEditProfileClick,
                 onMyUploadsClick = onMyUploadsClick,
                 onAboutClick = onAboutClick,
+                onConnectKayaSubmit = onConnectKayaSubmit,
+                onDisconnectKaya = onDisconnectKaya,
+                onClearKayaError = onClearKayaError,
                 listState = profileListState
             )
         }
@@ -158,6 +192,7 @@ private fun ProfileContent(
     profile: Profile,
     resolvedCollegeName: String,
     resolvedBranchName: String,
+    kayaState: KayaProfileState,
     appSettings: AppSettingsUiState,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onNotificationPreferencesClick: () -> Unit,
@@ -165,11 +200,16 @@ private fun ProfileContent(
     onEditProfileClick: () -> Unit,
     onMyUploadsClick: () -> Unit,
     onAboutClick: () -> Unit,
+    onConnectKayaSubmit: (username: String, password: String, onSuccess: () -> Unit) -> Unit,
+    onDisconnectKaya: () -> Unit,
+    onClearKayaError: () -> Unit,
     listState: LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
     var isExpanded by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDisconnectKayaDialog by remember { mutableStateOf(false) }
+    var showKayaSheet by remember { mutableStateOf(false) }
 
     var aboutExpanded by remember { mutableStateOf(false) }
     var notificationsExpanded by remember { mutableStateOf(false) }
@@ -306,6 +346,14 @@ private fun ProfileContent(
             }
             item(key = "uploads-breakdown", contentType = "uploads-breakdown") {
                 UploadsBreakdownCard(profile)
+            }
+            item(key = "kaya-card", contentType = "kaya") {
+                KayaConnectionCard(
+                    isConnected = kayaState.isConnected,
+                    username = kayaState.username,
+                    onConnectClick = { showKayaSheet = true },
+                    onDisconnectClick = { showDisconnectKayaDialog = true }
+                )
             }
             item(key = "logout-card", contentType = "logout") {
                 PressScaleCard(
@@ -541,6 +589,58 @@ private fun ProfileContent(
             },
             shape = RoundedCornerShape(24.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    }
+
+    if (showDisconnectKayaDialog) {
+        AlertDialog(
+            onDismissRequest = { showDisconnectKayaDialog = false },
+            title = {
+                Text(
+                    text = "Disconnect KAYA?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("This will remove your saved KAYA credentials, session, and cached timetable from this device.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDisconnectKayaDialog = false
+                        onDisconnectKaya()
+                    }
+                ) {
+                    Text("Disconnect", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDisconnectKayaDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    }
+
+    if (showKayaSheet) {
+        KayaConnectBottomSheet(
+            isLoading = kayaState.isConnecting,
+            errorMessage = kayaState.errorMessage,
+            initialUsername = kayaState.username ?: "",
+            onConnect = { username, password ->
+                onConnectKayaSubmit(username, password) {
+                    showKayaSheet = false
+                }
+            },
+            onDismiss = {
+                if (!kayaState.isConnecting) {
+                    showKayaSheet = false
+                    onClearKayaError()
+                }
+            }
         )
     }
 }
