@@ -65,87 +65,41 @@ fun KayaConnectionCard(
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header Row: Icon + Title + Status Pill
+            // Header Row: Icon + Title
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            TimetableAccent.copy(alpha = 0.20f),
+                            RoundedCornerShape(14.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(
-                                TimetableAccent.copy(alpha = 0.20f),
-                                RoundedCornerShape(14.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = "KAYA",
-                            tint = TimetableAccent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            text = "KAYA",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Academic Portal Integration",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.School,
+                        contentDescription = "KAYA",
+                        tint = TimetableAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
-                // Connection Status Pill
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isConnected) {
-                        ConnectedEmerald.copy(alpha = 0.15f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                    },
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (isConnected) {
-                            ConnectedEmerald.copy(alpha = 0.35f)
-                        } else {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                        }
+                Column {
+                    Text(
+                        text = "KAYA",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
                     )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(
-                                    color = if (isConnected) ConnectedEmerald else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    shape = CircleShape
-                                )
-                        )
-                        Text(
-                            text = if (isConnected) "Connected" else "Not connected",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp
-                            ),
-                            color = if (isConnected) ConnectedEmerald else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Academic Portal Integration",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -156,7 +110,9 @@ fun KayaConnectionCard(
 
             if (isConnected) {
                 // Connected Content
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    KayaStatusBadge(isConnected = true)
+
                     if (!username.isNullOrBlank()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -211,11 +167,15 @@ fun KayaConnectionCard(
                 }
             } else {
                 // Not Connected Content
-                Text(
-                    text = "Connect your KAYA account to view your personalized academic timetable on the Home screen.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    KayaStatusBadge(isConnected = false)
+
+                    Text(
+                        text = "Connect your KAYA account to view your personalized academic timetable on the Home screen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 Button(
                     onClick = onConnectClick,
@@ -244,3 +204,51 @@ fun KayaConnectionCard(
         }
     }
 }
+
+@Composable
+private fun KayaStatusBadge(
+    isConnected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = if (isConnected) {
+            ConnectedEmerald.copy(alpha = 0.15f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+        },
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isConnected) {
+                ConnectedEmerald.copy(alpha = 0.35f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(
+                        color = if (isConnected) ConnectedEmerald else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        shape = CircleShape
+                    )
+            )
+            Text(
+                text = if (isConnected) "Connected" else "Not connected",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp
+                ),
+                color = if (isConnected) ConnectedEmerald else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
