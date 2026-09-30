@@ -650,4 +650,148 @@ class UploadRepository(private val context: Context) {
             UploadType.Youtube -> "videos"
         }
     }
+
+    suspend fun updateDocumentAttachments(
+        collectionName: String,
+        documentId: String,
+        subject: String,
+        type: UploadType,
+        existingKept: List<com.pravor.notessharing.domain.model.EditableAttachment.ExistingRemote>,
+        newlyAdded: List<com.pravor.notessharing.domain.model.EditableAttachment.NewlyAddedLocal>,
+        removedRemote: List<com.pravor.notessharing.domain.model.EditableAttachment.ExistingRemote>,
+        onProgress: (Float) -> Unit
+    ) {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+            ?: throw IllegalStateException("User must be signed in to edit attachments.")
+
+        val totalCount = existingKept.size + newlyAdded.size
+        if (totalCount < 1) {
+            throw IllegalArgumentException("At least one attachment is required.")
+        }
+        if (type == UploadType.Pyq && totalCount != 1) {
+            throw IllegalArgumentException("PYQs support only a single PDF attachment.")
+        }
+
+        val newlyUploadedPaths = mutableListOf<String>()
+        val newDownloadUrls = mutableListOf<String>()
+        val newStoragePaths = mutableListOf<String>()
+
+        val totalNewBytes = newlyAdded.sumOf { it.sizeBytes }
+        var uploadedNewBytes = 0L
+
+        val folderName = when (type) {
+            UploadType.Notes -> "notes"
+            UploadType.CheatSheet -> "cheatsheets"
+            UploadType.Assignment -> "assignments"
+            UploadType.Pyq -> "pyqs"
+            else -> collectionName
+        }
+        val sanitizedSubject = sanitizeForStorage(subject)
+        val typeSlug = when (type) {
+            UploadType.Notes -> "notes"
+            UploadType.CheatSheet -> "cheatsheet"
+            UploadType.Assignment -> "assignment"
+            UploadType.Pyq -> "pyq"
+            else -> "document"
+        }
+        val folderSlug = "$sanitizedSubject-$typeSlug-$documentId"
+
+        try {
+            for ((idx, file) in newlyAdded.withIndex()) {
+                val ext = getFileExtension(file.displayName, file.uri)
+                val isPptx = ext in listOf("ppt", "pptx")
+                val safeBase = sanitizeFileName(file.displayName.substringBeforeLast('.'))
+                val uniqueSuffix = UUID.randomUUID().toString().take(8)
+                val fileName = if (ext == "pdf" || isPptx) {
+                    "${safeBase}_$uniqueSuffix.$ext"
+                } else {
+                    "page_new_${System.currentTimeMillis()}_${idx + 1}.$ext"
+                }
+
+                val storagePath = if (isPptx) {
+                    "$folderName/$folderSlug/original/$fileName"
+                } else {
+                    "$folderName/$folderSlug/$fileName"
+                }
+
+                val (uploadedPath, downloadUrl) = storageService.uploadFile(file.uri, storagePath) { fileProgress ->
+                    val fileUploadedBytes = (fileProgress * file.sizeBytes).toLong()
+                    val overallProgress = if (totalNewBytes > 0) {
+                        (uploadedNewBytes + fileUploadedBytes).toFloat() / totalNewBytes.toFloat()
+                    } else {
+                        1.0f
+                    }
+                    onProgress(overallProgress.coerceIn(0f, 1f))
+                }
+
+                uploadedNewBytes += file.sizeBytes
+                newlyUploadedPaths.add(uploadedPath)
+                newDownloadUrls.add(downloadUrl)
+                newStoragePaths.add(uploadedPath)
+            }
+        } catch (e: Exception) {
+            storageService.deleteFiles(newlyUploadedPaths)
+            throw e
+        }
+
+        val finalDownloadUrls = existingKept.map { it.downloadUrl } + newDownloadUrls
+        val finalStoragePaths = existingKept.map { it.storagePath } + newStoragePaths
+        val totalBytes = existingKept.sumOf { it.sizeBytes } + newlyAdded.sumOf { it.sizeBytes }
+
+        val firstDisplayName = if (existingKept.isNotEmpty()) existingKept.first().displayName else newlyAdded.first().displayName
+        val firstUri = if (existingKept.isNotEmpty()) existingKept.first().downloadUrl else newlyAdded.first().uri
+        val firstExt = getFileExtension(firstDisplayName, firstUri)
+        val isPdf = firstExt == "pdf"
+        val isPptx = firstExt in listOf("ppt", "pptx")
+        val fileType = if (isPdf) "pdf" else if (isPptx) "document" else "image"
+        val mimeType = when (firstExt) {
+            "pdf" -> "application/pdf"
+            "ppt" -> "application/vnd.ms-powerpoint"
+            "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "webp" -> "image/webp"
+            else -> "application/octet-stream"
+        }
+
+        val existingThumbnails = existingKept.map { it.thumbnailUrl ?: "" }
+        val newThumbnails = newDownloadUrls.map { if (fileType == "image") it else "" }
+        val finalThumbnails = existingThumbnails + newThumbnails
+        val primaryThumb = finalThumbnails.firstOrNull { it.isNotBlank() } ?: (if (fileType == "image") finalDownloadUrls.first() else "")
+        val thumbnailsGenerated = finalThumbnails.all { it.isNotBlank() }
+
+        val updates = mutableMapOf<String, Any>(
+            "fileUrls" to finalDownloadUrls,
+            "storagePaths" to finalStoragePaths,
+            "fileUrl" to finalDownloadUrls.first(),
+            "downloadUrl" to finalDownloadUrls.first(),
+            "storagePath" to finalStoragePaths.first(),
+            "fileSize" to totalBytes,
+            "attachmentCount" to finalDownloadUrls.size,
+            "fileType" to fileType,
+            "fileExtension" to firstExt,
+            "mimeType" to mimeType,
+            "thumbnailUrl" to primaryThumb,
+            "thumbnailUrls" to finalThumbnails,
+            "thumbnailGenerated" to thumbnailsGenerated,
+            "updatedAt" to System.currentTimeMillis()
+        )
+
+        try {
+            firestoreService.updateDocument(collectionName, documentId, updates)
+        } catch (e: Exception) {
+            storageService.deleteFiles(newlyUploadedPaths)
+            throw e
+        }
+
+        // Post-commit cleanup: safely delete removed remote files
+        for (removed in removedRemote) {
+            if (removed.storagePath.isNotBlank()) {
+                storageService.deleteFile(removed.storagePath)
+            } else if (removed.downloadUrl.isNotBlank()) {
+                storageService.deleteFile(removed.downloadUrl)
+            }
+        }
+        onProgress(1.0f)
+    }
 }

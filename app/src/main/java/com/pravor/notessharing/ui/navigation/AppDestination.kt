@@ -10,6 +10,7 @@ import com.pravor.notessharing.data.local.preferences.*
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -41,6 +42,9 @@ sealed class AppDestination(
     data object UploadSuccess : AppDestination("upload/success", "Upload Success", Icons.Filled.UploadFile)
     data object MyFiles : AppDestination("my_files", "My Files", Icons.Filled.UploadFile)
     data object MyUploads : AppDestination("my_uploads", "My Uploads", Icons.Filled.UploadFile)
+    data object UploadEdit : AppDestination("upload_edit/{documentId}", "Edit Attachments", Icons.Filled.UploadFile) {
+        fun createRoute(documentId: String) = "upload_edit/$documentId"
+    }
     data object MyBookmarks : AppDestination("my_bookmarks", "My Bookmarks", Icons.Filled.Bookmark)
     data object Profile : AppDestination("profile", "Profile", Icons.Filled.Person)
     data object EditProfile : AppDestination("profile/edit", "Edit Profile", Icons.Filled.Person)
@@ -78,6 +82,12 @@ sealed class AppDestination(
 
     data object SubjectResources : AppDestination("explore/subject_resources/{subjectName}", "Subject Resources", Icons.Filled.Explore) {
         fun createRoute(subjectName: String) = "explore/subject_resources/${android.net.Uri.encode(subjectName)}"
+    }
+
+    data object FullTimetable : AppDestination("timetable?day={day}", "My Timetable", Icons.Filled.CalendarMonth) {
+        fun createRoute(day: String? = null): String {
+            return if (!day.isNullOrBlank()) "timetable?day=${android.net.Uri.encode(day)}" else "timetable"
+        }
     }
 }
 

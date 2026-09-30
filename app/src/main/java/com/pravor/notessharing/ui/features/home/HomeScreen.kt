@@ -103,6 +103,7 @@ fun HomeRoute(
     onInteractiveHubNavigate: (String) -> Unit = {},
     pendingNotificationId: String? = null,
     onClearPendingNotificationId: () -> Unit = {},
+    onTimetableClick: (String?) -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -205,6 +206,7 @@ fun HomeRoute(
         onClearKayaError = viewModel::clearKayaError,
         onRetryKayaClick = viewModel::onRetryKayaClick,
         onTimetableDaySelected = viewModel::onTimetableDaySelected,
+        onTimetableClick = onTimetableClick,
         getStoredKayaUsername = viewModel::getStoredKayaUsername
     )
 }
@@ -252,6 +254,7 @@ fun HomeScreen(
     onConnectKayaClick: () -> Unit = {},
     onRetryKayaClick: () -> Unit = {},
     onTimetableDaySelected: (String) -> Unit = {},
+    onTimetableClick: (String?) -> Unit = {},
     getStoredKayaUsername: () -> String? = { null },
     modifier: Modifier = Modifier
 ) {
@@ -418,6 +421,10 @@ fun HomeScreen(
                             showKayaSheet = true
                         },
                         onTimetableDaySelected = onTimetableDaySelected,
+                        onTimetableClick = {
+                            val selectedDay = (timetableUiState as? com.pravor.notessharing.ui.features.home.timetable.TimetableSectionUiState.Success)?.selectedDay
+                            onTimetableClick(selectedDay)
+                        },
                         listState = feedListState
                     )
                 }

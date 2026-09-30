@@ -224,6 +224,9 @@ fun NavGraph(
                 pendingNotificationId = notificationId,
                 onClearPendingNotificationId = {
                     intent?.removeExtra("notification_id")
+                },
+                onTimetableClick = { selectedDay ->
+                    navController.navigate(AppDestination.FullTimetable.createRoute(selectedDay))
                 }
             )
         }
@@ -446,7 +449,7 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onDocumentClick = { docId ->
                     navController.navigate(
-                        AppDestination.DocumentDetail.createRoute(docId)
+                        AppDestination.UploadEdit.createRoute(docId)
                     )
                 },
                 onVideoClick = { videoId ->
@@ -454,6 +457,37 @@ fun NavGraph(
                         AppDestination.VideoDetail.createRoute(videoId)
                     )
                 }
+            )
+        }
+        composable(
+            route = AppDestination.UploadEdit.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("documentId") {
+                    type = androidx.navigation.NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
+            com.pravor.notessharing.ui.features.upload.edit.UploadEditRoute(
+                documentId = documentId,
+                onBackClick = { navController.popBackStack() },
+                onSaveSuccess = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = AppDestination.FullTimetable.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("day") {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val initialDay = backStackEntry.arguments?.getString("day")
+            com.pravor.notessharing.ui.features.home.timetable.FullTimetableRoute(
+                initialDay = initialDay,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable(AppDestination.MyBookmarks.route) {

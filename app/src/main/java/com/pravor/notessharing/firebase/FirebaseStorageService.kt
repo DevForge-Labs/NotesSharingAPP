@@ -32,4 +32,24 @@ class FirebaseStorageService(private val context: Context) {
         val downloadUrl = ref.downloadUrl.await().toString()
         return Pair(storagePath, downloadUrl)
     }
+
+    suspend fun deleteFile(storagePathOrUrl: String) {
+        if (storagePathOrUrl.isBlank()) return
+        try {
+            val ref = if (storagePathOrUrl.startsWith("http://") || storagePathOrUrl.startsWith("https://")) {
+                storage.getReferenceFromUrl(storagePathOrUrl)
+            } else {
+                storage.reference.child(storagePathOrUrl)
+            }
+            ref.delete().await()
+        } catch (e: Exception) {
+            android.util.Log.w("FirebaseStorageService", "Failed to delete storage file at $storagePathOrUrl: ${e.message}")
+        }
+    }
+
+    suspend fun deleteFiles(storagePathsOrUrls: List<String>) {
+        for (path in storagePathsOrUrls) {
+            deleteFile(path)
+        }
+    }
 }

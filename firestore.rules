@@ -24,6 +24,22 @@ service cloud.firestore {
         );
     }
 
+    function canUpdateResource() {
+      return (isOwner() || isAdmin()) &&
+        (
+          isAdmin() ||
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'uploaderId', 'uploaderUid', 'branch', 'semester', 'subject', 'year', 'examYear', 'examType', 'createdAt'
+            ]) &&
+            (
+              !('fileUrls' in request.resource.data) ||
+              request.resource.data.fileUrls.size() > 0
+            )
+          )
+        );
+    }
+
     // USERS
     match /users/{userId} {
       allow read: if true;
@@ -95,25 +111,29 @@ service cloud.firestore {
     match /notes/{docId} {
       allow read: if true;
       allow create: if signedIn();
-      allow update, delete: if isOwner() || isAdmin();
+      allow update: if canUpdateResource();
+      allow delete: if isOwner() || isAdmin();
     }
 
     match /assignments/{docId} {
       allow read: if true;
       allow create: if signedIn();
-      allow update, delete: if isOwner() || isAdmin();
+      allow update: if canUpdateResource();
+      allow delete: if isOwner() || isAdmin();
     }
 
     match /cheatsheets/{docId} {
       allow read: if true;
       allow create: if signedIn();
-      allow update, delete: if isOwner() || isAdmin();
+      allow update: if canUpdateResource();
+      allow delete: if isOwner() || isAdmin();
     }
 
     match /pyqs/{docId} {
       allow read: if true;
       allow create: if signedIn();
-      allow update, delete: if isOwner() || isAdmin();
+      allow update: if canUpdateResource();
+      allow delete: if isOwner() || isAdmin();
     }
 
     match /videos/{docId} {

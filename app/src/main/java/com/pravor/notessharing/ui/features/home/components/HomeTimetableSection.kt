@@ -115,6 +115,7 @@ fun HomeTimetableSection(
     onRetryClick: () -> Unit = {},
     onReconnectClick: () -> Unit = {},
     onDaySelected: (String) -> Unit = {},
+    onTimetableClick: (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -127,6 +128,7 @@ fun HomeTimetableSection(
             icon = Icons.Default.CalendarMonth,
             iconTint = TimetableAccent,
             accentColor = TimetableAccent,
+            onSeeMoreClick = if (state is TimetableSectionUiState.Success) onTimetableClick else null,
             trailingContent = trailingContent
         )
 
@@ -157,7 +159,8 @@ fun HomeTimetableSection(
                     TimetableSuccessCard(
                         state = currentState,
                         onDaySelected = onDaySelected,
-                        onReconnectClick = onReconnectClick
+                        onReconnectClick = onReconnectClick,
+                        onTimetableClick = onTimetableClick
                     )
                 }
             }
@@ -394,6 +397,7 @@ private fun TimetableSuccessCard(
     state: TimetableSectionUiState.Success,
     onDaySelected: (String) -> Unit,
     onReconnectClick: () -> Unit,
+    onTimetableClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -457,7 +461,11 @@ private fun TimetableSuccessCard(
     )
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = if (onTimetableClick != null) {
+            modifier.fillMaxWidth().clickable(onClick = onTimetableClick)
+        } else {
+            modifier.fillMaxWidth()
+        },
         shape = cardShape,
         border = BorderStroke(1.dp, TimetableAccent.copy(alpha = 0.25f)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
@@ -627,6 +635,7 @@ private fun TimetableSuccessCard(
                         is24Hour = is24Hour,
                         listState = verticalListState,
                         onRowHeightMeasured = onRowHeightMeasured,
+                        onTimetableClick = onTimetableClick,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -647,11 +656,13 @@ private fun TimetableDayPage(
     is24Hour: Boolean,
     listState: LazyListState,
     onRowHeightMeasured: ((Int, Int) -> Unit)? = null,
+    onTimetableClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (entries.isEmpty()) {
         TimetableNoClassesEmptyState(
             day = day,
+            onTimetableClick = onTimetableClick,
             modifier = modifier
         )
     } else {
@@ -676,7 +687,8 @@ private fun TimetableDayPage(
                         is24Hour = is24Hour,
                         onHeightMeasured = if (index < 3) { h ->
                             onRowHeightMeasured?.invoke(index, h)
-                        } else null
+                        } else null,
+                        onTimetableClick = onTimetableClick
                     )
                 }
             }
@@ -742,6 +754,7 @@ private fun TimetableDayPage(
 @Composable
 private fun TimetableNoClassesEmptyState(
     day: String,
+    onTimetableClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val compositionResult = rememberLottieComposition(
@@ -754,9 +767,7 @@ private fun TimetableNoClassesEmptyState(
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clipToBounds(),
+        modifier = (if (onTimetableClick != null) modifier.fillMaxSize().clipToBounds().clickable(onClick = onTimetableClick) else modifier.fillMaxSize().clipToBounds()),
         contentAlignment = Alignment.Center
     ) {
         if (composition != null) {
@@ -842,6 +853,7 @@ private fun TimetableEntryRow(
     item: TimetableRowItem,
     is24Hour: Boolean = false,
     onHeightMeasured: ((Int) -> Unit)? = null,
+    onTimetableClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val rowShape = RoundedCornerShape(10.dp)
@@ -858,8 +870,7 @@ private fun TimetableEntryRow(
     val displayTime = remember(item, is24Hour) { item.formattedTime(is24Hour) }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
+        modifier = (if (onTimetableClick != null) modifier.fillMaxWidth().clickable(onClick = onTimetableClick) else modifier.fillMaxWidth())
             .onSizeChanged { size ->
                 if (size.height > 0) {
                     onHeightMeasured?.invoke(size.height)
