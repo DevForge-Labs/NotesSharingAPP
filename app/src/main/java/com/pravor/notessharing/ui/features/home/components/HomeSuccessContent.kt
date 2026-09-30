@@ -107,6 +107,7 @@ fun HomeSuccessContent(
     onRetryKayaClick: () -> Unit = {},
     onReconnectClick: () -> Unit = {},
     onTimetableDaySelected: (String) -> Unit = {},
+    onTimetableClick: (() -> Unit)? = null,
     listState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val bottomPadding = LocalBottomBarPadding.current
@@ -164,6 +165,7 @@ fun HomeSuccessContent(
                     onRetryClick = onRetryKayaClick,
                     onReconnectClick = onReconnectClick,
                     onDaySelected = onTimetableDaySelected,
+                    onTimetableClick = onTimetableClick,
                     trailingContent = if (content.recentlyOpened == null) {
                         {
                             HomeNotificationBell(

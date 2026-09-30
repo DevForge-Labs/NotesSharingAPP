@@ -294,7 +294,8 @@ fun NotesSharingApp(
             currentRoute?.startsWith("image_viewing") != true &&
             currentRoute?.startsWith("profile/notification_preferences") != true &&
             currentRoute?.startsWith("profile/about") != true &&
-            currentRoute?.startsWith("search") != true
+            currentRoute?.startsWith("search") != true &&
+            currentRoute?.startsWith("timetable") != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

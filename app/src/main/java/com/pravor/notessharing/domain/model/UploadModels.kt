@@ -41,6 +41,39 @@ data class SelectedUploadFile(
 )
 
 @Immutable
+sealed interface EditableAttachment {
+    val id: String
+    val displayName: String
+    val sizeBytes: Long
+    val isPdf: Boolean
+    val isImage: Boolean
+
+    @Immutable
+    data class ExistingRemote(
+        override val id: String,
+        override val displayName: String,
+        override val sizeBytes: Long,
+        override val isPdf: Boolean,
+        override val isImage: Boolean,
+        val downloadUrl: String,
+        val storagePath: String,
+        val thumbnailUrl: String? = null
+    ) : EditableAttachment
+
+    @Immutable
+    data class NewlyAddedLocal(
+        override val id: String,
+        override val displayName: String,
+        override val sizeBytes: Long,
+        override val isPdf: Boolean,
+        override val isImage: Boolean,
+        val uri: String,
+        val source: UploadFileSource
+    ) : EditableAttachment
+}
+
+
+@Immutable
 data class UploadItem(
     val id: String,
     val branch: String,

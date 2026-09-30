@@ -83,8 +83,17 @@ fun MyUploadsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isUploadsLoading by viewModel.isUploadsLoading.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadMyFiles()
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.loadMyFiles()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     val listState = rememberLazyListState()

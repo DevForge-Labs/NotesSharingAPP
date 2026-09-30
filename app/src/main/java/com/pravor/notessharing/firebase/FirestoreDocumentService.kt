@@ -24,4 +24,8 @@ class FirestoreDocumentService {
             )
         ).await()
     }
+
+    suspend fun updateDocument(collectionName: String, documentId: String, updates: Map<String, Any>) {
+        firestore.collection(collectionName).document(documentId).update(updates).await()
+    }
 }
