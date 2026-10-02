@@ -103,7 +103,9 @@ fun DocumentDetailRoute(
                 sectionDisplay = doc.sectionDisplay,
                 college = doc.college,
                 branch = doc.branch,
-                semester = doc.semester
+                semester = doc.semester,
+                subjectId = doc.subjectId,
+                uploaderId = doc.uploaderId
             )
             ContinueLearningRepository(context).saveLastOpened(
                 id = doc.id,
@@ -123,7 +125,9 @@ fun DocumentDetailRoute(
                 sectionDisplay = doc.sectionDisplay,
                 college = doc.college,
                 branch = doc.branch,
-                semester = doc.semester
+                semester = doc.semester,
+                subjectId = doc.subjectId,
+                uploaderId = doc.uploaderId
             )
             com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
         }

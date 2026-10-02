@@ -60,7 +60,8 @@ data class StudyFile(
     val college: String? = null,
     val branch: String? = null,
     val semester: String? = null,
-    val subjectId: String? = null
+    val subjectId: String? = null,
+    val uploaderId: String? = null
 ) {
     fun matchesSearchQuery(query: String): Boolean {
         if (query.isBlank()) return true

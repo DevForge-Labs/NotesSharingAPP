@@ -258,7 +258,12 @@ class DocumentDetailViewModel(
                     upvotes = doc.upvotes,
                     thumbnailUrl = doc.thumbnailUrl,
                     subject = doc.subject,
-                    documentType = docType
+                    documentType = docType,
+                    college = doc.college,
+                    branch = doc.branch,
+                    semester = doc.semester,
+                    subjectId = doc.subjectId,
+                    uploaderId = doc.uploaderId
                 )
                 bookmarkRepository.addBookmark(studyFile, currentUid)
             }

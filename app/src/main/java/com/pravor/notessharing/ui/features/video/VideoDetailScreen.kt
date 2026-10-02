@@ -104,7 +104,9 @@ fun VideoDetailRoute(
                 youtubeThumbnailUrl = video.youtubeThumbnailUrl,
                 college = video.college,
                 branch = video.branch,
-                semester = video.semester
+                semester = video.semester,
+                subjectId = video.subjectId,
+                uploaderId = video.uploaderId
             )
             ContinueLearningRepository(context).saveLastOpened(
                 id = video.id,
@@ -120,7 +122,9 @@ fun VideoDetailRoute(
                 youtubeThumbnailUrl = video.youtubeThumbnailUrl,
                 college = video.college,
                 branch = video.branch,
-                semester = video.semester
+                semester = video.semester,
+                subjectId = video.subjectId,
+                uploaderId = video.uploaderId
             )
             com.pravor.notessharing.core.widget.WidgetUpdateManager.updateAllWidgets(context)
         }
@@ -229,7 +233,12 @@ fun VideoDetailScreen(
                                             thumbnailUrl = video.thumbnailUrl
                                                 ?: video.youtubeThumbnailUrl,
                                             subject = video.subject,
-                                            documentType = "YouTube Resource"
+                                            documentType = "YouTube Resource",
+                                            college = video.college,
+                                            branch = video.branch,
+                                            semester = video.semester,
+                                            subjectId = video.subjectId,
+                                            uploaderId = video.uploaderId
                                         )
                                         bookmarkRepository.addBookmark(studyFile, currentUid)
                                     }

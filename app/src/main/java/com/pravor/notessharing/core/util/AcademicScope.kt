@@ -11,7 +11,8 @@ data class AcademicScope(
     val collegeId: String,
     val branchId: String? = null,
     val semester: String? = null,
-    val subjectIds: List<String> = emptyList()
+    val subjectIds: List<String> = emptyList(),
+    val userId: String? = null
 ) {
     val canonicalCollegeId: String get() = LegacyAcademicCompatibilityResolver.resolveCollegeId(collegeId)
     val canonicalBranchId: String? get() = branchId?.takeIf { it.isNotBlank() }?.let { LegacyAcademicCompatibilityResolver.resolveBranchId(it) }
@@ -45,7 +46,8 @@ data class AcademicScope(
         docBranch: String?,
         docSemester: String?,
         docSubjectId: String?,
-        docSubjectName: String? = null
+        docSubjectName: String? = null,
+        docUploaderId: String? = null
     ): Boolean {
         if (!isCollegeValid) return true
 
@@ -57,7 +59,13 @@ data class AcademicScope(
             }
         }
 
-        // 2. Direct Subject ID verification: If catalog subject matches, permit immediately
+        // 2. Ownership Exception: If the requesting user is the original uploader, permit access immediately.
+        // Missing, blank, or placeholder uploader IDs (e.g. 'dummy-uid') never grant ownership access.
+        if (!userId.isNullOrBlank() && !docUploaderId.isNullOrBlank() && docUploaderId != "dummy-uid" && userId == docUploaderId) {
+            return true
+        }
+
+        // 3. Direct Subject ID verification: If catalog subject matches, permit immediately
         if (!docSubjectId.isNullOrBlank() && subjectIds.isNotEmpty()) {
             if (subjectIds.any { it.equals(docSubjectId, ignoreCase = true) }) {
                 return true
@@ -192,7 +200,8 @@ object AcademicScopeResolver {
             collegeId = canonicalCollegeId,
             branchId = rawBranch,
             semester = rawSemester,
-            subjectIds = subjectIds
+            subjectIds = subjectIds,
+            userId = profile.uid.takeIf { it.isNotBlank() }
         )
     }
 }

@@ -115,8 +115,15 @@ open class SearchRepository(
             semVariants.add("common")
             semVariants.add("all")
 
-            val semFilterExpr = semVariants.joinToString(separator = " OR ", prefix = "(", postfix = ")") { sem ->
-                "semester:'${sem.replace("'", "\\'")}'"
+            val semFilterExpr = if (!scope.userId.isNullOrBlank()) {
+                val semClauses = semVariants.joinToString(separator = " OR ") { sem ->
+                    "semester:'${sem.replace("'", "\\'")}'"
+                }
+                "($semClauses OR uploaderId:'${scope.userId.replace("'", "\\'")}')"
+            } else {
+                semVariants.joinToString(separator = " OR ", prefix = "(", postfix = ")") { sem ->
+                    "semester:'${sem.replace("'", "\\'")}'"
+                }
             }
             filterParts.add(semFilterExpr)
         }
@@ -258,6 +265,7 @@ open class SearchRepository(
             val channelName = hit.additionalProperties?.get("channelName")?.jsonPrimitive?.content ?: ""
             val playlistTitle = hit.additionalProperties?.get("playlistTitle")?.jsonPrimitive?.content ?: ""
             val subjectId = hit.additionalProperties?.get("subjectId")?.jsonPrimitive?.content ?: ""
+            val uploaderId = hit.additionalProperties?.get("uploaderId")?.jsonPrimitive?.content ?: ""
 
             // Client-Side Defensive Layer: Verify hit against academic scope
             if (scope.isCollegeValid) {
@@ -266,7 +274,8 @@ open class SearchRepository(
                     docBranch = branch,
                     docSemester = semester,
                     docSubjectId = subjectId.ifBlank { null },
-                    docSubjectName = displaySubject.ifBlank { null }
+                    docSubjectName = displaySubject.ifBlank { null },
+                    docUploaderId = uploaderId.ifBlank { null }
                 )
                 if (!isPermitted) {
                     return@mapNotNull null

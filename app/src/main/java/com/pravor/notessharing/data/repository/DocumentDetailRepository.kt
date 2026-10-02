@@ -125,7 +125,8 @@ class DocumentDetailRepository {
                     docBranch = result.branch,
                     docSemester = result.semester,
                     docSubjectId = resolvedSubjectId,
-                    docSubjectName = result.subject
+                    docSubjectName = result.subject,
+                    docUploaderId = result.uploaderId
                 )
                 if (!isPermitted) {
                     if (BuildConfig.DEBUG) {

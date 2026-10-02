@@ -65,6 +65,7 @@ class BookmarkRepository {
                                 val branch = data["branch"] as? String
                                 val semester = data["semester"] as? String
                                 val subjectId = data["subjectId"] as? String
+                                val uploaderId = data["uploaderId"] as? String
                                 
                                 StudyFile(
                                     id = docId,
@@ -79,7 +80,8 @@ class BookmarkRepository {
                                     college = college,
                                     branch = branch,
                                     semester = semester,
-                                    subjectId = subjectId
+                                    subjectId = subjectId,
+                                    uploaderId = uploaderId
                                 )
                             }
                             if (_bookmarksFlow.value != list) {
@@ -188,6 +190,7 @@ class BookmarkRepository {
             if (!studyFile.examYear.isNullOrBlank()) data["examYear"] = studyFile.examYear
             if (!studyFile.examType.isNullOrBlank()) data["examType"] = studyFile.examType
             if (!studyFile.sectionDisplay.isNullOrBlank()) data["sectionDisplay"] = studyFile.sectionDisplay
+            if (!studyFile.uploaderId.isNullOrBlank()) data["uploaderId"] = studyFile.uploaderId
 
             bookmarksCollection.document(bookmarkId).set(data.filterValues { it != null }).await()
             try {
