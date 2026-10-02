@@ -33,7 +33,8 @@ class ContinueLearningRepository(context: Context) {
         college: String? = null,
         branch: String? = null,
         semester: String? = null,
-        subjectId: String? = null
+        subjectId: String? = null,
+        uploaderId: String? = null
     ) {
         android.util.Log.d("WidgetDebug", "ContinueLearningRepository.saveLastOpened: id=$id, type=$type, title=$title, subject=$subject")
         val json = JSONObject()
@@ -57,6 +58,7 @@ class ContinueLearningRepository(context: Context) {
             .put("branch", branch ?: "")
             .put("semester", semester ?: "")
             .put("subjectId", subjectId ?: "")
+            .put("uploaderId", uploaderId ?: "")
         
         val thumbnailUrlsArray = org.json.JSONArray()
         thumbnailUrls.forEach { thumbnailUrlsArray.put(it) }
@@ -75,6 +77,7 @@ class ContinueLearningRepository(context: Context) {
             val docBranch = json.optString("branch").ifBlank { null }
             val docSemester = json.optString("semester").ifBlank { null }
             val docSubjectId = json.optString("subjectId").ifBlank { null }
+            val docUploaderId = json.optString("uploaderId").ifBlank { null }
 
             val docSubject = json.optString("subject").ifBlank { null }
 
@@ -84,7 +87,8 @@ class ContinueLearningRepository(context: Context) {
                     docBranch = docBranch,
                     docSemester = docSemester,
                     docSubjectId = docSubjectId,
-                    docSubjectName = docSubject
+                    docSubjectName = docSubject,
+                    docUploaderId = docUploaderId
                 )
                 if (!isPermitted) return null
             }

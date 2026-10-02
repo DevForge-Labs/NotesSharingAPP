@@ -63,7 +63,8 @@ class BookmarkViewModel(
                     docBranch = item.branch,
                     docSemester = item.semester,
                     docSubjectId = item.subjectId,
-                    docSubjectName = item.subject
+                    docSubjectName = item.subject,
+                    docUploaderId = item.uploaderId
                 )
             }
         } else {
